@@ -22,7 +22,7 @@ export const loginSchema = z.object({
     .trim()
     .toLowerCase(),
   password: z.string().min(1, "A senha é obrigatória."),
-  remember_me: z.boolean().default(false),
+  remember_me: z.boolean().optional(),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
