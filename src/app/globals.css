@@ -119,17 +119,6 @@
 
 /* THEME: NETFLIX (Red & Black) */
 .theme-netflix {
-  --background: oklch(0.98 0 0);
-  --foreground: oklch(0.145 0 0);
-  --primary: oklch(0.5 0.2 20); /* Red */
-  --primary-foreground: oklch(0.985 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.5 0.2 20);
-}
-.theme-netflix.dark, .dark.theme-netflix {
   --background: oklch(0.1 0 0);
   --foreground: oklch(0.985 0 0);
   --primary: oklch(0.5 0.2 20); /* Red */
@@ -140,20 +129,20 @@
   --input: oklch(1 0 0 / 20%);
   --ring: oklch(0.5 0.2 20);
 }
+.theme-netflix.light, .light.theme-netflix {
+  --background: oklch(0.98 0 0);
+  --foreground: oklch(0.145 0 0);
+  --primary: oklch(0.5 0.2 20); /* Red */
+  --primary-foreground: oklch(0.985 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.5 0.2 20);
+}
 
 /* THEME: ANIME (Purple & Neon Pink) */
 .theme-anime {
-  --background: oklch(0.99 0 300);
-  --foreground: oklch(0.2 0 300);
-  --primary: oklch(0.6 0.2 300); /* Purple */
-  --primary-foreground: oklch(0.985 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0 300);
-  --border: oklch(0.9 0.05 300);
-  --input: oklch(0.9 0.05 300);
-  --ring: oklch(0.6 0.2 300);
-}
-.theme-anime.dark, .dark.theme-anime {
   --background: oklch(0.15 0.05 300);
   --foreground: oklch(0.985 0 0);
   --primary: oklch(0.6 0.25 320); /* Neon Pink/Purple */
@@ -164,20 +153,20 @@
   --input: oklch(1 0 0 / 20%);
   --ring: oklch(0.6 0.25 320);
 }
+.theme-anime.light, .light.theme-anime {
+  --background: oklch(0.99 0 300);
+  --foreground: oklch(0.2 0 300);
+  --primary: oklch(0.6 0.2 300); /* Purple */
+  --primary-foreground: oklch(0.985 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0 300);
+  --border: oklch(0.9 0.05 300);
+  --input: oklch(0.9 0.05 300);
+  --ring: oklch(0.6 0.2 300);
+}
 
 /* THEME: OCEAN (Deep Blue) */
 .theme-ocean {
-  --background: oklch(0.98 0.02 240);
-  --foreground: oklch(0.15 0.05 240);
-  --primary: oklch(0.5 0.15 250); /* Blue */
-  --primary-foreground: oklch(0.985 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.05 240);
-  --border: oklch(0.9 0.05 240);
-  --input: oklch(0.9 0.05 240);
-  --ring: oklch(0.5 0.15 250);
-}
-.theme-ocean.dark, .dark.theme-ocean {
   --background: oklch(0.12 0.05 250);
   --foreground: oklch(0.985 0 0);
   --primary: oklch(0.6 0.2 250); /* Bright Blue */
@@ -187,6 +176,17 @@
   --border: oklch(1 0 0 / 15%);
   --input: oklch(1 0 0 / 20%);
   --ring: oklch(0.6 0.2 250);
+}
+.theme-ocean.light, .light.theme-ocean {
+  --background: oklch(0.98 0.02 240);
+  --foreground: oklch(0.15 0.05 240);
+  --primary: oklch(0.5 0.15 250); /* Blue */
+  --primary-foreground: oklch(0.985 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.05 240);
+  --border: oklch(0.9 0.05 240);
+  --input: oklch(0.9 0.05 240);
+  --ring: oklch(0.5 0.15 250);
 }
 @layer base {
   * {

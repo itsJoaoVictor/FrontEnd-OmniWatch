@@ -1,0 +1,55 @@
+{
+  "heroFeature": {
+    "id": "101",
+    "title": "Duna: Parte 2",
+    "type": "movie",
+    "coverHorizontal": "https://picsum.photos/seed/dunahero/1200/800",
+    "progress": 85,
+    "currentEpisode": null,
+    "description": "O duque Paul Atreides se junta aos Fremen e comeca uma jornada espiritual e marcial para se tornar MuadDib..."
+  },
+  "continueWatching": [
+    {
+      "id": "102",
+      "title": "The Last of Us",
+      "type": "series",
+      "coverHorizontal": "https://picsum.photos/seed/cw1/800/450",
+      "progress": 30,
+      "currentEpisode": "T1:E3"
+    },
+    {
+      "id": "201",
+      "title": "Oppenheimer",
+      "type": "movie",
+      "coverHorizontal": "https://picsum.photos/seed/cw2/800/450",
+      "progress": 15,
+      "currentEpisode": null
+    }
+  ],
+  "moviesInQueue": [
+    {
+      "id": "201",
+      "title": "Oppenheimer",
+      "type": "movie",
+      "coverVertical": "https://picsum.photos/seed/opp/600/900"
+    },
+    {
+      "id": "202",
+      "title": "Deadpool & Wolverine",
+      "type": "movie",
+      "coverVertical": "https://picsum.photos/seed/dead/600/900"
+    },
+    {
+      "id": "203",
+      "title": "Furiosa",
+      "type": "movie",
+      "coverVertical": "https://picsum.photos/seed/fur/600/900"
+    },
+    {
+      "id": "204",
+      "title": "Divertida Mente 2",
+      "type": "movie",
+      "coverVertical": "https://picsum.photos/seed/div/600/900"
+    }
+  ]
+}
