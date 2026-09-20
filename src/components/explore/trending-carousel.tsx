@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { TrendingItem } from "@/types/trending";
 import {
   Carousel,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star } from "lucide-react";
+import { AddToListButton } from "@/components/shared/AddToListButton";
 
 interface TrendingCarouselProps {
   items: TrendingItem[];
@@ -37,7 +39,7 @@ export function TrendingCarousel({ items }: TrendingCarouselProps) {
               key={item.id}
               className="pl-2 md:pl-4 basis-1/2 md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
             >
-              <div className="p-1">
+              <Link href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`} className="block p-1">
                 <Card className="overflow-hidden border-0 bg-transparent group relative cursor-pointer aspect-[2/3]">
                   <CardContent className="p-0 h-full w-full">
                     <Image
@@ -62,13 +64,17 @@ export function TrendingCarousel({ items }: TrendingCarouselProps) {
                       <div className="flex items-center text-yellow-400">
                         <Star className="w-4 h-4 mr-1 fill-current" />
                         <span className="text-sm font-medium text-white">
-                          {item.vote_average.toFixed(1)}
+                          {(item.vote_average / 2).toFixed(1)}
                         </span>
                       </div>
                     </div>
+                    {/* Add to List Button */}
+                    <div className="absolute top-2 right-2 z-10">
+                      <AddToListButton tmdb_id={item.id} media_type={item.media_type as 'movie' | 'tv'} className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4" />
+                    </div>
                   </CardContent>
                 </Card>
-              </div>
+              </Link>
             </CarouselItem>
           );
         })}

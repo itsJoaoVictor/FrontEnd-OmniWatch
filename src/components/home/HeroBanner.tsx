@@ -10,7 +10,7 @@ interface HeroFeatureProps {
     type: string;
     coverHorizontal: string;
     description?: string;
-    currentEpisode?: string;
+    currentEpisode?: string | null;
   };
 }
 
@@ -23,13 +23,13 @@ export function HeroBanner({ data }: HeroFeatureProps) {
           src={data.coverHorizontal}
           alt={data.title}
           fill
-          className="object-cover"
+          className="object-cover object-[center_15%]"
           priority
         />
         {/* Gradients to blend with dark mode */}
         <div className="absolute inset-0 bg-black/40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent" />
       </div>
 
       {/* Content */}
@@ -39,11 +39,11 @@ export function HeroBanner({ data }: HeroFeatureProps) {
             <Star className="w-3 h-3 fill-current" />
             Em Destaque
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-foreground mb-3 max-w-2xl drop-shadow-lg tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-3 max-w-2xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] tracking-tight">
             {data.title}
           </h1>
           {data.description && (
-            <p className="text-base md:text-lg text-foreground/90 mb-6 max-w-xl drop-shadow-md line-clamp-2">
+            <p className="text-base md:text-lg text-gray-200 mb-6 max-w-xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] line-clamp-2">
               {data.description}
             </p>
           )}
@@ -53,7 +53,7 @@ export function HeroBanner({ data }: HeroFeatureProps) {
               <CheckCircle className="w-5 h-5" />
               {data.currentEpisode ? `Marcar ${data.currentEpisode} como Visto` : 'Marcar como Visto'}
             </Button>
-            <Link href={`/title/${data.id}`}>
+            <Link href={`/${data.type === 'movie' ? 'movie' : 'tv'}/${data.id}`}>
               <Button size="lg" variant="secondary" className="gap-2 bg-secondary/80 text-secondary-foreground hover:bg-secondary rounded-full font-semibold px-6 backdrop-blur-md border border-border">
                 <Info className="w-5 h-5" />
                 Detalhes

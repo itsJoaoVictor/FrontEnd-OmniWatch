@@ -44,7 +44,7 @@ export function ContentCarousel({ title, items, layout = "poster" }: ContentCaro
             {items.map((item) => (
               <CarouselItem key={item.id} className={`pl-4 ${basisClass}`}>
                 <div className="py-2">
-                  <MediaCard item={item} layout={layout} />
+                  <MediaCard item={item} layout={layout} priority={items.indexOf(item) < 4} />
                 </div>
               </CarouselItem>
             ))}

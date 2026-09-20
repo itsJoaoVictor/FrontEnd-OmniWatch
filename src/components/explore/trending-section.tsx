@@ -5,7 +5,7 @@ async function getTrendingData(): Promise<TrendingResponse> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   // Usando revalidate para armazenar o dado em cache no Next.js (ISR)
   const res = await fetch(`${apiUrl}/api/trending`, {
-    next: { revalidate: 3600 },
+    next: { revalidate: process.env.NODE_ENV === 'development' ? 0 : 3600 },
   });
 
   if (!res.ok) {
