@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, PlayCircle, CheckCircle2, Circle } from "lucide-react";
+import { ChevronDown, ChevronUp, PlayCircle, CheckCircle2, Circle, Star } from "lucide-react";
 import { SeasonItem, EpisodeItem, SeasonDetailsResponse } from "@/types/details";
 import { api } from "@/lib/axios";
 import { useMyListStore } from "@/store/useMyListStore";
@@ -107,9 +107,11 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
             <div className="flex flex-col gap-4 mt-4">
 
               {episodes.map((episode) => {
-                const isWatched = (episodeProgress || []).some(
+                const epProg = (episodeProgress || []).find(
                   p => p.season_number === season.season_number && p.episode_number === episode.episode_number
                 );
+                const isWatched = !!epProg;
+                const rating = epProg?.rating;
                 
                 return (
                   <div key={episode.id} className="flex gap-2 items-stretch bg-background/40 rounded-md hover:bg-background/60 transition-colors group">
@@ -137,9 +139,17 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
                           <h5 className="font-semibold text-lg group-hover:text-primary transition-colors">
                             {episode.episode_number}. {episode.name}
                           </h5>
-                          {episode.runtime && (
-                            <span className="text-xs text-gray-400 whitespace-nowrap">{episode.runtime} min</span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {rating !== undefined && rating !== null && (
+                              <span className="flex items-center gap-1 text-xs text-yellow-400 font-semibold bg-yellow-400/10 px-1.5 py-0.5 rounded" title="Sua nota neste episódio">
+                                <Star className="w-3 h-3 fill-yellow-400" />
+                                {rating.toFixed(1)}
+                              </span>
+                            )}
+                            {episode.runtime && (
+                              <span className="text-xs text-gray-400 whitespace-nowrap">{episode.runtime} min</span>
+                            )}
+                          </div>
                         </div>
                         {episode.air_date && (
                           <span className="text-xs text-gray-500 mb-2">

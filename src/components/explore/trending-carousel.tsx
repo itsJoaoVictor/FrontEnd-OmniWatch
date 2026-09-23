@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { TrendingItem } from "@/types/trending";
 import {
@@ -13,6 +12,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Star } from "lucide-react";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { PosterImage } from "@/components/shared/PosterImage";
 
 interface TrendingCarouselProps {
   items: TrendingItem[];
@@ -30,9 +30,6 @@ export function TrendingCarousel({ items }: TrendingCarouselProps) {
       <CarouselContent className="-ml-2 md:-ml-4">
         {items.map((item) => {
           const displayTitle = item.title || item.name || "Unknown";
-          const imageUrl = item.poster_path
-            ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-            : "https://picsum.photos/500/750?grayscale";
 
           return (
             <CarouselItem
@@ -41,12 +38,15 @@ export function TrendingCarousel({ items }: TrendingCarouselProps) {
             >
               <Link href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`} className="block p-1">
                 <Card className="overflow-hidden border-0 bg-transparent group relative cursor-pointer aspect-[2/3]">
-                  <CardContent className="p-0 h-full w-full">
-                    <Image
-                      src={imageUrl}
+                  <CardContent className="p-0 h-full w-full relative">
+                    <PosterImage
+                      src={item.poster_path}
+                      fallbackSrc={item.backdrop_path}
                       alt={displayTitle}
+                      title={displayTitle}
+                      type={item.media_type}
                       fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="transition-transform duration-300 group-hover:scale-105"
                       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
                     />
                     
@@ -70,7 +70,14 @@ export function TrendingCarousel({ items }: TrendingCarouselProps) {
                     </div>
                     {/* Add to List Button */}
                     <div className="absolute top-2 right-2 z-10">
-                      <AddToListButton tmdb_id={item.id} media_type={item.media_type as 'movie' | 'tv'} className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4" />
+                      <AddToListButton
+                        tmdb_id={item.id}
+                        media_type={item.media_type as 'movie' | 'tv'}
+                        title={displayTitle}
+                        poster_path={item.poster_path}
+                        backdrop_path={item.backdrop_path}
+                        className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4"
+                      />
                     </div>
                   </CardContent>
                 </Card>

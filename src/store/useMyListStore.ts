@@ -18,6 +18,7 @@ export interface SavedItem {
 export interface EpisodeProgress {
   season_number: number;
   episode_number: number;
+  rating?: number | null;
 }
 
 interface MyListStore {
@@ -27,9 +28,10 @@ interface MyListStore {
   fetchMyList: () => Promise<void>;
   fetchProgress: (tmdb_id: number) => Promise<void>;
   toggleEpisode: (tmdb_id: number, season: number, episode: number, isWatched: boolean) => Promise<void>;
-  addToList: (tmdb_id: number, media_type: 'movie' | 'tv') => Promise<void>;
+  addToList: (tmdb_id: number, media_type: 'movie' | 'tv', extra?: { title?: string | null; poster_path?: string | null; backdrop_path?: string | null }) => Promise<void>;
   updateStatus: (tmdb_id: number, newStatus: ListStatus) => Promise<void>;
   updateRating: (tmdb_id: number, rating: number) => Promise<void>;
+  updateEpisodeRating: (tmdb_id: number, season: number, episode: number, rating: number) => Promise<void>;
   removeFromList: (tmdb_id: number) => Promise<void>;
   bulkMarkEpisodes: (tmdb_id: number, season: number, episode: number) => Promise<void>;
 }
@@ -45,15 +47,17 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
       const res = await api.get('/api/my-list');
       const itemsMap: Record<number, SavedItem> = {};
       res.data.forEach((item: any) => {
-        const tmdbId = item.media?.tmdb_id || item.tmdb_id; // Fallback just in case
+        const rawTmdbId = item.media?.tmdb_id ?? item.tmdb_id;
+        const parsedTmdbId = typeof rawTmdbId === 'string' ? parseInt(rawTmdbId, 10) : Number(rawTmdbId);
+        const tmdbId = (!isNaN(parsedTmdbId) && parsedTmdbId > 0) ? parsedTmdbId : (typeof item.id === 'number' ? item.id : undefined);
         if (tmdbId) {
           itemsMap[tmdbId] = {
-            id: item.id,
+            id: item.id?.toString() || String(tmdbId),
             tmdb_id: tmdbId,
-            status: item.status,
+            status: item.status || 'plan_to_watch',
             rating: item.rating,
-            media_type: item.media?.media_type || item.media_type,
-            title: item.media?.title || item.title,
+            media_type: item.media?.media_type || item.media_type || 'movie',
+            title: item.media?.title || item.title || 'Título Desconhecido',
             poster_path: item.media?.poster_path || item.poster_path,
             backdrop_path: item.media?.backdrop_path || item.backdrop_path,
             last_watched_at: item.last_watched_at,
@@ -149,28 +153,53 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     }
   },
 
-  addToList: async (tmdb_id, media_type) => {
+  addToList: async (tmdb_id, media_type, extra) => {
+    const numericTmdbId = Number(tmdb_id);
+    if (!numericTmdbId || isNaN(numericTmdbId)) {
+      console.warn('Cannot add to list: invalid tmdb_id', tmdb_id);
+      return;
+    }
+
     const tempId = `temp-${Date.now()}`;
     // Optimistic update
     set((state) => ({
       items: {
         ...state.items,
-        [tmdb_id]: {
+        [numericTmdbId]: {
           id: tempId,
-          tmdb_id,
+          tmdb_id: numericTmdbId,
           status: 'plan_to_watch',
           media_type,
+          title: extra?.title || undefined,
+          poster_path: extra?.poster_path || undefined,
+          backdrop_path: extra?.backdrop_path || undefined,
         }
       }
     }));
 
     try {
-      const res = await api.post('/api/my-list', { tmdb_id, media_type, status: 'plan_to_watch' });
-      // Update with the real internal ID from DB
+      const res = await api.post('/api/my-list', {
+        tmdb_id: numericTmdbId,
+        media_type,
+        status: 'plan_to_watch',
+        title: extra?.title || undefined,
+        poster_path: extra?.poster_path || undefined,
+        backdrop_path: extra?.backdrop_path || undefined,
+      });
+      // Update with the real internal ID and media from DB
       set((state) => ({
         items: {
           ...state.items,
-          [tmdb_id]: { ...state.items[tmdb_id], id: res.data.id }
+          [numericTmdbId]: {
+            ...state.items[numericTmdbId],
+            id: res.data.id,
+            tmdb_id: res.data.media?.tmdb_id || numericTmdbId,
+            status: res.data.status || state.items[numericTmdbId]?.status || 'plan_to_watch',
+            media_type: res.data.media?.media_type || state.items[numericTmdbId]?.media_type || media_type,
+            title: res.data.media?.title || state.items[numericTmdbId]?.title || extra?.title || undefined,
+            poster_path: res.data.media?.poster_path || state.items[numericTmdbId]?.poster_path || extra?.poster_path || undefined,
+            backdrop_path: res.data.media?.backdrop_path || state.items[numericTmdbId]?.backdrop_path || extra?.backdrop_path || undefined,
+          }
         }
       }));
     } catch (error) {
@@ -178,7 +207,7 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
       // Revert optimistic update
       set((state) => {
         const newItems = { ...state.items };
-        delete newItems[tmdb_id];
+        delete newItems[numericTmdbId];
         return { items: newItems };
       });
     }
@@ -255,6 +284,49 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
         items: {
           ...state.items,
           [tmdb_id]: { ...item, rating: oldRating }
+        }
+      }));
+    }
+  },
+
+  updateEpisodeRating: async (tmdb_id, season, episode, rating) => {
+    let item = get().items[tmdb_id];
+    if (!item) {
+      await get().addToList(tmdb_id, 'tv');
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    } else if (item.id.startsWith('temp-')) {
+      let retries = 0;
+      while (get().items[tmdb_id]?.id?.startsWith('temp-') && retries < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        retries++;
+      }
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    }
+
+    const prevProgress = get().episodeProgress[tmdb_id] || [];
+    const exists = prevProgress.find(p => p.season_number === season && p.episode_number === episode);
+
+    // Optimistic update
+    set((state) => ({
+      episodeProgress: {
+        ...state.episodeProgress,
+        [tmdb_id]: exists
+          ? prevProgress.map(p => (p.season_number === season && p.episode_number === episode ? { ...p, rating } : p))
+          : [...prevProgress, { season_number: season, episode_number: episode, rating }]
+      }
+    }));
+
+    try {
+      await api.patch(`/api/my-list/${item.id}/progress/${season}/${episode}/rating`, { rating });
+    } catch (error) {
+      console.error('Failed to update episode rating', error);
+      // rollback
+      set((state) => ({
+        episodeProgress: {
+          ...state.episodeProgress,
+          [tmdb_id]: prevProgress
         }
       }));
     }

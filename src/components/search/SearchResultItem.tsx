@@ -36,10 +36,9 @@ export function SearchResultItem({ item, onClick }: SearchResultItemProps) {
 
   const href = `/${item.media_type}/${item.id}`;
   
-  // Use a fallback image if image_path is not available
   const imageUrl = item.image_path 
     ? `https://image.tmdb.org/t/p/w92${item.image_path}` 
-    : "/placeholder.png";
+    : null;
 
   const year = item.date ? new Date(item.date).getFullYear() : null;
 
@@ -49,18 +48,22 @@ export function SearchResultItem({ item, onClick }: SearchResultItemProps) {
       onClick={onClick}
       className="flex items-center gap-3 p-2 hover:bg-muted/50 transition-colors rounded-md group"
     >
-      <div className="flex-shrink-0 w-10 h-14 bg-muted rounded overflow-hidden relative">
-        {item.image_path ? (
+      <div className="flex-shrink-0 w-10 h-14 bg-zinc-800 rounded overflow-hidden relative flex items-center justify-center">
+        {imageUrl ? (
           <img 
             src={imageUrl} 
             alt={item.title}
             className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              // Hide broken image and show icon
+              e.currentTarget.style.display = 'none';
+            }}
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center opacity-20">
-            {getBadgeIcon()}
-          </div>
-        )}
+        ) : null}
+        <div className="absolute inset-0 flex items-center justify-center opacity-30 -z-0">
+          {getBadgeIcon()}
+        </div>
       </div>
       
       <div className="flex flex-col overflow-hidden">

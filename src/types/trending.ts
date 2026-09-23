@@ -4,6 +4,7 @@ export interface TrendingItem {
   name?: string | null;
   overview: string;
   poster_path?: string | null;
+  backdrop_path?: string | null;
   media_type: string;
   popularity: number;
   vote_average: number;

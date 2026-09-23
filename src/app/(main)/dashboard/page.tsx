@@ -21,7 +21,7 @@ export default function HomePage() {
   }, [items, fetchMyList]);
 
   useEffect(() => {
-    const tvWatching = Object.values(items).filter(i => i.status === 'watching' && i.media_type === 'tv');
+    const tvWatching = Object.values(items).filter(i => i && i.status === 'watching' && i.media_type === 'tv' && i.tmdb_id);
     tvWatching.forEach(item => {
       if (!episodeProgress[item.tmdb_id] && !fetchedProgressRef.current.has(item.tmdb_id)) {
         fetchedProgressRef.current.add(item.tmdb_id);
@@ -37,7 +37,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const checkNewEpisodes = async () => {
-      const tvWatching = Object.values(items).filter(i => i.status === 'watching' && i.media_type === 'tv');
+      const tvWatching = Object.values(items).filter(i => i && i.status === 'watching' && i.media_type === 'tv' && i.tmdb_id);
       
       tvWatching.sort((a, b) => {
         const dateA = a.last_watched_at ? new Date(a.last_watched_at).getTime() : 0;
@@ -130,7 +130,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const checkTrendingPlanToWatch = async () => {
-      const planToWatchItems = Object.values(items).filter(i => i.status === 'plan_to_watch');
+      const planToWatchItems = Object.values(items).filter(i => i && i.status === 'plan_to_watch' && i.tmdb_id);
       if (planToWatchItems.length === 0) return;
 
       try {
@@ -157,7 +157,7 @@ export default function HomePage() {
 
   // Derived state from store
   const { heroFeature, continueWatching, moviesInQueue, tvInQueue } = useMemo(() => {
-    const itemsArray = Object.values(items);
+    const itemsArray = Object.values(items).filter(i => i && (i.tmdb_id || i.id));
     
     let watchingItems = itemsArray.filter(i => i.status === 'watching');
     watchingItems.sort((a, b) => {
@@ -215,10 +215,10 @@ export default function HomePage() {
       }
 
       return {
-        id: i.tmdb_id.toString(),
+        id: (i.tmdb_id ?? i.id)?.toString() || '',
         title: i.title || 'Título Desconhecido',
         type: i.media_type,
-        coverVertical: i.poster_path ? `https://image.tmdb.org/t/p/w342${i.poster_path}` : '',
+        coverVertical: i.poster_path || '',
         coverHorizontal: i.backdrop_path ? `https://image.tmdb.org/t/p/w1280${i.backdrop_path}` : (i.poster_path ? `https://image.tmdb.org/t/p/w1280${i.poster_path}` : ''),
         currentEpisode: currentEpisode,
         nextEpisodeToWatch: nextEpisodeToWatch,
@@ -265,7 +265,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="pb-16 overflow-hidden min-h-screen">
+    <div className="pb-8 overflow-hidden min-h-screen">
       {heroFeature ? (
         <HeroBanner data={heroFeature} />
       ) : (

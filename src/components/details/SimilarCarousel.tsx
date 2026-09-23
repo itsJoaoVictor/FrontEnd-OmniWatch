@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { SimilarItem } from "@/types/details";
 import {
@@ -11,6 +10,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Star } from "lucide-react";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { PosterImage } from "@/components/shared/PosterImage";
 
 interface SimilarCarouselProps {
   items: SimilarItem[];
@@ -44,23 +44,25 @@ export function SimilarCarousel({ items, type }: SimilarCarouselProps) {
                 <Card className="border-0 bg-transparent shadow-none hover:opacity-80 transition-opacity">
                   <CardContent className="p-0">
                     <div className="w-full aspect-[2/3] relative rounded-md overflow-hidden bg-muted mb-2 group">
-                      {item.poster_path ? (
-                        <Image
-                          src={`${imageUrl}${item.poster_path}`}
-                          alt={item.title}
-                          fill
-                          priority={items.indexOf(item) < 4}
-                          loading={items.indexOf(item) < 4 ? "eager" : "lazy"}
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                          Sem Poster
-                        </div>
-                      )}
+                      <PosterImage
+                        src={item.poster_path}
+                        alt={item.title}
+                        title={item.title}
+                        type={type}
+                        fill
+                        priority={items.indexOf(item) < 4}
+                        className="transition-transform duration-300 group-hover:scale-105"
+                        sizes="(max-width: 768px) 140px, 200px"
+                      />
                       {/* Botão de Adicionar à Lista */}
                       <div className="absolute top-2 right-2 z-10">
-                        <AddToListButton tmdb_id={item.id} media_type={type} className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4" />
+                        <AddToListButton
+                          tmdb_id={item.id}
+                          media_type={type}
+                          title={item.title}
+                          poster_path={item.poster_path ?? undefined}
+                          className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4"
+                        />
                       </div>
                     </div>
                     <p className="font-bold text-sm truncate">{item.title}</p>

@@ -2,13 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, User, LogOut } from "lucide-react";
+import { Bell, User, LogOut, Menu } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SearchInput } from "./SearchInput";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/axios";
 import { useMyListStore } from "@/store/useMyListStore";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 export function Topbar() {
   const router = useRouter();
@@ -43,16 +50,52 @@ export function Topbar() {
             <Link href="/stats" className="text-foreground/80 hover:text-primary transition-colors">Estatísticas</Link>
           </nav>
         </div>
-        <div className="flex items-center gap-4 text-foreground">
+        <div className="flex items-center gap-2 lg:gap-4 text-foreground">
+          {/* Mobile Hamburger Menu */}
+          <div className="lg:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="w-full cursor-pointer">Início</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/explore" className="w-full cursor-pointer">Explorar</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/my-list" className="w-full cursor-pointer">Minha Lista</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/calendar" className="w-full cursor-pointer">Calendário</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/stats" className="w-full cursor-pointer">Estatísticas</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="w-full cursor-pointer">Perfil</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500 cursor-pointer">
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <SearchInput />
           <NotificationBell />
-          <Link href="/profile" className="p-2 hover:bg-foreground/10 rounded-full transition-colors">
-            <User className="w-5 h-5" />
-          </Link>
-          <button onClick={handleLogout} className="p-2 hover:bg-foreground/10 text-red-500 rounded-full transition-colors" title="Sair">
-            <LogOut className="w-5 h-5" />
-          </button>
-          <div className="ml-2">
+          <div className="hidden lg:flex items-center gap-2">
+            <Link href="/profile" className="p-2 hover:bg-foreground/10 rounded-full transition-colors">
+              <User className="w-5 h-5" />
+            </Link>
+            <button onClick={handleLogout} className="p-2 hover:bg-foreground/10 text-red-500 rounded-full transition-colors" title="Sair">
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="ml-0 lg:ml-2">
             <ThemeToggle />
           </div>
         </div>

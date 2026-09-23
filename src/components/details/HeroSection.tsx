@@ -2,8 +2,10 @@ import Image from "next/image";
 import { Star } from "lucide-react";
 import { GenreItem, CrewItem, WatchProviderItem } from "@/types/details";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { MatchScoreBadge } from "./MatchScoreBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UserRatingBadge } from "@/components/shared/UserRatingBadge";
+import { PosterImage } from "@/components/shared/PosterImage";
 
 interface HeroSectionProps {
   tmdbId: number;
@@ -34,8 +36,7 @@ export function HeroSection({
   metaInfo,
   watchProviders
 }: HeroSectionProps) {
-  const imageUrl = "https://image.tmdb.org/t/p/original";
-  const posterUrl = "https://image.tmdb.org/t/p/w500";
+  const imageUrl = "https://image.tmdb.org/t/p/w1280";
 
   return (
     <div className="relative w-full h-auto md:min-h-[600px] flex items-center bg-black/90 pt-20 md:pt-24 pb-8 md:pb-12">
@@ -57,21 +58,17 @@ export function HeroSection({
         <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
           {/* Poster */}
           <div className="flex-shrink-0 w-[200px] md:w-[300px] flex flex-col gap-4">
-            <div className="rounded-lg overflow-hidden shadow-2xl">
-              {posterPath ? (
-                <Image
-                  src={`${posterUrl}${posterPath}`}
-                  alt={title}
-                  width={300}
-                  height={450}
-                  className="w-full h-auto object-cover"
-                  priority
-                />
-              ) : (
-                <div className="w-[300px] h-[450px] bg-muted flex items-center justify-center">
-                  <span className="text-muted-foreground">Sem imagem</span>
-                </div>
-              )}
+            <div className="rounded-lg overflow-hidden shadow-2xl aspect-[2/3] w-full relative">
+              <PosterImage
+                src={posterPath}
+                fallbackSrc={backdropPath}
+                alt={title}
+                title={title}
+                type={mediaType}
+                fill
+                priority
+                sizes="(max-width: 768px) 200px, 300px"
+              />
             </div>
             
             {watchProviders && watchProviders.length > 0 && (
@@ -96,7 +93,14 @@ export function HeroSection({
             <div className="flex flex-col md:flex-row md:items-center justify-center md:justify-start gap-4 mb-2">
               <h1 className="text-3xl md:text-5xl font-bold">{title}</h1>
               <div className="flex items-center justify-center gap-3">
-                <AddToListButton tmdb_id={tmdbId} media_type={mediaType} className="w-12 h-12 [&>svg]:w-6 [&>svg]:h-6" />
+                <AddToListButton
+                  tmdb_id={tmdbId}
+                  media_type={mediaType}
+                  title={title}
+                  poster_path={posterPath ?? undefined}
+                  backdrop_path={backdropPath ?? undefined}
+                  className="w-12 h-12 [&>svg]:w-6 [&>svg]:h-6"
+                />
               </div>
             </div>
             
@@ -118,6 +122,10 @@ export function HeroSection({
                   {info}
                 </span>
               ))}
+            </div>
+
+            <div className="mb-4">
+              <MatchScoreBadge tmdbId={tmdbId} mediaType={mediaType} />
             </div>
 
             <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-6">

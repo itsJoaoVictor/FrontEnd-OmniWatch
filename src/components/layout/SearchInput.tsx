@@ -82,7 +82,7 @@ export function SearchInput() {
         onSubmit={handleSubmit}
         className={`flex items-center transition-all duration-300 ease-in-out overflow-hidden ${
           isExpanded 
-            ? "w-64 bg-background/90 border border-border/50 rounded-md px-2 h-9" 
+            ? "w-[45vw] sm:w-[50vw] md:w-64 bg-background/90 border border-border/50 rounded-md px-2 h-9" 
             : "w-9 h-9 bg-transparent border-transparent rounded-full hover:bg-foreground/10"
         }`}
       >

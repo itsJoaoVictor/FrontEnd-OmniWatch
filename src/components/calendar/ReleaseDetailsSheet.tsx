@@ -29,9 +29,18 @@ export function ReleaseDetailsSheet({ isOpen, onClose, release }: ReleaseDetails
         
         <div className="flex gap-4 mt-4">
           {release.media.poster_path ? (
-            <img src={`https://image.tmdb.org/t/p/w154${release.media.poster_path}`} className="w-24 h-auto rounded-md shadow" alt="poster" />
+            <img
+              src={`https://image.tmdb.org/t/p/w154${release.media.poster_path}`}
+              className="w-24 h-36 object-cover rounded-md shadow"
+              alt="poster"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
           ) : (
-            <div className="w-24 h-36 bg-zinc-800 rounded-md"></div>
+            <div className="w-24 h-36 bg-zinc-800 rounded-md flex flex-col items-center justify-center p-2 text-zinc-500 text-xs text-center border border-zinc-700/50">
+              Sem Imagem
+            </div>
           )}
           
           <div className="flex-1">

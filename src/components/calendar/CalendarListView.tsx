@@ -37,9 +37,17 @@ export function CalendarListView({ releases, loading }: CalendarListViewProps) {
               <div className="text-2xl font-bold text-white">{format(parseISO(release.release_date), 'dd')}</div>
             </div>
             {release.media.poster_path ? (
-              <img src={`https://image.tmdb.org/t/p/w92${release.media.poster_path}`} className="w-12 h-18 object-cover rounded" alt="poster" />
+              <img
+                src={`https://image.tmdb.org/t/p/w92${release.media.poster_path}`}
+                className="w-12 h-18 object-cover rounded bg-zinc-700"
+                alt="poster"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             ) : (
-              <div className="w-12 h-18 bg-zinc-700 rounded flex items-center justify-center">?</div>
+              <div className="w-12 h-18 bg-zinc-700 rounded flex items-center justify-center text-xs text-zinc-400">?</div>
             )}
             <div className="flex-1">
               <h3 className="font-bold text-white text-lg">{release.media.title}</h3>

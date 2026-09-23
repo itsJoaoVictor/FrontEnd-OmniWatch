@@ -17,6 +17,7 @@ export default function RegisterPage() {
           width={120} 
           height={120} 
           className="object-contain"
+          priority
         />
         <span className="text-3xl font-bold tracking-tight">OmniWatch</span>
       </Link>

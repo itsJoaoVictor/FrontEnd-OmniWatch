@@ -17,6 +17,9 @@ interface AddToListButtonProps {
   tmdb_id: number;
   media_type: 'movie' | 'tv';
   className?: string;
+  title?: string | null;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
 }
 
 const statusLabels: Record<ListStatus, string> = {
@@ -26,17 +29,20 @@ const statusLabels: Record<ListStatus, string> = {
   dropped: 'Abandonei',
 };
 
-export function AddToListButton({ tmdb_id, media_type, className }: AddToListButtonProps) {
+export function AddToListButton({ tmdb_id, media_type, className, title, poster_path, backdrop_path }: AddToListButtonProps) {
   const { items, addToList, updateStatus, updateRating, removeFromList } = useMyListStore();
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
-  const savedItem = items[tmdb_id];
+  const numericTmdbId = Number(tmdb_id);
+  const isValidId = !isNaN(numericTmdbId) && numericTmdbId > 0;
+  const savedItem = isValidId ? items[numericTmdbId] : undefined;
   const isInList = !!savedItem;
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addToList(tmdb_id, media_type);
+    if (!isValidId) return;
+    addToList(numericTmdbId, media_type, { title, poster_path, backdrop_path });
   };
 
   if (!isInList) {
@@ -76,7 +82,7 @@ export function AddToListButton({ tmdb_id, media_type, className }: AddToListBut
                 'cursor-pointer',
                 savedItem.status === status && 'bg-accent text-accent-foreground font-medium'
               )}
-              onClick={() => updateStatus(tmdb_id, status)}
+              onClick={() => updateStatus(numericTmdbId, status)}
             >
               {statusLabels[status]}
             </DropdownMenuItem>
@@ -87,17 +93,18 @@ export function AddToListButton({ tmdb_id, media_type, className }: AddToListBut
             <>
               <div className="px-2 py-2 flex flex-col gap-1.5">
                 <span className="text-xs font-semibold text-muted-foreground flex justify-between">
-                  Sua Nota {savedItem.rating ? <span className="text-yellow-400">{(savedItem.rating / 2).toFixed(1)}</span> : ''}
+                  Sua Nota {savedItem.rating ? <span className="text-yellow-400">{savedItem.rating.toFixed(1)}</span> : ''}
                 </span>
                 <div 
                   className="flex items-center justify-between w-full"
                   onMouseLeave={() => setHoverRating(null)}
                 >
                   {[1, 2, 3, 4, 5].map((starIndex) => {
-                    const starValue = starIndex * 2;
+                    const fullValue = starIndex;
+                    const halfValue = starIndex - 0.5;
                     const currentRating = hoverRating !== null ? hoverRating : (savedItem.rating || 0);
-                    const isFull = currentRating >= starValue;
-                    const isHalf = currentRating === starValue - 1;
+                    const isFull = currentRating >= fullValue;
+                    const isHalf = currentRating === halfValue;
 
                     return (
                       <div key={starIndex} className="relative w-6 h-6 text-muted-foreground cursor-pointer">
@@ -116,14 +123,14 @@ export function AddToListButton({ tmdb_id, media_type, className }: AddToListBut
                         {/* Left half click area */}
                         <div 
                           className="absolute left-0 top-0 w-1/2 h-full z-10" 
-                          onMouseEnter={() => setHoverRating(starValue - 1)}
-                          onClick={(e) => { e.preventDefault(); updateRating(tmdb_id, starValue - 1); }}
+                          onMouseEnter={() => setHoverRating(halfValue)}
+                          onClick={(e) => { e.preventDefault(); updateRating(numericTmdbId, halfValue); }}
                         />
                         {/* Right half click area */}
                         <div 
                           className="absolute right-0 top-0 w-1/2 h-full z-10" 
-                          onMouseEnter={() => setHoverRating(starValue)}
-                          onClick={(e) => { e.preventDefault(); updateRating(tmdb_id, starValue); }}
+                          onMouseEnter={() => setHoverRating(fullValue)}
+                          onClick={(e) => { e.preventDefault(); updateRating(numericTmdbId, fullValue); }}
                         />
                       </div>
                     );
@@ -137,7 +144,7 @@ export function AddToListButton({ tmdb_id, media_type, className }: AddToListBut
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
-            onClick={() => removeFromList(tmdb_id)}
+            onClick={() => removeFromList(numericTmdbId)}
           >
             Remover da lista
           </DropdownMenuItem>

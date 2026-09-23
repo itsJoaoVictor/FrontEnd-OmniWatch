@@ -9,6 +9,7 @@ import { AddToListButton } from "@/components/shared/AddToListButton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UserRatingBadge } from "@/components/shared/UserRatingBadge";
 import { useMyListStore } from "@/store/useMyListStore";
+import { PosterImage } from "@/components/shared/PosterImage";
 
 export interface MediaItem {
   id: string;
@@ -37,19 +38,20 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
   if (layout === "tracking") {
     return (
       <Link href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`} className="group relative flex gap-4 bg-card hover:bg-accent border border-border hover:border-primary/50 rounded-xl p-3 transition-all duration-300 cursor-pointer block">
-        <div className="relative w-32 md:w-40 aspect-video rounded-lg overflow-hidden shrink-0 shadow-md">
-          {item.coverHorizontal && (
-            <Image
-              src={item.coverHorizontal}
-              alt={item.title}
-              fill
-              priority={priority}
-              loading={priority ? "eager" : "lazy"}
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-          )}
+        <div className="relative w-32 md:w-40 aspect-video rounded-lg overflow-hidden shrink-0 shadow-md bg-muted">
+          <PosterImage
+            src={item.coverHorizontal || item.coverVertical}
+            fallbackSrc={item.coverVertical}
+            alt={item.title}
+            title={item.title}
+            type={item.type}
+            fill
+            priority={priority}
+            sizes="(max-width: 768px) 160px, 200px"
+            className="transition-transform duration-500 group-hover:scale-110"
+          />
           {/* Overlay escuro leve na imagem */}
-          <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+          <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors pointer-events-none" />
         </div>
         
         <div className="flex-1 flex flex-col justify-center py-1 overflow-hidden">
@@ -95,7 +97,11 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
                   await updateStatus(tmdbId, 'watching');
                 } else {
                   if (!savedItem) {
-                    await addToList(tmdbId, item.type as 'movie' | 'tv');
+                    await addToList(tmdbId, item.type as 'movie' | 'tv', {
+                      title: item.title,
+                      poster_path: item.coverVertical,
+                      backdrop_path: item.coverHorizontal,
+                    });
                   }
                   await updateStatus(tmdbId, 'completed');
                 }
@@ -120,17 +126,17 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
   return (
     <Link href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`} className="relative group cursor-pointer w-full transition-all duration-300 hover:-translate-y-2 block">
       <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden bg-muted shadow-lg border border-border group-hover:border-primary/50 transition-colors">
-        {item.coverVertical && (
-          <Image
-            src={item.coverVertical}
-            alt={item.title}
-            fill
-            priority={priority}
-            loading={priority ? "eager" : "lazy"}
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        )}
+        <PosterImage
+          src={item.coverVertical}
+          fallbackSrc={item.coverHorizontal}
+          alt={item.title}
+          title={item.title}
+          type={item.type}
+          fill
+          priority={priority}
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+          className="transition-transform duration-500 group-hover:scale-105"
+        />
         
         {/* Status Badge e Avaliação */}
         {savedItem && (
@@ -150,9 +156,18 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
         </div>
 
         {/* Botão de adicionar sempre visível no canto superior direito */}
-        <div className="absolute top-2 right-2 z-10">
-          <AddToListButton tmdb_id={parseInt(item.id)} media_type={item.type as 'movie' | 'tv'} className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4" />
-        </div>
+        {!isNaN(tmdbId) && tmdbId > 0 && (
+          <div className="absolute top-2 right-2 z-10">
+            <AddToListButton
+              tmdb_id={tmdbId}
+              media_type={item.type as 'movie' | 'tv'}
+              title={item.title}
+              poster_path={item.coverVertical}
+              backdrop_path={item.coverHorizontal}
+              className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4"
+            />
+          </div>
+        )}
       </div>
     </Link>
   );

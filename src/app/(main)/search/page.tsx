@@ -67,7 +67,7 @@ function SearchContent() {
     id: String(item.id),
     title: item.title,
     type: item.media_type,
-    coverVertical: item.image_path ? `https://image.tmdb.org/t/p/w500${item.image_path}` : undefined,
+    coverVertical: item.image_path ? `https://image.tmdb.org/t/p/w342${item.image_path}` : undefined,
   });
 
   return (

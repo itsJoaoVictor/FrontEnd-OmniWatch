@@ -15,22 +15,28 @@ interface HeroFeatureProps {
 }
 
 export function HeroBanner({ data }: HeroFeatureProps) {
+  const hasImage = Boolean(data.coverHorizontal && data.coverHorizontal.trim() !== "");
+
   return (
-    <div className="relative w-full h-[55vh] md:h-[65vh] flex items-end overflow-hidden">
+    <div className="relative w-full h-[55vh] md:h-[65vh] flex items-end overflow-hidden bg-zinc-950">
       {/* Background Image */}
-      <div className="absolute inset-0 w-full h-full">
-        <Image
-          src={data.coverHorizontal}
-          alt={data.title}
-          fill
-          className="object-cover object-[center_15%]"
-          priority
-        />
-        {/* Gradients to blend with dark mode */}
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent" />
-      </div>
+      {hasImage ? (
+        <div className="absolute inset-0 w-full h-full">
+          <Image
+            src={data.coverHorizontal}
+            alt={data.title}
+            fill
+            className="object-cover object-[center_15%]"
+            priority
+          />
+          {/* Gradients to blend with dark mode */}
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent" />
+        </div>
+      ) : (
+        <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-zinc-950 via-zinc-900 to-zinc-950" />
+      )}
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 lg:px-8 pb-12 md:pb-16 flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
@@ -39,7 +45,7 @@ export function HeroBanner({ data }: HeroFeatureProps) {
             <Star className="w-3 h-3 fill-current" />
             Em Destaque
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-3 max-w-2xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-3 max-w-2xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] tracking-tight">
             {data.title}
           </h1>
           {data.description && (

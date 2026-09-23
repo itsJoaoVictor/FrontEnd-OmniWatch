@@ -4,6 +4,7 @@ import { PlayCircle } from "lucide-react";
 import { EpisodeDetailsResponse } from "@/types/details";
 import Link from "next/link";
 import { EpisodeWatchButton } from "@/components/details/EpisodeWatchButton";
+import { EpisodeRatingControl } from "@/components/details/EpisodeRatingControl";
 import { ProgressFetcher } from "@/components/details/ProgressFetcher";
 
 async function getEpisodeData(id: string, seasonNumber: string, episodeNumber: string): Promise<EpisodeDetailsResponse | null> {
@@ -30,7 +31,7 @@ export default async function EpisodeDetailsPage({ params }: { params: Promise<{
     notFound();
   }
 
-  const stillUrl = "https://image.tmdb.org/t/p/original";
+  const stillUrl = "https://image.tmdb.org/t/p/w1280";
 
   return (
     <main className="w-full min-h-screen bg-background">
@@ -64,15 +65,22 @@ export default async function EpisodeDetailsPage({ params }: { params: Promise<{
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
               {episode.name}
             </h1>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div className="text-xl text-gray-400">
                 Temporada {episode.season_number} • Episódio {episode.episode_number}
               </div>
-              <EpisodeWatchButton 
-                seriesId={parseInt(id)} 
-                seasonNumber={episode.season_number} 
-                episodeNumber={episode.episode_number} 
-              />
+              <div className="flex flex-wrap items-center gap-3">
+                <EpisodeRatingControl 
+                  seriesId={parseInt(id)} 
+                  seasonNumber={episode.season_number} 
+                  episodeNumber={episode.episode_number} 
+                />
+                <EpisodeWatchButton 
+                  seriesId={parseInt(id)} 
+                  seasonNumber={episode.season_number} 
+                  episodeNumber={episode.episode_number} 
+                />
+              </div>
             </div>
             
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300 mb-6">
