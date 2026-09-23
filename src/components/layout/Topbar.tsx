@@ -54,29 +54,27 @@ export function Topbar() {
           {/* Mobile Hamburger Menu */}
           <div className="lg:hidden">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Menu className="h-5 w-5" />
-                </Button>
+              <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-9 w-9" />}>
+                <Menu className="h-5 w-5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard" className="w-full cursor-pointer">Início</Link>
+                <DropdownMenuItem render={<Link href="/dashboard" className="w-full cursor-pointer" />}>
+                  Início
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/explore" className="w-full cursor-pointer">Explorar</Link>
+                <DropdownMenuItem render={<Link href="/explore" className="w-full cursor-pointer" />}>
+                  Explorar
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/my-list" className="w-full cursor-pointer">Minha Lista</Link>
+                <DropdownMenuItem render={<Link href="/my-list" className="w-full cursor-pointer" />}>
+                  Minha Lista
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/calendar" className="w-full cursor-pointer">Calendário</Link>
+                <DropdownMenuItem render={<Link href="/calendar" className="w-full cursor-pointer" />}>
+                  Calendário
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/stats" className="w-full cursor-pointer">Estatísticas</Link>
+                <DropdownMenuItem render={<Link href="/stats" className="w-full cursor-pointer" />}>
+                  Estatísticas
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="w-full cursor-pointer">Perfil</Link>
+                <DropdownMenuItem render={<Link href="/profile" className="w-full cursor-pointer" />}>
+                  Perfil
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500 cursor-pointer">
                   Sair
