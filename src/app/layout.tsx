@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   title: "OmniWatch",
   description: "Seu organizador e recomendador pessoal de filmes e séries.",
   manifest: "/manifest.json",
-  themeColor: "#09090b",
   appleWebApp: {
     capable: true,
     title: "OmniWatch",
@@ -24,8 +23,13 @@ export const metadata: Metadata = {
   }
 };
 
+export const viewport = {
+  themeColor: "#09090b",
+};
+
 import { Toaster } from "@/components/ui/toast";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 export default function RootLayout({
   children,
@@ -51,6 +55,7 @@ export default function RootLayout({
         >
           {children}
           <Toaster />
+          <ServiceWorkerRegister />
         </ThemeProvider>
       </body>
     </html>
