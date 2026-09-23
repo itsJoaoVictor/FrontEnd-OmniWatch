@@ -18,7 +18,8 @@ export default function HomePage() {
     if (Object.keys(items).length === 0) {
       fetchMyList();
     }
-  }, [items, fetchMyList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchMyList]);
 
   useEffect(() => {
     const tvWatching = Object.values(items).filter(i => i && i.status === 'watching' && i.media_type === 'tv' && i.tmdb_id);
