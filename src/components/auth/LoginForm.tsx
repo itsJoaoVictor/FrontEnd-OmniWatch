@@ -50,6 +50,9 @@ export function LoginForm() {
     try {
       await api.post("/api/auth/login", data);
       
+      // Seta um cookie no domínio do frontend para o middleware.ts saber que o usuário está logado
+      document.cookie = "is_logged_in=true; path=/; max-age=604800; samesite=lax";
+
       toast.add({
         title: "Sucesso!",
         description: "Login realizado com sucesso.",

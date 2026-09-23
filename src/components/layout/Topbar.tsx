@@ -28,9 +28,10 @@ export function Topbar() {
   const handleLogout = async () => {
     try {
       await api.post('/api/auth/logout');
-      router.push('/');
     } catch (error) {
       console.error("Erro ao fazer logout", error);
+    } finally {
+      document.cookie = "is_logged_in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       router.push('/');
     }
   };
