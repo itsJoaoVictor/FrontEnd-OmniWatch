@@ -16,12 +16,17 @@ export const metadata: Metadata = {
   title: "OmniWatch",
   description: "Seu organizador e recomendador pessoal de filmes e séries.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon-192x192.png",
+    apple: "/icon-192x192.png",
+  },
   appleWebApp: {
     capable: true,
     title: "OmniWatch",
     statusBarStyle: "black-translucent",
   }
 };
+
 
 export const viewport = {
   themeColor: "#09090b",

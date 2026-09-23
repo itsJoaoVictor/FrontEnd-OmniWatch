@@ -2,11 +2,30 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') || 
-                     request.nextUrl.pathname.startsWith('/register') ||
-                     request.nextUrl.pathname.startsWith('/forgot-password');
+  const { pathname } = request.nextUrl;
+
+  // Allow static assets, images, and PWA configuration files without authentication
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname === '/manifest.json' ||
+    pathname === '/sw.js' ||
+    pathname.startsWith('/icon-') ||
+    pathname.startsWith('/logo') ||
+    pathname.endsWith('.png') ||
+    pathname.endsWith('.svg') ||
+    pathname.endsWith('.ico') ||
+    pathname.endsWith('.json') ||
+    pathname.endsWith('.js')
+  ) {
+    return NextResponse.next();
+  }
+
+  const isAuthPage = pathname.startsWith('/login') || 
+                     pathname.startsWith('/register') ||
+                     pathname.startsWith('/forgot-password');
                      
-  const isHomePage = request.nextUrl.pathname === '/';
+  const isHomePage = pathname === '/';
   
   const isLoggedIn = request.cookies.has('is_logged_in');
 
@@ -26,12 +45,13 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, sitemap.xml, robots.txt, logo.* (metadata files)
+     * Match all request paths except for:
+     * - api routes
+     * - _next/static & _next/image
+     * - metadata & PWA files (manifest.json, sw.js, favicon.ico, etc.)
+     * - static file extensions
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|logo.*|sitemap.xml|robots.txt).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|manifest.json|sw.js|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json|js)$).*)',
   ],
 };
+
