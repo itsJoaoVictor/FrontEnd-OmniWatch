@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, PlayCircle, CheckCircle2, Circle, Star } from "lucide-react";
+import { ChevronDown, ChevronUp, PlayCircle, CheckCircle2, Circle, Star, Clock } from "lucide-react";
 import { SeasonItem, EpisodeItem, SeasonDetailsResponse } from "@/types/details";
 import { api } from "@/lib/axios";
 import { useMyListStore } from "@/store/useMyListStore";
@@ -162,29 +162,39 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
                       </div>
                     </Link>
                     <div className="flex items-center justify-center pr-4">
-                      <button 
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          await toggleEpisode(seriesId, season.season_number, episode.episode_number, !isWatched);
-                          if (!isWatched && (season.season_number > 1 || episode.episode_number > 1)) {
-                            const progress = useMyListStore.getState().episodeProgress[seriesId];
-                            if (hasMissingPreviousEpisodes(progress, season.season_number, episode.episode_number)) {
-                              if (window.confirm(`Você marcou o episódio ${episode.episode_number}. Deseja marcar todos os anteriores da série como assistidos?`)) {
-                                useMyListStore.getState().bulkMarkEpisodes(seriesId, season.season_number, episode.episode_number);
+                      {(!episode.air_date || new Date(episode.air_date) > new Date()) && !isWatched ? (
+                        <div 
+                          className="flex items-center gap-1.5 text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full whitespace-nowrap select-none"
+                          title={`Estreia em ${episode.air_date ? new Date(episode.air_date).toLocaleDateString('pt-BR') : 'Data a definir'}`}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Não lançado</span>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            await toggleEpisode(seriesId, season.season_number, episode.episode_number, !isWatched);
+                            if (!isWatched && (season.season_number > 1 || episode.episode_number > 1)) {
+                              const progress = useMyListStore.getState().episodeProgress[seriesId];
+                              if (hasMissingPreviousEpisodes(progress, season.season_number, episode.episode_number)) {
+                                if (window.confirm(`Você marcou o episódio ${episode.episode_number}. Deseja marcar todos os anteriores da série como assistidos?`)) {
+                                  useMyListStore.getState().bulkMarkEpisodes(seriesId, season.season_number, episode.episode_number);
+                                }
                               }
                             }
-                          }
-                        }}
-                        className="p-2 rounded-full hover:bg-muted/50 transition-colors"
-                        title={isWatched ? "Desmarcar como assistido" : "Marcar como assistido"}
-                      >
-                        {isWatched ? (
-                          <CheckCircle2 className="text-primary w-6 h-6" />
-                        ) : (
-                          <Circle className="text-muted-foreground w-6 h-6" />
-                        )}
-                      </button>
+                          }}
+                          className="p-2 rounded-full hover:bg-muted/50 transition-colors"
+                          title={isWatched ? "Desmarcar como assistido" : "Marcar como assistido"}
+                        >
+                          {isWatched ? (
+                            <CheckCircle2 className="text-primary w-6 h-6" />
+                          ) : (
+                            <Circle className="text-muted-foreground w-6 h-6" />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { toast } from '@/components/ui/toast';
 
 interface AddToListButtonProps {
   tmdb_id: number;
@@ -20,6 +21,7 @@ interface AddToListButtonProps {
   title?: string | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
+  release_date?: string | null;
 }
 
 const statusLabels: Record<ListStatus, string> = {
@@ -29,7 +31,7 @@ const statusLabels: Record<ListStatus, string> = {
   dropped: 'Abandonei',
 };
 
-export function AddToListButton({ tmdb_id, media_type, className, title, poster_path, backdrop_path }: AddToListButtonProps) {
+export function AddToListButton({ tmdb_id, media_type, className, title, poster_path, backdrop_path, release_date }: AddToListButtonProps) {
   const { items, addToList, updateStatus, updateRating, removeFromList } = useMyListStore();
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
@@ -75,18 +77,54 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
             Alterar Status
           </div>
           <DropdownMenuSeparator />
-          {(Object.keys(statusLabels) as ListStatus[]).map((status) => (
-            <DropdownMenuItem
-              key={status}
-              className={cn(
-                'cursor-pointer',
-                savedItem.status === status && 'bg-accent text-accent-foreground font-medium'
-              )}
-              onClick={() => updateStatus(numericTmdbId, status)}
-            >
-              {statusLabels[status]}
-            </DropdownMenuItem>
-          ))}
+          {(() => {
+            const effectiveReleaseDate = (release_date !== undefined && release_date !== null)
+              ? release_date
+              : savedItem?.release_date;
+
+            const isMovieReleased = media_type === 'movie' 
+              ? Boolean(
+                  effectiveReleaseDate && 
+                  typeof effectiveReleaseDate === 'string' && 
+                  effectiveReleaseDate.trim() !== '' && 
+                  new Date(effectiveReleaseDate.trim()) <= new Date()
+                )
+              : true;
+
+            return (Object.keys(statusLabels) as ListStatus[]).map((status) => {
+              const isCompletedDisabled = media_type === 'movie' && !isMovieReleased && status === 'completed';
+              return (
+                <DropdownMenuItem
+                  key={status}
+                  disabled={isCompletedDisabled}
+                  className={cn(
+                    'cursor-pointer',
+                    savedItem.status === status && 'bg-accent text-accent-foreground font-medium',
+                    isCompletedDisabled && 'opacity-50 cursor-not-allowed select-none text-muted-foreground'
+                  )}
+                  onClick={(e) => {
+                    if (isCompletedDisabled) {
+                      e.preventDefault();
+                      toast.add({
+                        title: "Ação não permitida",
+                        description: "Filmes que ainda não estrearam não podem ser marcados como assistidos.",
+                        type: "error"
+                      });
+                      return;
+                    }
+                    updateStatus(numericTmdbId, status);
+                  }}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span>{statusLabels[status]}</span>
+                    {isCompletedDisabled && (
+                      <span className="text-[10px] text-amber-400 font-medium ml-2 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">Não lançado</span>
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              );
+            });
+          })()}
           <DropdownMenuSeparator />
 
           {savedItem.status !== 'plan_to_watch' && (

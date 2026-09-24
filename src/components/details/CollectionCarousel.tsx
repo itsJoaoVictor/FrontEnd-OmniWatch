@@ -179,6 +179,7 @@ export function CollectionCarousel({ collection }: CollectionCarouselProps) {
                           title={item.title}
                           poster_path={item.poster_path ?? undefined}
                           backdrop_path={item.backdrop_path ?? undefined}
+                          release_date={item.release_date}
                           className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4"
                         />
                       </div>

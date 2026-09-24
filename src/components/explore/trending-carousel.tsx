@@ -76,6 +76,7 @@ export function TrendingCarousel({ items }: TrendingCarouselProps) {
                         title={displayTitle}
                         poster_path={item.poster_path}
                         backdrop_path={item.backdrop_path}
+                        release_date={item.release_date || item.first_air_date}
                         className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4"
                       />
                     </div>

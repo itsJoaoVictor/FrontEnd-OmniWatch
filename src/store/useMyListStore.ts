@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '@/lib/axios';
+import { toast } from '@/components/ui/toast';
 
 export type ListStatus = 'plan_to_watch' | 'watching' | 'completed' | 'dropped';
 
@@ -13,6 +14,7 @@ export interface SavedItem {
   backdrop_path?: string;
   rating?: number;
   last_watched_at?: string;
+  release_date?: string | null;
 }
 
 export interface EpisodeProgress {
@@ -28,7 +30,7 @@ interface MyListStore {
   fetchMyList: () => Promise<void>;
   fetchProgress: (tmdb_id: number) => Promise<void>;
   toggleEpisode: (tmdb_id: number, season: number, episode: number, isWatched: boolean) => Promise<void>;
-  addToList: (tmdb_id: number, media_type: 'movie' | 'tv', extra?: { title?: string | null; poster_path?: string | null; backdrop_path?: string | null }) => Promise<void>;
+  addToList: (tmdb_id: number, media_type: 'movie' | 'tv', extra?: { title?: string | null; poster_path?: string | null; backdrop_path?: string | null; release_date?: string | null }) => Promise<void>;
   updateStatus: (tmdb_id: number, newStatus: ListStatus) => Promise<void>;
   updateRating: (tmdb_id: number, rating: number) => Promise<void>;
   updateEpisodeRating: (tmdb_id: number, season: number, episode: number, rating: number) => Promise<void>;
@@ -61,6 +63,7 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
             poster_path: item.media?.poster_path || item.poster_path,
             backdrop_path: item.media?.backdrop_path || item.backdrop_path,
             last_watched_at: item.last_watched_at,
+            release_date: item.media?.release_date ?? item.release_date ?? null,
           };
         }
       });
@@ -199,6 +202,7 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
             title: res.data.media?.title || state.items[numericTmdbId]?.title || extra?.title || undefined,
             poster_path: res.data.media?.poster_path || state.items[numericTmdbId]?.poster_path || extra?.poster_path || undefined,
             backdrop_path: res.data.media?.backdrop_path || state.items[numericTmdbId]?.backdrop_path || extra?.backdrop_path || undefined,
+            release_date: res.data.media?.release_date ?? extra?.release_date ?? null,
           }
         }
       }));
@@ -238,11 +242,18 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     }));
 
     try {
-      await api.patch(`/api/my-list/${item.id}`, { status: newStatus });
-      if (newStatus === 'completed' && item.media_type === 'tv') {
+      const res = await api.patch(`/api/my-list/${item.id}`, { status: newStatus });
+      const finalStatus = res.data?.status || newStatus;
+      set((state) => ({
+        items: {
+          ...state.items,
+          [tmdb_id]: { ...item, status: finalStatus }
+        }
+      }));
+      if (item.media_type === 'tv' && (newStatus === 'completed' || finalStatus === 'watching')) {
         await get().fetchProgress(tmdb_id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update status', error);
       // Revert
       set((state) => ({
@@ -251,6 +262,14 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
           [tmdb_id]: { ...item, status: oldStatus }
         }
       }));
+      const errorDetail = error?.response?.data?.detail;
+      if (errorDetail) {
+        toast.add({
+          title: "Ação não permitida",
+          description: errorDetail,
+          type: "error"
+        });
+      }
     }
   },
 

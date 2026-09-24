@@ -188,10 +188,15 @@ export default function HomePage() {
     const mapToMediaItem = (i: any): MediaItem => {
       let currentEpisode = null;
       let nextEpisodeToWatch = undefined;
+      const isUpToDate = upToDateShows.has(i.tmdb_id);
+
       if (i.media_type === 'tv' && i.status === 'watching') {
         const prog = episodeProgress[i.tmdb_id];
         if (prog && prog.length > 0) {
-          if (correctedNextEpisodes[i.tmdb_id]) {
+          if (isUpToDate) {
+            currentEpisode = `Você está em dia!`;
+            nextEpisodeToWatch = undefined;
+          } else if (correctedNextEpisodes[i.tmdb_id]) {
             const { season, episode } = correctedNextEpisodes[i.tmdb_id];
             currentEpisode = `S${season} E${episode}`;
             nextEpisodeToWatch = { season, episode };
@@ -223,6 +228,8 @@ export default function HomePage() {
         coverHorizontal: i.backdrop_path ? `https://image.tmdb.org/t/p/w1280${i.backdrop_path}` : (i.poster_path ? `https://image.tmdb.org/t/p/w1280${i.poster_path}` : ''),
         currentEpisode: currentEpisode,
         nextEpisodeToWatch: nextEpisodeToWatch,
+        isUpToDate: isUpToDate,
+        release_date: i.release_date ?? null,
       };
     };
 

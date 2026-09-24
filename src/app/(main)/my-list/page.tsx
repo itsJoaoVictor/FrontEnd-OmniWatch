@@ -200,6 +200,7 @@ export default function MyListPage() {
                         type: item.media_type || 'movie',
                         coverVertical: item.poster_path || '',
                         coverHorizontal: item.backdrop_path || '',
+                        release_date: item.release_date,
                       }}
                       layout="poster"
                       priority={index < 12}

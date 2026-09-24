@@ -20,6 +20,8 @@ export interface MediaItem {
   progress?: number;
   currentEpisode?: string | null;
   nextEpisodeToWatch?: { season: number; episode: number };
+  isUpToDate?: boolean;
+  release_date?: string | null;
 }
 
 interface MediaCardProps {
@@ -76,47 +78,63 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
         </div>
 
         <div className="flex items-center justify-center pr-2">
-          <button
-            onClick={async (e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              if (isNaN(tmdbId)) return; // Se for dado mockado
-              
-              if (item.type === 'tv' && item.nextEpisodeToWatch) {
-                await toggleEpisode(tmdbId, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode, true);
-                if (item.nextEpisodeToWatch.season > 1 || item.nextEpisodeToWatch.episode > 1) {
-                  const progress = useMyListStore.getState().episodeProgress[tmdbId];
-                  if (hasMissingPreviousEpisodes(progress, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode)) {
-                    if (window.confirm(`Você marcou o episódio ${item.nextEpisodeToWatch.episode}. Deseja marcar todos os anteriores da série como assistidos?`)) {
-                      useMyListStore.getState().bulkMarkEpisodes(tmdbId, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode);
+          {item.type === 'tv' && item.isUpToDate ? (
+            <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full whitespace-nowrap shadow-sm select-none" title="Você assistiu a todos os episódios disponíveis até o momento">
+              Em dia
+            </span>
+          ) : item.type === 'movie' && !Boolean(
+            (item.release_date || savedItem?.release_date) && 
+            typeof (item.release_date || savedItem?.release_date) === 'string' && 
+            (item.release_date || savedItem?.release_date)!.trim() !== '' && 
+            new Date((item.release_date || savedItem?.release_date)!.trim()) <= new Date()
+          ) ? (
+            <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full whitespace-nowrap shadow-sm select-none" title="Filme ainda não lançado">
+              Não lançado
+            </span>
+          ) : (
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (isNaN(tmdbId)) return; // Se for dado mockado
+                
+                if (item.type === 'tv' && item.nextEpisodeToWatch) {
+                  await toggleEpisode(tmdbId, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode, true);
+                  if (item.nextEpisodeToWatch.season > 1 || item.nextEpisodeToWatch.episode > 1) {
+                    const progress = useMyListStore.getState().episodeProgress[tmdbId];
+                    if (hasMissingPreviousEpisodes(progress, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode)) {
+                      if (window.confirm(`Você marcou o episódio ${item.nextEpisodeToWatch.episode}. Deseja marcar todos os anteriores da série como assistidos?`)) {
+                        useMyListStore.getState().bulkMarkEpisodes(tmdbId, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode);
+                      }
                     }
                   }
-                }
-              } else {
-                if (isWatched) {
-                  await updateStatus(tmdbId, 'watching');
                 } else {
-                  if (!savedItem) {
-                    await addToList(tmdbId, item.type as 'movie' | 'tv', {
-                      title: item.title,
-                      poster_path: item.coverVertical,
-                      backdrop_path: item.coverHorizontal,
-                    });
+                  if (isWatched) {
+                    await updateStatus(tmdbId, 'watching');
+                  } else {
+                    if (!savedItem) {
+                      await addToList(tmdbId, item.type as 'movie' | 'tv', {
+                        title: item.title,
+                        poster_path: item.coverVertical,
+                        backdrop_path: item.coverHorizontal,
+                        release_date: item.release_date || undefined,
+                      });
+                    }
+                    await updateStatus(tmdbId, 'completed');
                   }
-                  await updateStatus(tmdbId, 'completed');
                 }
-              }
-            }}
-            className={cn(
-              "w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 border-2",
-              isWatched 
-                ? "bg-primary border-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
-                : "bg-transparent border-muted-foreground/50 text-muted-foreground hover:border-primary hover:text-primary"
-            )}
-            title="Marcar como visto"
-          >
-            <Check className={cn("w-5 h-5", isWatched && "stroke-[3px]")} />
-          </button>
+              }}
+              className={cn(
+                "w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 border-2",
+                isWatched 
+                  ? "bg-primary border-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
+                  : "bg-transparent border-muted-foreground/50 text-muted-foreground hover:border-primary hover:text-primary"
+              )}
+              title="Marcar como visto"
+            >
+              <Check className={cn("w-5 h-5", isWatched && "stroke-[3px]")} />
+            </button>
+          )}
         </div>
       </Link>
     );
@@ -164,6 +182,7 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
               title={item.title}
               poster_path={item.coverVertical}
               backdrop_path={item.coverHorizontal}
+              release_date={item.release_date || savedItem?.release_date}
               className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4"
             />
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMyListStore } from "@/store/useMyListStore";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, Clock } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 import { hasMissingPreviousEpisodes } from "@/lib/utils";
 
@@ -9,15 +9,31 @@ interface EpisodeWatchButtonProps {
   seriesId: number;
   seasonNumber: number;
   episodeNumber: number;
+  airDate?: string | null;
 }
 
-export function EpisodeWatchButton({ seriesId, seasonNumber, episodeNumber }: EpisodeWatchButtonProps) {
+export function EpisodeWatchButton({ seriesId, seasonNumber, episodeNumber, airDate }: EpisodeWatchButtonProps) {
   const episodeProgress = useMyListStore(state => state.episodeProgress[seriesId]);
   const toggleEpisode = useMyListStore(state => state.toggleEpisode);
 
   const isWatched = (episodeProgress || []).some(
     p => p.season_number === seasonNumber && p.episode_number === episodeNumber
   );
+
+  const isReleased = airDate ? new Date(airDate) <= new Date() : true;
+
+  if (!isReleased && !isWatched) {
+    const formattedDate = airDate ? new Date(airDate).toLocaleDateString('pt-BR') : 'Indefinida';
+    return (
+      <div 
+        className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-amber-400/90 bg-amber-500/10 border border-amber-500/20 cursor-not-allowed select-none"
+        title={`Este episódio estreia em ${formattedDate}`}
+      >
+        <Clock size={18} />
+        <span>Estreia em {formattedDate}</span>
+      </div>
+    );
+  }
 
   return (
     <button

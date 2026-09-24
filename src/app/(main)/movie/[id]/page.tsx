@@ -77,6 +77,7 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
         crew={movie.credits.crew}
         metaInfo={metaInfo}
         watchProviders={movie.watch_providers}
+        releaseDate={movie.release_date}
       />
 
       <div className="container mx-auto px-4 pb-12 mt-8">

@@ -79,6 +79,7 @@ export default async function EpisodeDetailsPage({ params }: { params: Promise<{
                   seriesId={parseInt(id)} 
                   seasonNumber={episode.season_number} 
                   episodeNumber={episode.episode_number} 
+                  airDate={episode.air_date}
                 />
               </div>
             </div>

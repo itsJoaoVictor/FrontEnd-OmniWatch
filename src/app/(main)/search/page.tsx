@@ -68,6 +68,7 @@ function SearchContent() {
     title: item.title,
     type: item.media_type,
     coverVertical: item.image_path ? `https://image.tmdb.org/t/p/w342${item.image_path}` : undefined,
+    release_date: item.date,
   });
 
   return (

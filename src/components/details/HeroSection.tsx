@@ -20,6 +20,7 @@ interface HeroSectionProps {
   crew: CrewItem[];
   metaInfo: string[]; // ex: ['2023', '120 min', '12 Seasons']
   watchProviders?: WatchProviderItem[];
+  releaseDate?: string | null;
 }
 
 export function HeroSection({
@@ -34,7 +35,8 @@ export function HeroSection({
   genres,
   crew,
   metaInfo,
-  watchProviders
+  watchProviders,
+  releaseDate
 }: HeroSectionProps) {
   const imageUrl = "https://image.tmdb.org/t/p/w1280";
 
@@ -99,6 +101,7 @@ export function HeroSection({
                   title={title}
                   poster_path={posterPath ?? undefined}
                   backdrop_path={backdropPath ?? undefined}
+                  release_date={releaseDate}
                   className="w-12 h-12 [&>svg]:w-6 [&>svg]:h-6"
                 />
               </div>
