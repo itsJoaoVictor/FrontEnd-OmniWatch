@@ -13,6 +13,7 @@ const statusLabels: Record<ListStatus, string> = {
   watching: "Assistindo",
   completed: "Assistido",
   dropped: "Abandonei",
+  upcoming: "Aguardando Estreia",
 };
 
 export function StatusBadge({ tmdb_id, className }: StatusBadgeProps) {
@@ -28,6 +29,7 @@ export function StatusBadge({ tmdb_id, className }: StatusBadgeProps) {
       savedItem.status === "watching" && "text-amber-400",
       savedItem.status === "completed" && "text-green-400",
       savedItem.status === "dropped" && "text-red-400",
+      savedItem.status === "upcoming" && "text-purple-400 border-purple-500/30",
       className
     )}>
       {statusLabels[savedItem.status]}

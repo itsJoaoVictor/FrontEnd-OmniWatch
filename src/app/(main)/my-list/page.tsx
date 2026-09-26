@@ -144,6 +144,13 @@ export default function MyListPage() {
               Quero Ver
             </Button>
             <Button
+              variant={statusFilter === 'upcoming' ? 'default' : 'outline'}
+              className="rounded-full cursor-pointer"
+              onClick={() => setStatusFilter('upcoming')}
+            >
+              Aguardando Estreia
+            </Button>
+            <Button
               variant={statusFilter === 'watching' ? 'default' : 'outline'}
               className="rounded-full cursor-pointer"
               onClick={() => setStatusFilter('watching')}

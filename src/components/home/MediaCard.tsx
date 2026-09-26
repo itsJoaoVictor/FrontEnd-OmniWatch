@@ -82,14 +82,14 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
             <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full whitespace-nowrap shadow-sm select-none" title="Você assistiu a todos os episódios disponíveis até o momento">
               Em dia
             </span>
-          ) : item.type === 'movie' && !Boolean(
+          ) : (item.type === 'movie' && !Boolean(
             (item.release_date || savedItem?.release_date) && 
             typeof (item.release_date || savedItem?.release_date) === 'string' && 
             (item.release_date || savedItem?.release_date)!.trim() !== '' && 
             new Date((item.release_date || savedItem?.release_date)!.trim()) <= new Date()
-          ) ? (
-            <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full whitespace-nowrap shadow-sm select-none" title="Filme ainda não lançado">
-              Não lançado
+          )) || savedItem?.status === 'upcoming' ? (
+            <span className="text-xs font-semibold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full whitespace-nowrap shadow-sm select-none" title="Aguardando data de estreia">
+              Aguardando Estreia
             </span>
           ) : (
             <button

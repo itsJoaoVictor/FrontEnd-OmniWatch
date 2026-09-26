@@ -157,7 +157,7 @@ export default function HomePage() {
   }, [items]);
 
   // Derived state from store
-  const { heroFeature, continueWatching, moviesInQueue, tvInQueue } = useMemo(() => {
+    const { heroFeature, continueWatching, moviesInQueue, tvInQueue, upcomingMedia } = useMemo(() => {
     const itemsArray = Object.values(items).filter(i => i && (i.tmdb_id || i.id));
     
     let watchingItems = itemsArray.filter(i => i.status === 'watching');
@@ -181,8 +181,8 @@ export default function HomePage() {
       hero = watchingItems[0];
       heroReason = 'continue_watching';
     } else {
-      hero = itemsArray.find(i => i.status === 'plan_to_watch') || itemsArray[0];
-      heroReason = 'suggestion';
+      hero = itemsArray.find(i => i.status === 'plan_to_watch') || itemsArray.find(i => i.status === 'upcoming') || itemsArray[0];
+      heroReason = hero?.status === 'upcoming' ? 'upcoming' : 'suggestion';
     }
 
     const mapToMediaItem = (i: any): MediaItem => {
@@ -240,6 +240,8 @@ export default function HomePage() {
       description = 'Episódio fresquinho! Acabou de sair nas últimas 48 horas.';
     } else if (heroReason === 'trending_plan_to_watch') {
       description = 'Em alta no momento! Chegou a hora de tirar esse título da sua lista de "Quero Ver".';
+    } else if (heroReason === 'upcoming') {
+      description = 'No seu radar! Aguardando a data de estreia nos cinemas e streaming.';
     } else if (heroReason === 'suggestion') {
       description = 'Na sua lista de desejos. Pronto para começar?';
     }
@@ -259,6 +261,7 @@ export default function HomePage() {
       continueWatching: watchingItems.filter(i => !upToDateShows.has(i.tmdb_id)).map(mapToMediaItem),
       moviesInQueue: itemsArray.filter(i => i.status === 'plan_to_watch' && i.media_type === 'movie').map(mapToMediaItem),
       tvInQueue: itemsArray.filter(i => i.status === 'plan_to_watch' && i.media_type === 'tv').map(mapToMediaItem),
+      upcomingMedia: itemsArray.filter(i => i.status === 'upcoming').map(mapToMediaItem),
     };
   }, [items, episodeProgress, priorityHeroId, trendingPlanToWatchId, correctedNextEpisodes, upToDateShows]);
 
@@ -309,6 +312,14 @@ export default function HomePage() {
           <ContentCarousel 
             title="Séries na Fila" 
             items={tvInQueue} 
+            layout="poster"
+          />
+        )}
+
+        {upcomingMedia.length > 0 && (
+          <ContentCarousel 
+            title="Aguardando Estreia" 
+            items={upcomingMedia} 
             layout="poster"
           />
         )}

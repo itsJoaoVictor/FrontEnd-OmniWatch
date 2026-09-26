@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { api } from '@/lib/axios';
 import { toast } from '@/components/ui/toast';
 
-export type ListStatus = 'plan_to_watch' | 'watching' | 'completed' | 'dropped';
+export type ListStatus = 'plan_to_watch' | 'watching' | 'completed' | 'dropped' | 'upcoming';
 
 export interface SavedItem {
   id: string; // internal DB id
@@ -163,6 +163,16 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
       return;
     }
 
+    const effectiveReleaseDate = extra?.release_date;
+    const isReleased = effectiveReleaseDate 
+      ? Boolean(
+          typeof effectiveReleaseDate === 'string' &&
+          effectiveReleaseDate.trim() !== '' &&
+          new Date(effectiveReleaseDate.trim()) <= new Date()
+        )
+      : true;
+    const targetStatus: ListStatus = (effectiveReleaseDate && !isReleased) ? 'upcoming' : 'plan_to_watch';
+
     const tempId = `temp-${Date.now()}`;
     // Optimistic update
     set((state) => ({
@@ -171,11 +181,12 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
         [numericTmdbId]: {
           id: tempId,
           tmdb_id: numericTmdbId,
-          status: 'plan_to_watch',
+          status: targetStatus,
           media_type,
           title: extra?.title || undefined,
           poster_path: extra?.poster_path || undefined,
           backdrop_path: extra?.backdrop_path || undefined,
+          release_date: extra?.release_date || null,
         }
       }
     }));
@@ -184,10 +195,11 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
       const res = await api.post('/api/my-list', {
         tmdb_id: numericTmdbId,
         media_type,
-        status: 'plan_to_watch',
+        status: targetStatus,
         title: extra?.title || undefined,
         poster_path: extra?.poster_path || undefined,
         backdrop_path: extra?.backdrop_path || undefined,
+        release_date: extra?.release_date || undefined,
       });
       // Update with the real internal ID and media from DB
       set((state) => ({
@@ -197,7 +209,7 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
             ...state.items[numericTmdbId],
             id: res.data.id,
             tmdb_id: res.data.media?.tmdb_id || numericTmdbId,
-            status: res.data.status || state.items[numericTmdbId]?.status || 'plan_to_watch',
+            status: res.data.status || targetStatus,
             media_type: res.data.media?.media_type || state.items[numericTmdbId]?.media_type || media_type,
             title: res.data.media?.title || state.items[numericTmdbId]?.title || extra?.title || undefined,
             poster_path: res.data.media?.poster_path || state.items[numericTmdbId]?.poster_path || extra?.poster_path || undefined,
@@ -206,6 +218,14 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
           }
         }
       }));
+
+      if (res.data.status === 'upcoming') {
+        toast.add({
+          title: "Adicionado a 'Aguardando Estreia'",
+          description: "Avisaremos você assim que o título for lançado!",
+          type: "success"
+        });
+      }
     } catch (error) {
       console.error('Failed to add to list', error);
       // Revert optimistic update

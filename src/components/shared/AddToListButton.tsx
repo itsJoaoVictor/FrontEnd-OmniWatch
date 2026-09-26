@@ -25,6 +25,7 @@ interface AddToListButtonProps {
 }
 
 const statusLabels: Record<ListStatus, string> = {
+  upcoming: 'Aguardando Estreia',
   plan_to_watch: 'Quero Ver',
   watching: 'Assistindo',
   completed: 'Assistido',
@@ -44,7 +45,7 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
     e.preventDefault();
     e.stopPropagation();
     if (!isValidId) return;
-    addToList(numericTmdbId, media_type, { title, poster_path, backdrop_path });
+    addToList(numericTmdbId, media_type, { title, poster_path, backdrop_path, release_date });
   };
 
   if (!isInList) {
@@ -72,7 +73,7 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
           >
             <MoreHorizontal className="h-5 w-5" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-52">
           <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
             Alterar Status
           </div>
@@ -91,23 +92,30 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
                 )
               : true;
 
-            return (Object.keys(statusLabels) as ListStatus[]).map((status) => {
+            const availableStatuses: ListStatus[] = isMovieReleased 
+              ? ['plan_to_watch', 'watching', 'completed', 'dropped']
+              : ['upcoming', 'plan_to_watch', 'watching', 'completed', 'dropped'];
+
+            return availableStatuses.map((status) => {
               const isCompletedDisabled = media_type === 'movie' && !isMovieReleased && status === 'completed';
+              const isWatchingDisabled = media_type === 'movie' && !isMovieReleased && status === 'watching';
+              const isDisabled = isCompletedDisabled || isWatchingDisabled;
+
               return (
                 <DropdownMenuItem
                   key={status}
-                  disabled={isCompletedDisabled}
+                  disabled={isDisabled}
                   className={cn(
                     'cursor-pointer',
                     savedItem.status === status && 'bg-accent text-accent-foreground font-medium',
-                    isCompletedDisabled && 'opacity-50 cursor-not-allowed select-none text-muted-foreground'
+                    isDisabled && 'opacity-50 cursor-not-allowed select-none text-muted-foreground'
                   )}
                   onClick={(e) => {
-                    if (isCompletedDisabled) {
+                    if (isDisabled) {
                       e.preventDefault();
                       toast.add({
                         title: "Ação não permitida",
-                        description: "Filmes que ainda não estrearam não podem ser marcados como assistidos.",
+                        description: "Títulos que ainda não estrearam não podem ser marcados como assistidos ou em andamento.",
                         type: "error"
                       });
                       return;
@@ -117,7 +125,7 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
                 >
                   <div className="flex items-center justify-between w-full">
                     <span>{statusLabels[status]}</span>
-                    {isCompletedDisabled && (
+                    {isDisabled && (
                       <span className="text-[10px] text-amber-400 font-medium ml-2 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">Não lançado</span>
                     )}
                   </div>
@@ -127,7 +135,7 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
           })()}
           <DropdownMenuSeparator />
 
-          {savedItem.status !== 'plan_to_watch' && (
+          {!['plan_to_watch', 'upcoming'].includes(savedItem.status) && (
             <>
               <div className="px-2 py-2 flex flex-col gap-1.5">
                 <span className="text-xs font-semibold text-muted-foreground flex justify-between">
