@@ -164,14 +164,13 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     }
 
     const effectiveReleaseDate = extra?.release_date;
-    const isReleased = effectiveReleaseDate 
-      ? Boolean(
-          typeof effectiveReleaseDate === 'string' &&
-          effectiveReleaseDate.trim() !== '' &&
-          new Date(effectiveReleaseDate.trim()) <= new Date()
-        )
-      : true;
-    const targetStatus: ListStatus = (effectiveReleaseDate && !isReleased) ? 'upcoming' : 'plan_to_watch';
+    const isReleased = Boolean(
+      effectiveReleaseDate && 
+      typeof effectiveReleaseDate === 'string' && 
+      effectiveReleaseDate.trim() !== '' && 
+      new Date(effectiveReleaseDate.trim()) <= new Date()
+    );
+    const targetStatus: ListStatus = isReleased ? 'plan_to_watch' : 'upcoming';
 
     const tempId = `temp-${Date.now()}`;
     // Optimistic update

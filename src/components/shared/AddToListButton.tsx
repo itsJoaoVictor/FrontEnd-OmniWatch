@@ -92,46 +92,48 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
                 )
               : true;
 
-            const availableStatuses: ListStatus[] = isMovieReleased 
-              ? ['plan_to_watch', 'watching', 'completed', 'dropped']
-              : ['upcoming', 'plan_to_watch', 'watching', 'completed', 'dropped'];
+            const isUpcoming = !isMovieReleased || savedItem.status === 'upcoming';
 
-            return availableStatuses.map((status) => {
-              const isCompletedDisabled = media_type === 'movie' && !isMovieReleased && status === 'completed';
-              const isWatchingDisabled = media_type === 'movie' && !isMovieReleased && status === 'watching';
-              const isDisabled = isCompletedDisabled || isWatchingDisabled;
-
+            if (isUpcoming) {
               return (
-                <DropdownMenuItem
-                  key={status}
-                  disabled={isDisabled}
-                  className={cn(
-                    'cursor-pointer',
-                    savedItem.status === status && 'bg-accent text-accent-foreground font-medium',
-                    isDisabled && 'opacity-50 cursor-not-allowed select-none text-muted-foreground'
-                  )}
-                  onClick={(e) => {
-                    if (isDisabled) {
-                      e.preventDefault();
-                      toast.add({
-                        title: "Ação não permitida",
-                        description: "Títulos que ainda não estrearam não podem ser marcados como assistidos ou em andamento.",
-                        type: "error"
-                      });
-                      return;
-                    }
-                    updateStatus(numericTmdbId, status);
-                  }}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span>{statusLabels[status]}</span>
-                    {isDisabled && (
-                      <span className="text-[10px] text-amber-400 font-medium ml-2 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">Não lançado</span>
-                    )}
+                <>
+                  <div className="px-3 py-2 flex flex-col gap-1">
+                    <span className="text-[11px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                      Aguardando Estreia
+                    </span>
+                    <span className="text-[11px] text-muted-foreground leading-snug">
+                      Entrará automaticamente em &ldquo;Quero Ver&rdquo; assim que for lançado.
+                    </span>
                   </div>
-                </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className={cn(
+                      'cursor-pointer',
+                      savedItem.status === 'dropped' && 'bg-accent text-accent-foreground font-medium'
+                    )}
+                    onClick={() => updateStatus(numericTmdbId, 'dropped')}
+                  >
+                    <span>Abandonei</span>
+                  </DropdownMenuItem>
+                </>
               );
-            });
+            }
+
+            // Para títulos lançados: apenas opções normais (sem 'upcoming')
+            const releasedStatuses: ListStatus[] = ['plan_to_watch', 'watching', 'completed', 'dropped'];
+            return releasedStatuses.map((status) => (
+              <DropdownMenuItem
+                key={status}
+                className={cn(
+                  'cursor-pointer',
+                  savedItem.status === status && 'bg-accent text-accent-foreground font-medium'
+                )}
+                onClick={() => updateStatus(numericTmdbId, status)}
+              >
+                <span>{statusLabels[status]}</span>
+              </DropdownMenuItem>
+            ));
           })()}
           <DropdownMenuSeparator />
 
