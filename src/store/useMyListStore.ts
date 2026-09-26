@@ -270,10 +270,15 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     const oldStatus = item.status;
     
     // Optimistic update
+    const shouldClearRating = ['plan_to_watch', 'upcoming'].includes(newStatus);
     set((state) => ({
       items: {
         ...state.items,
-        [tmdb_id]: { ...item, status: newStatus }
+        [tmdb_id]: { 
+          ...item, 
+          status: newStatus,
+          rating: shouldClearRating ? undefined : item.rating,
+        }
       }
     }));
 
@@ -283,10 +288,15 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
         body: { status: newStatus },
       });
       const finalStatus = data?.status || newStatus;
+      const finalShouldClearRating = ['plan_to_watch', 'upcoming'].includes(finalStatus);
       set((state) => ({
         items: {
           ...state.items,
-          [tmdb_id]: { ...item, status: finalStatus }
+          [tmdb_id]: { 
+            ...item, 
+            status: finalStatus,
+            rating: finalShouldClearRating ? undefined : (data?.rating ?? (shouldClearRating ? undefined : item.rating)),
+          }
         }
       }));
       if (item.media_type === 'tv' && (newStatus === 'completed' || finalStatus === 'watching')) {
