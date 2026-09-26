@@ -21,8 +21,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Bloquear acesso à rota de cadastro e redirecionar para login
+  if (pathname.startsWith('/register')) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   const isAuthPage = pathname.startsWith('/login') || 
-                     pathname.startsWith('/register') ||
                      pathname.startsWith('/forgot-password');
                      
   const isHomePage = pathname === '/';

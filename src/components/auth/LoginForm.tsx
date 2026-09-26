@@ -162,13 +162,13 @@ export function LoginForm() {
           </fieldset>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center">
+      <CardFooter className="flex flex-col items-center justify-center space-y-2 text-center pt-2">
         <p className="text-sm text-muted-foreground">
-          Não tem uma conta?{" "}
-          <Link href="/register" className="text-primary hover:underline font-medium transition-colors">
-            Cadastre-se
-          </Link>
+          Não tem uma conta?
         </p>
+        <div className="w-full rounded-md bg-muted/60 border border-border/50 p-3 text-xs text-muted-foreground leading-relaxed">
+          Novos cadastros públicos estão desativados. Caso queira cadastrar ou testar o projeto, por favor, <span className="text-foreground font-medium">entre em contato</span> para solicitar acesso.
+        </div>
       </CardFooter>
     </Card>
   );
