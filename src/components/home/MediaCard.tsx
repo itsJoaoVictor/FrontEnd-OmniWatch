@@ -118,9 +118,11 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
                         poster_path: item.coverVertical,
                         backdrop_path: item.coverHorizontal,
                         release_date: item.release_date || undefined,
+                        status: 'completed',
                       });
+                    } else {
+                      await updateStatus(tmdbId, 'completed');
                     }
-                    await updateStatus(tmdbId, 'completed');
                   }
                 }
               }}

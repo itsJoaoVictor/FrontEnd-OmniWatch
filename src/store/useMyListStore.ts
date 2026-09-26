@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '@/lib/axios';
+import { resilientFetch } from '@/lib/resilient-fetch';
 import { toast } from '@/components/ui/toast';
 
 export type ListStatus = 'plan_to_watch' | 'watching' | 'completed' | 'dropped' | 'upcoming';
@@ -30,7 +31,17 @@ interface MyListStore {
   fetchMyList: () => Promise<void>;
   fetchProgress: (tmdb_id: number) => Promise<void>;
   toggleEpisode: (tmdb_id: number, season: number, episode: number, isWatched: boolean) => Promise<void>;
-  addToList: (tmdb_id: number, media_type: 'movie' | 'tv', extra?: { title?: string | null; poster_path?: string | null; backdrop_path?: string | null; release_date?: string | null }) => Promise<void>;
+  addToList: (
+    tmdb_id: number,
+    media_type: 'movie' | 'tv',
+    extra?: {
+      title?: string | null;
+      poster_path?: string | null;
+      backdrop_path?: string | null;
+      release_date?: string | null;
+      status?: ListStatus;
+    }
+  ) => Promise<void>;
   updateStatus: (tmdb_id: number, newStatus: ListStatus) => Promise<void>;
   updateRating: (tmdb_id: number, rating: number) => Promise<void>;
   updateEpisodeRating: (tmdb_id: number, season: number, episode: number, rating: number) => Promise<void>;
@@ -170,7 +181,10 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
       effectiveReleaseDate.trim() !== '' && 
       new Date(effectiveReleaseDate.trim()) <= new Date()
     );
-    const targetStatus: ListStatus = isReleased ? 'plan_to_watch' : 'upcoming';
+    let targetStatus: ListStatus = extra?.status || (isReleased ? 'plan_to_watch' : 'upcoming');
+    if (!isReleased && (targetStatus === 'completed' || targetStatus === 'watching')) {
+      targetStatus = 'upcoming';
+    }
 
     const tempId = `temp-${Date.now()}`;
     // Optimistic update
@@ -191,14 +205,17 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     }));
 
     try {
-      const res = await api.post('/api/my-list', {
-        tmdb_id: numericTmdbId,
-        media_type,
-        status: targetStatus,
-        title: extra?.title || undefined,
-        poster_path: extra?.poster_path || undefined,
-        backdrop_path: extra?.backdrop_path || undefined,
-        release_date: extra?.release_date || undefined,
+      const data = await resilientFetch<any>('/api/my-list', {
+        method: 'POST',
+        body: {
+          tmdb_id: numericTmdbId,
+          media_type,
+          status: targetStatus,
+          title: extra?.title || undefined,
+          poster_path: extra?.poster_path || undefined,
+          backdrop_path: extra?.backdrop_path || undefined,
+          release_date: extra?.release_date || undefined,
+        },
       });
       // Update with the real internal ID and media from DB
       set((state) => ({
@@ -206,19 +223,19 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
           ...state.items,
           [numericTmdbId]: {
             ...state.items[numericTmdbId],
-            id: res.data.id,
-            tmdb_id: res.data.media?.tmdb_id || numericTmdbId,
-            status: res.data.status || targetStatus,
-            media_type: res.data.media?.media_type || state.items[numericTmdbId]?.media_type || media_type,
-            title: res.data.media?.title || state.items[numericTmdbId]?.title || extra?.title || undefined,
-            poster_path: res.data.media?.poster_path || state.items[numericTmdbId]?.poster_path || extra?.poster_path || undefined,
-            backdrop_path: res.data.media?.backdrop_path || state.items[numericTmdbId]?.backdrop_path || extra?.backdrop_path || undefined,
-            release_date: res.data.media?.release_date ?? extra?.release_date ?? null,
+            id: data.id,
+            tmdb_id: data.media?.tmdb_id || numericTmdbId,
+            status: data.status || targetStatus,
+            media_type: data.media?.media_type || state.items[numericTmdbId]?.media_type || media_type,
+            title: data.media?.title || state.items[numericTmdbId]?.title || extra?.title || undefined,
+            poster_path: data.media?.poster_path || state.items[numericTmdbId]?.poster_path || extra?.poster_path || undefined,
+            backdrop_path: data.media?.backdrop_path || state.items[numericTmdbId]?.backdrop_path || extra?.backdrop_path || undefined,
+            release_date: data.media?.release_date ?? extra?.release_date ?? null,
           }
         }
       }));
 
-      if (res.data.status === 'upcoming') {
+      if (data.status === 'upcoming') {
         toast.add({
           title: "Adicionado a 'Aguardando Estreia'",
           description: "Avisaremos você assim que o título for lançado!",
@@ -261,8 +278,11 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     }));
 
     try {
-      const res = await api.patch(`/api/my-list/${item.id}`, { status: newStatus });
-      const finalStatus = res.data?.status || newStatus;
+      const data = await resilientFetch<any>(`/api/my-list/${item.id}`, {
+        method: 'PATCH',
+        body: { status: newStatus },
+      });
+      const finalStatus = data?.status || newStatus;
       set((state) => ({
         items: {
           ...state.items,
@@ -315,7 +335,10 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     }));
 
     try {
-      await api.patch(`/api/my-list/${item.id}`, { rating });
+      await resilientFetch(`/api/my-list/${item.id}`, {
+        method: 'PATCH',
+        body: { rating },
+      });
     } catch (error) {
       console.error('Failed to update rating', error);
       set((state) => ({
@@ -400,7 +423,9 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     });
 
     try {
-      await api.delete(`/api/my-list/${item.id}`);
+      await resilientFetch(`/api/my-list/${item.id}`, {
+        method: 'DELETE',
+      });
     } catch (error) {
       console.error('Failed to remove from list', error);
       // Revert
