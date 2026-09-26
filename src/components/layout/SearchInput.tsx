@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Search, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
 import { SearchDropdown } from "@/components/search/SearchDropdown";
 import { api } from "@/lib/axios";
@@ -17,20 +17,44 @@ export function SearchInput() {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
   
   const debouncedQuery = useDebounce(query, 500);
 
-  // Lida com clique fora para fechar
+  const handleClose = useCallback(() => {
+    setIsExpanded(false);
+    setQuery("");
+    setResults([]);
+  }, []);
+
+  // Lida com clique fora para fechar e limpar a busca
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsExpanded(false);
+        handleClose();
       }
     }
     
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [handleClose]);
+
+  // Fecha e limpa ao mudar de rota
+  useEffect(() => {
+    handleClose();
+  }, [pathname, handleClose]);
+
+  // Fecha e limpa ao pressionar Escape
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        handleClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleClose]);
 
   // Busca dados na API quando o debounceQuery muda
   useEffect(() => {
@@ -65,14 +89,16 @@ export function SearchInput() {
 
   const handleClear = () => {
     setQuery("");
+    setResults([]);
     inputRef.current?.focus();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (query.trim()) {
-      setIsExpanded(false);
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+      const targetQuery = query.trim();
+      handleClose();
+      router.push(`/search?q=${encodeURIComponent(targetQuery)}`);
     }
   };
 
@@ -128,7 +154,7 @@ export function SearchInput() {
           query={debouncedQuery || query} 
           results={results} 
           isLoading={isLoading} 
-          onClose={() => setIsExpanded(false)} 
+          onClose={handleClose} 
         />
       )}
     </div>
