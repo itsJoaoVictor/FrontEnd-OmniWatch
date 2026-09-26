@@ -86,8 +86,11 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
   };
 
   const handleStatusChange = (newStatus: ListStatus, e: React.MouseEvent) => {
-    e.preventDefault(); // Impede o fechamento do menu ao trocar de status
+    e.preventDefault();
+    e.stopPropagation();
     if (!isValidId) return;
+
+    setIsOpen(true);
 
     const prevStatus = savedItem?.status;
     updateStatus(numericTmdbId, newStatus);
@@ -204,11 +207,11 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    closeOnClick={false}
                     className={cn(
                       'cursor-pointer flex items-center justify-between py-2 px-2.5 transition-colors',
                       savedItem.status === 'dropped' && 'bg-accent text-accent-foreground font-semibold'
                     )}
-                    onSelect={(e) => e.preventDefault()}
                     onClick={(e) => handleStatusChange('dropped', e)}
                   >
                     <div className="flex items-center gap-2.5">
@@ -231,11 +234,11 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
               return (
                 <DropdownMenuItem
                   key={status}
+                  closeOnClick={false}
                   className={cn(
                     'cursor-pointer flex items-center justify-between py-2 px-2.5 transition-colors',
                     isSelected && 'bg-accent text-accent-foreground font-semibold'
                   )}
-                  onSelect={(e) => e.preventDefault()}
                   onClick={(e) => handleStatusChange(status, e)}
                 >
                   <div className="flex items-center gap-2.5">
