@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { TrendingSection } from "@/components/explore/trending-section";
 import { TrendingSkeleton } from "@/components/explore/trending-skeleton";
 import { RecommendationsSection } from "@/components/explore/recommendations-section";
+import { UpcomingSection } from "@/components/explore/upcoming-section";
 import { PersonasSection } from "@/components/explore/personas-section";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,10 @@ export default function Page() {
 
       <Suspense fallback={<TrendingSkeleton />}>
         <RecommendationsSection />
+      </Suspense>
+
+      <Suspense fallback={<TrendingSkeleton />}>
+        <UpcomingSection />
       </Suspense>
 
       <Suspense fallback={<TrendingSkeleton />}>

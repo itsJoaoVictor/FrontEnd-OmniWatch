@@ -9,6 +9,13 @@ export interface RecommendationItem {
   overview?: string;
   match_score: number;
   match_tags: string[];
+  release_date?: string;
+  first_air_date?: string;
+}
+
+export interface UpcomingRecommendations {
+  movies: RecommendationItem[];
+  series: RecommendationItem[];
 }
 
 export interface PersonaCarousel {
