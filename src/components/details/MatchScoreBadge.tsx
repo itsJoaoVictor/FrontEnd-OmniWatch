@@ -21,10 +21,6 @@ export function MatchScoreBadge({ tmdbId, mediaType }: MatchScoreBadgeProps) {
   useEffect(() => {
     async function fetchScore() {
       try {
-        // Fase 3: Feedback Implícito - Registra visita (+0.2)
-        api.post(`/api/recommendations/visit/${mediaType}/${tmdbId}`)
-          .catch((err) => console.error("Error recording visit:", err));
-
         const res = await api.get<MatchScoreData>(`/api/recommendations/score/${mediaType}/${tmdbId}`);
 
         if (res.status === 200 && res.data) {
