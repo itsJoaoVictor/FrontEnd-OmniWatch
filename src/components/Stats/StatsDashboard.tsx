@@ -1,138 +1,154 @@
-
 'use client';
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/axios';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Film, Tv } from 'lucide-react';
-
-interface StatData {
-  totalTime: number;
-  totalTimeMovies: number;
-  totalTimeTv: number;
-  totalMovies: number;
-  totalEpisodes: number;
-  ratingDistribution: { rating: string, count: number }[];
-  topGenres: { name: string, count: number }[];
-}
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#d0ed57', '#a4de6c', '#8dd1e1'];
+import { StatisticsResponse, PeriodFilter, MediaTypeFilter } from './types';
+import { StatsFilters } from './StatsFilters';
+import { StatsKpiCards } from './StatsKpiCards';
+import { StatsCharts } from './StatsCharts';
+import { StatsRankingTable } from './StatsRankingTable';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 
 export function StatsDashboard() {
-  const [data, setData] = useState<StatData | null>(null);
+  const [data, setData] = useState<StatisticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await api.get('/api/statistics');
-        setData(response.data);
-      } catch (error) {
-        console.error('Failed to fetch stats', error);
-      } finally {
-        setLoading(false);
+  const [period, setPeriod] = useState<PeriodFilter>('all');
+  const [mediaType, setMediaType] = useState<MediaTypeFilter>('all');
+
+  // Client-side cache: instantanea para filtros já consultados (0ms)
+  const clientCacheRef = useRef<Map<string, StatisticsResponse>>(new Map());
+  // AbortController para prevenir race conditions em trocas rápidas de filtros
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const fetchStats = useCallback(async (isInitial = false) => {
+    const cacheKey = `${period}:${mediaType}`;
+
+    // Se estiver em cache, exibe imediatamente e revalida em background
+    if (clientCacheRef.current.has(cacheKey)) {
+      setData(clientCacheRef.current.get(cacheKey)!);
+      setLoading(false);
+      setIsRefreshing(true);
+    } else {
+      if (isInitial || !data) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
       }
     }
-    fetchData();
-  }, []);
+    setError(null);
 
-  if (loading) return <div className='flex justify-center items-center h-64'>Carregando estatísticas...</div>;
-  if (!data) return <div className='flex justify-center items-center h-64'>Nenhuma estatística disponível.</div>;
+    // Cancela requisição anterior pendente se houver
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-  const formatTime = (minutes: number) => {
-    const totalHours = Math.floor(minutes / 60);
-    const days = Math.floor(totalHours / 24);
-    const hours = totalHours % 24;
-    const mins = minutes % 60;
-    
-    if (days > 0) return `${days}d ${hours}h ${mins}m`;
-    return `${hours}h ${mins}m`;
-  };
+    try {
+      const response = await api.get('/api/statistics', {
+        params: {
+          period,
+          media_type: mediaType,
+        },
+        signal: controller.signal,
+      });
+
+      // Atualiza o cache do cliente e o estado da tela
+      clientCacheRef.current.set(cacheKey, response.data);
+      setData(response.data);
+    } catch (err: any) {
+      // Ignora cancelamentos intencionais
+      if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
+        return;
+      }
+      console.error('Failed to fetch statistics:', err);
+      if (!clientCacheRef.current.has(cacheKey)) {
+        setError('Não foi possível carregar as estatísticas. Verifique sua conexão e tente novamente.');
+      }
+    } finally {
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+    }
+  }, [period, mediaType]);
+
+  useEffect(() => {
+    fetchStats();
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchStats]);
+
+  if (loading && !data) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        {/* Skeleton Filters */}
+        <div className="h-16 bg-zinc-900/50 rounded-2xl border border-zinc-800/80" />
+        {/* Skeleton KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-32 bg-zinc-900/50 rounded-2xl border border-zinc-800/80" />
+          ))}
+        </div>
+        {/* Skeleton Charts */}
+        <div className="h-72 bg-zinc-900/50 rounded-2xl border border-zinc-800/80" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-72 bg-zinc-900/50 rounded-2xl border border-zinc-800/80" />
+          <div className="h-72 bg-zinc-900/50 rounded-2xl border border-zinc-800/80" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl bg-zinc-900/40 border border-zinc-800 space-y-4">
+        <div className="p-3 bg-red-500/10 text-red-400 rounded-full border border-red-500/20">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <p className="text-zinc-300 font-medium text-sm max-w-md">{error}</p>
+        <button
+          onClick={() => fetchStats(true)}
+          className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  if (!data) return null;
 
   return (
-    <div className='space-y-6'>
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Tempo Assistido</CardTitle>
-            <Clock className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>
-              {formatTime(data.totalTime)}
-            </div>
-            <div className='text-xs text-muted-foreground mt-1 flex flex-col space-y-1'>
-              <span>Filmes: {formatTime(data.totalTimeMovies || 0)}</span>
-              <span>Séries: {formatTime(data.totalTimeTv || 0)}</span>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Filmes Assistidos</CardTitle>
-            <Film className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>{data.totalMovies}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Episódios Assistidos</CardTitle>
-            <Tv className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>{data.totalEpisodes}</div>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="space-y-6">
+      {/* Barra de Filtros no Topo */}
+      <StatsFilters
+        period={period}
+        mediaType={mediaType}
+        onPeriodChange={setPeriod}
+        onMediaTypeChange={setMediaType}
+        isLoading={isRefreshing}
+      />
 
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribuição de Notas</CardTitle>
-          </CardHeader>
-          <CardContent className='h-[300px]'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <BarChart data={data.ratingDistribution} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray='3 3' vertical={false} stroke='#333' />
-                <XAxis dataKey='rating' stroke='#888' />
-                <YAxis allowDecimals={false} stroke='#888' />
-                <Tooltip cursor={{fill: '#222'}} contentStyle={{backgroundColor: '#111', borderColor: '#333'}} />
-                <Bar dataKey='count' fill='#3b82f6' radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Cards de KPIs Principais */}
+      <StatsKpiCards data={data} mediaType={mediaType} />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Gêneros Mais Assistidos</CardTitle>
-          </CardHeader>
-          <CardContent className='h-[300px]'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <PieChart>
-                <Pie
-                  data={data.topGenres}
-                  dataKey='count'
-                  nameKey='name'
-                  cx='50%'
-                  cy='50%'
-                  outerRadius={100}
-                  fill='#8884d8'
-                  label={({ name, percent }) => (percent ?? 0) > 0.05 ? name : ''}
-                >
-                  {data.topGenres.map((entry, index) => (
-                    <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{backgroundColor: '#111', borderColor: '#333'}} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Gráficos Interativos */}
+      <StatsCharts data={data} />
+
+      {/* Tabela de Ranking de Gêneros */}
+      <StatsRankingTable
+        genres={data.rankings?.genres || data.topGenres || []}
+        overallAverageRating={data.kpis?.averageRating}
+        mediaType={mediaType}
+      />
     </div>
   );
 }
-
