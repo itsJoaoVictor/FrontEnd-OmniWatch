@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { api } from '@/lib/axios';
 import { resilientFetch } from '@/lib/resilient-fetch';
 import { toast } from '@/components/ui/toast';
@@ -64,65 +65,81 @@ interface MyListStore {
   bulkMarkEpisodes: (tmdb_id: number, season: number, episode: number) => Promise<void>;
 }
 
-export const useMyListStore = create<MyListStore>((set, get) => ({
-  items: {},
-  episodeProgress: {},
-  isLoading: false,
-  
-  fetchMyList: async () => {
-    set({ isLoading: true });
-    try {
-      const res = await api.get('/api/my-list');
-      const itemsMap: Record<number, SavedItem> = {};
-      const newCorrections: Record<number, { season: number; episode: number }> = {};
+let inFlightFetchMyList: Promise<void> | null = null;
+
+export const useMyListStore = create<MyListStore>()(
+  persist(
+    (set, get) => ({
+      items: {},
+      episodeProgress: {},
+      isLoading: false,
       
-      res.data.forEach((item: any) => {
-        const rawTmdbId = item.media?.tmdb_id ?? item.tmdb_id;
-        const parsedTmdbId = typeof rawTmdbId === 'string' ? parseInt(rawTmdbId, 10) : Number(rawTmdbId);
-        const tmdbId = (!isNaN(parsedTmdbId) && parsedTmdbId > 0) ? parsedTmdbId : (typeof item.id === 'number' ? item.id : undefined);
-        if (tmdbId) {
-          itemsMap[tmdbId] = {
-            id: item.id?.toString() || String(tmdbId),
-            tmdb_id: tmdbId,
-            status: item.status || 'plan_to_watch',
-            rating: item.rating,
-            media_type: item.media?.media_type || item.media_type || 'movie',
-            title: item.media?.title || item.title || 'Título Desconhecido',
-            poster_path: item.media?.poster_path || item.poster_path,
-            backdrop_path: item.media?.backdrop_path || item.backdrop_path,
-            last_watched_at: item.last_watched_at,
-            release_date: item.media?.release_date ?? item.release_date ?? null,
-            is_up_to_date: item.is_up_to_date !== undefined ? item.is_up_to_date : null,
-            next_episode: item.next_episode || null,
-          };
-
-          // Sincroniza o cache local com a resposta oficial do backend
-          if (item.is_up_to_date === true) {
-            addUpToDateShowToCache(tmdbId);
-          } else if (item.is_up_to_date === false) {
-            removeUpToDateShowFromCache(tmdbId);
-          }
-
-          if (item.next_episode?.season_number && item.next_episode?.episode_number) {
-            newCorrections[tmdbId] = {
-              season: item.next_episode.season_number,
-              episode: item.next_episode.episode_number,
-            };
-          }
+      fetchMyList: async () => {
+        if (inFlightFetchMyList) {
+          return inFlightFetchMyList;
         }
-      });
 
-      if (Object.keys(newCorrections).length > 0) {
-        saveCorrectedEpisodesToCache(newCorrections);
-      }
+        inFlightFetchMyList = (async () => {
+          // Apenas ativa isLoading se ainda não tiver itens carregados (padrão SWR)
+          if (Object.keys(get().items).length === 0) {
+            set({ isLoading: true });
+          }
+          try {
+            const res = await api.get('/api/my-list');
+            const itemsMap: Record<number, SavedItem> = {};
+            const newCorrections: Record<number, { season: number; episode: number }> = {};
+            
+            res.data.forEach((item: any) => {
+              const rawTmdbId = item.media?.tmdb_id ?? item.tmdb_id;
+              const parsedTmdbId = typeof rawTmdbId === 'string' ? parseInt(rawTmdbId, 10) : Number(rawTmdbId);
+              const tmdbId = (!isNaN(parsedTmdbId) && parsedTmdbId > 0) ? parsedTmdbId : (typeof item.id === 'number' ? item.id : undefined);
+              if (tmdbId) {
+                itemsMap[tmdbId] = {
+                  id: item.id?.toString() || String(tmdbId),
+                  tmdb_id: tmdbId,
+                  status: item.status || 'plan_to_watch',
+                  rating: item.rating,
+                  media_type: item.media?.media_type || item.media_type || 'movie',
+                  title: item.media?.title || item.title || 'Título Desconhecido',
+                  poster_path: item.media?.poster_path || item.poster_path,
+                  backdrop_path: item.media?.backdrop_path || item.backdrop_path,
+                  last_watched_at: item.last_watched_at,
+                  release_date: item.media?.release_date ?? item.release_date ?? null,
+                  is_up_to_date: item.is_up_to_date !== undefined ? item.is_up_to_date : null,
+                  next_episode: item.next_episode || null,
+                };
 
-      set({ items: itemsMap });
-    } catch (error) {
-      console.error('Failed to fetch my list', error);
-    } finally {
-      set({ isLoading: false });
-    }
-  },
+                // Sincroniza o cache local com a resposta oficial do backend
+                if (item.is_up_to_date === true) {
+                  addUpToDateShowToCache(tmdbId);
+                } else if (item.is_up_to_date === false) {
+                  removeUpToDateShowFromCache(tmdbId);
+                }
+
+                if (item.next_episode?.season_number && item.next_episode?.episode_number) {
+                  newCorrections[tmdbId] = {
+                    season: item.next_episode.season_number,
+                    episode: item.next_episode.episode_number,
+                  };
+                }
+              }
+            });
+
+            if (Object.keys(newCorrections).length > 0) {
+              saveCorrectedEpisodesToCache(newCorrections);
+            }
+
+            set({ items: itemsMap });
+          } catch (error) {
+            console.error('Failed to fetch my list', error);
+          } finally {
+            set({ isLoading: false });
+            inFlightFetchMyList = null;
+          }
+        })();
+
+        return inFlightFetchMyList;
+      },
 
   fetchProgress: async (tmdb_id) => {
     const item = get().items[tmdb_id];
@@ -512,4 +529,10 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
       console.error('Failed to bulk mark episodes', error);
     }
   }
-}));
+}),
+{
+  name: 'omniwatch_my_list',
+  partialize: (state) => ({ items: state.items }),
+}
+)
+);

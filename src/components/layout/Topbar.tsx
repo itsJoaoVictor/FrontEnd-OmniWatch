@@ -7,7 +7,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { SearchInput } from "./SearchInput";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/axios";
-import { useMyListStore } from "@/store/useMyListStore";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { 
   DropdownMenu, 
@@ -19,11 +18,6 @@ import { Button } from "@/components/ui/button";
 
 export function Topbar() {
   const router = useRouter();
-  const { fetchMyList } = useMyListStore();
-
-  useEffect(() => {
-    fetchMyList();
-  }, [fetchMyList]);
 
   const handleLogout = async () => {
     try {

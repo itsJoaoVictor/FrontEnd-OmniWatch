@@ -21,15 +21,14 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsMounted(true);
-    if (Object.keys(items).length === 0) {
-      fetchMyList();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchMyList();
   }, [fetchMyList]);
 
   useEffect(() => {
     const tvWatching = Object.values(items).filter(i => i && i.status === 'watching' && i.media_type === 'tv' && i.tmdb_id);
     tvWatching.forEach(item => {
+      // Se o backend já calculou is_up_to_date ou next_episode, não precisamos disparar chamadas individuais
+      if (item.is_up_to_date !== null && item.is_up_to_date !== undefined) return;
       if (!episodeProgress[item.tmdb_id] && !fetchedProgressRef.current.has(item.tmdb_id)) {
         fetchedProgressRef.current.add(item.tmdb_id);
         fetchProgress(item.tmdb_id);
@@ -324,8 +323,24 @@ export default function HomePage() {
 
   if (isLoading && Object.keys(items).length === 0) {
     return (
-      <div className="flex justify-center items-center h-[50vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="pb-8 overflow-hidden min-h-screen animate-pulse">
+        <div className="w-full h-[55vh] bg-secondary/30 rounded-b-3xl mb-8 flex items-end p-8">
+          <div className="space-y-4 max-w-lg">
+            <div className="h-8 w-64 bg-muted/60 rounded-lg" />
+            <div className="h-4 w-96 bg-muted/40 rounded" />
+            <div className="h-10 w-36 bg-primary/20 rounded-md" />
+          </div>
+        </div>
+        <div className="px-4 md:px-8 space-y-8">
+          <div className="space-y-4">
+            <div className="h-6 w-48 bg-muted/50 rounded" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="aspect-[2/3] bg-secondary/40 rounded-xl" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
