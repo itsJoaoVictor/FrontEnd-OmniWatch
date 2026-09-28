@@ -2,9 +2,21 @@ import { create } from 'zustand';
 import { api } from '@/lib/axios';
 import { resilientFetch } from '@/lib/resilient-fetch';
 import { toast } from '@/components/ui/toast';
-import { removeUpToDateShowFromCache } from '@/lib/seriesCache';
+import {
+  removeUpToDateShowFromCache,
+  addUpToDateShowToCache,
+  saveCorrectedEpisodesToCache
+} from '@/lib/seriesCache';
 
 export type ListStatus = 'plan_to_watch' | 'watching' | 'completed' | 'dropped' | 'upcoming';
+
+export interface NextEpisodeData {
+  season_number: number;
+  episode_number: number;
+  name?: string | null;
+  air_date?: string | null;
+  is_released?: boolean;
+}
 
 export interface SavedItem {
   id: string; // internal DB id
@@ -17,6 +29,8 @@ export interface SavedItem {
   rating?: number;
   last_watched_at?: string;
   release_date?: string | null;
+  is_up_to_date?: boolean | null;
+  next_episode?: NextEpisodeData | null;
 }
 
 export interface EpisodeProgress {
@@ -60,6 +74,8 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     try {
       const res = await api.get('/api/my-list');
       const itemsMap: Record<number, SavedItem> = {};
+      const newCorrections: Record<number, { season: number; episode: number }> = {};
+      
       res.data.forEach((item: any) => {
         const rawTmdbId = item.media?.tmdb_id ?? item.tmdb_id;
         const parsedTmdbId = typeof rawTmdbId === 'string' ? parseInt(rawTmdbId, 10) : Number(rawTmdbId);
@@ -76,9 +92,30 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
             backdrop_path: item.media?.backdrop_path || item.backdrop_path,
             last_watched_at: item.last_watched_at,
             release_date: item.media?.release_date ?? item.release_date ?? null,
+            is_up_to_date: item.is_up_to_date !== undefined ? item.is_up_to_date : null,
+            next_episode: item.next_episode || null,
           };
+
+          // Sincroniza o cache local com a resposta oficial do backend
+          if (item.is_up_to_date === true) {
+            addUpToDateShowToCache(tmdbId);
+          } else if (item.is_up_to_date === false) {
+            removeUpToDateShowFromCache(tmdbId);
+          }
+
+          if (item.next_episode?.season_number && item.next_episode?.episode_number) {
+            newCorrections[tmdbId] = {
+              season: item.next_episode.season_number,
+              episode: item.next_episode.episode_number,
+            };
+          }
         }
       });
+
+      if (Object.keys(newCorrections).length > 0) {
+        saveCorrectedEpisodesToCache(newCorrections);
+      }
+
       set({ items: itemsMap });
     } catch (error) {
       console.error('Failed to fetch my list', error);

@@ -59,6 +59,28 @@ export default function HomePage() {
       const newlyVerified = new Set<number>(verifiedShows);
       
       for (const item of tvWatching) {
+        // Se o backend já calculou e forneceu is_up_to_date, aproveitamos diretamente sem chamada extra
+        if (item.is_up_to_date === true) {
+          newUpToDate.add(item.tmdb_id);
+          newlyVerified.add(item.tmdb_id);
+          if (item.next_episode?.season_number && item.next_episode?.episode_number) {
+            newCorrections[item.tmdb_id] = {
+              season: item.next_episode.season_number,
+              episode: item.next_episode.episode_number,
+            };
+          }
+          continue;
+        } else if (item.is_up_to_date === false) {
+          newlyVerified.add(item.tmdb_id);
+          if (item.next_episode?.season_number && item.next_episode?.episode_number) {
+            newCorrections[item.tmdb_id] = {
+              season: item.next_episode.season_number,
+              episode: item.next_episode.episode_number,
+            };
+          }
+          continue;
+        }
+
         const prog = episodeProgress[item.tmdb_id];
         if (!prog) {
           // Se o progresso da série ainda está sendo carregado, mas ela já constava no cache como upToDate,
@@ -189,8 +211,9 @@ export default function HomePage() {
     });
 
     const activeWatchingItems = watchingItems.filter(i => {
-      if (upToDateShows.has(i.tmdb_id)) return false;
+      if (i.is_up_to_date === true || upToDateShows.has(i.tmdb_id)) return false;
       if (i.media_type === 'tv') {
+        if (i.is_up_to_date === false) return true;
         return verifiedShows.has(i.tmdb_id);
       }
       return true;
@@ -217,19 +240,22 @@ export default function HomePage() {
     const mapToMediaItem = (i: any): MediaItem => {
       let currentEpisode = null;
       let nextEpisodeToWatch = undefined;
-      const isUpToDate = upToDateShows.has(i.tmdb_id);
+      const isUpToDate = i.is_up_to_date === true || upToDateShows.has(i.tmdb_id);
 
       if (i.media_type === 'tv' && i.status === 'watching') {
-        const prog = episodeProgress[i.tmdb_id];
-        if (prog && prog.length > 0) {
-          if (isUpToDate) {
-            currentEpisode = `Você está em dia!`;
-            nextEpisodeToWatch = undefined;
-          } else if (correctedNextEpisodes[i.tmdb_id]) {
-            const { season, episode } = correctedNextEpisodes[i.tmdb_id];
-            currentEpisode = `S${season} E${episode}`;
-            nextEpisodeToWatch = { season, episode };
-          } else {
+        if (isUpToDate) {
+          currentEpisode = `Você está em dia!`;
+          nextEpisodeToWatch = undefined;
+        } else if (i.next_episode && i.next_episode.season_number && i.next_episode.episode_number) {
+          currentEpisode = `S${i.next_episode.season_number} E${i.next_episode.episode_number}`;
+          nextEpisodeToWatch = { season: i.next_episode.season_number, episode: i.next_episode.episode_number };
+        } else if (correctedNextEpisodes[i.tmdb_id]) {
+          const { season, episode } = correctedNextEpisodes[i.tmdb_id];
+          currentEpisode = `S${season} E${episode}`;
+          nextEpisodeToWatch = { season, episode };
+        } else {
+          const prog = episodeProgress[i.tmdb_id];
+          if (prog && prog.length > 0) {
             let maxSeason = 0;
             let maxEp = 0;
             for (const ep of prog) {
@@ -242,10 +268,10 @@ export default function HomePage() {
             }
             currentEpisode = `S${maxSeason} E${maxEp + 1}`;
             nextEpisodeToWatch = { season: maxSeason, episode: maxEp + 1 };
+          } else {
+            currentEpisode = `S1 E1`;
+            nextEpisodeToWatch = { season: 1, episode: 1 };
           }
-        } else {
-          currentEpisode = `S1 E1`;
-          nextEpisodeToWatch = { season: 1, episode: 1 };
         }
       }
 
