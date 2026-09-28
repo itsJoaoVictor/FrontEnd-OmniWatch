@@ -26,7 +26,7 @@ export function SimilarCarousel({ items, type }: SimilarCarouselProps) {
       <Carousel
         opts={{
           align: "start",
-          loop: false,
+          loop: true,
         }}
         className="w-full"
       >

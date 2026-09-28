@@ -37,6 +37,7 @@ export function ContentCarousel({ title, items, layout = "poster" }: ContentCaro
           opts={{
             align: "start",
             dragFree: true,
+            loop: true,
           }}
           className="w-full"
         >

@@ -29,7 +29,7 @@ export function VideoCarousel({ videos }: VideoCarouselProps) {
       <Carousel
         opts={{
           align: "start",
-          loop: false,
+          loop: true,
         }}
         className="w-full"
       >

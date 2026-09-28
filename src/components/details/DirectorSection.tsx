@@ -25,7 +25,7 @@ export function DirectorSection({ crew, title = "Direção" }: DirectorSectionPr
       <Carousel
         opts={{
           align: "start",
-          loop: false,
+          loop: true,
         }}
         className="w-full"
       >

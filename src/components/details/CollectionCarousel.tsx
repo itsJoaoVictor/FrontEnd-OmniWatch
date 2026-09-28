@@ -149,7 +149,7 @@ export function CollectionCarousel({ collection }: CollectionCarouselProps) {
       <Carousel
         opts={{
           align: "start",
-          loop: false,
+          loop: true,
         }}
         className="w-full"
       >

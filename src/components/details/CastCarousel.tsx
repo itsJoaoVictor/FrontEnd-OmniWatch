@@ -23,7 +23,7 @@ export function CastCarousel({ cast }: CastCarouselProps) {
       <Carousel
         opts={{
           align: "start",
-          loop: false,
+          loop: true,
         }}
         className="w-full"
       >

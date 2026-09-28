@@ -91,7 +91,7 @@ export function RecommendationsCarousel({ items, showReleaseDate = false }: Reco
     <Carousel
       opts={{
         align: "start",
-        loop: itemsList.length > 5,
+        loop: true,
       }}
       className="w-full relative"
     >
@@ -103,12 +103,15 @@ export function RecommendationsCarousel({ items, showReleaseDate = false }: Reco
           return (
             <CarouselItem
               key={item.id}
-              className={cn(
-                "pl-2 md:pl-4 basis-1/2 md:basis-1/4 lg:basis-1/5 xl:basis-1/6 transition-all duration-300",
-                isHiding ? "opacity-0 scale-90 pointer-events-none" : "opacity-100 scale-100"
-              )}
+              className="pl-2 md:pl-4 basis-1/2 md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
             >
-              <Link href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`} className="block p-1">
+              <div
+                className={cn(
+                  "h-full w-full transition-all duration-300",
+                  isHiding ? "opacity-0 scale-90 pointer-events-none" : "opacity-100 scale-100"
+                )}
+              >
+                <Link href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`} className="block p-1">
                 <Card className="overflow-hidden border-2 border-primary/50 bg-transparent group relative cursor-pointer aspect-[2/3]">
                   <CardContent className="p-0 h-full w-full relative">
                     <PosterImage
@@ -268,6 +271,7 @@ export function RecommendationsCarousel({ items, showReleaseDate = false }: Reco
                   </CardContent>
                 </Card>
               </Link>
+              </div>
             </CarouselItem>
           );
         })}
