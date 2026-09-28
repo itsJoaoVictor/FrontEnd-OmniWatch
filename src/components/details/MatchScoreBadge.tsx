@@ -53,15 +53,37 @@ export function MatchScoreBadge({ tmdbId, mediaType }: MatchScoreBadgeProps) {
         </span>
       </div>
       
-      {data.match_tags && data.match_tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-3">
-          {data.match_tags.map((tag, idx) => (
-            <span key={idx} className="text-xs px-2 py-1 bg-background/50 rounded-md border border-border/50 text-foreground/70">
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
+      {data.match_tags && data.match_tags.length > 0 && (() => {
+        const isHero =
+          data.match_tags[0].startsWith("🍿") ||
+          data.match_tags[0].startsWith("🎬") ||
+          data.match_tags[0].startsWith("🌟") ||
+          data.match_tags[0].startsWith("🚀");
+        const heroTag = isHero ? data.match_tags[0] : null;
+        const secondaryTags = isHero ? data.match_tags.slice(1) : data.match_tags;
+
+        return (
+          <div className="mt-3 space-y-2">
+            {heroTag && (
+              <div className="px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs md:text-sm font-medium leading-snug flex items-center gap-1.5">
+                {heroTag}
+              </div>
+            )}
+            {secondaryTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {secondaryTags.map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className="text-xs px-2.5 py-1 bg-background/50 rounded-md border border-border/50 text-foreground/80 font-medium"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

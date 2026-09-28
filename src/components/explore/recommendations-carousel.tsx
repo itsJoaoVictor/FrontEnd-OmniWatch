@@ -148,7 +148,15 @@ export function RecommendationsCarousel({ items, showReleaseDate = false }: Reco
                         </span>
                       ) : (
                         item.match_tags && item.match_tags.length > 0 && (
-                          <span className="text-[9px] md:text-xs font-medium text-zinc-300 line-clamp-1 drop-shadow-md">
+                          <span
+                            className={`text-[9px] md:text-xs font-medium line-clamp-1 drop-shadow-md ${
+                              item.match_tags[0].startsWith("🍿")
+                                ? "text-amber-300 font-semibold"
+                                : item.match_tags[0].startsWith("🎬") || item.match_tags[0].startsWith("🌟") || item.match_tags[0].startsWith("🚀")
+                                ? "text-amber-200/90 font-medium"
+                                : "text-zinc-300"
+                            }`}
+                          >
                             {item.match_tags[0]}
                           </span>
                         )
@@ -175,20 +183,40 @@ export function RecommendationsCarousel({ items, showReleaseDate = false }: Reco
                       </div>
 
                       {/* Top Tags (Por que foi selecionado) */}
-                      {item.match_tags && item.match_tags.length > 0 && (
-                        <div className="mt-auto pt-1 md:pt-2 border-t border-white/20">
-                          <span className="text-[8px] md:text-[9px] lg:text-[10px] text-zinc-400 block mb-1 uppercase tracking-wider font-semibold">
-                            Por que foi selecionado:
-                          </span>
-                          <div className="flex flex-col gap-0.5 md:gap-1">
-                            {item.match_tags.map((tag, idx) => (
-                              <span key={idx} className="text-[9px] md:text-xs text-zinc-100 line-clamp-1 drop-shadow-md">
-                                {tag}
-                              </span>
-                            ))}
+                      {item.match_tags && item.match_tags.length > 0 && (() => {
+                        const isHighlighted =
+                          item.match_tags[0].startsWith("🍿") ||
+                          item.match_tags[0].startsWith("🎬") ||
+                          item.match_tags[0].startsWith("🌟") ||
+                          item.match_tags[0].startsWith("🚀");
+                        const primaryTag = isHighlighted ? item.match_tags[0] : null;
+                        const otherTags = isHighlighted ? item.match_tags.slice(1) : item.match_tags;
+
+                        return (
+                          <div className="mt-auto pt-1.5 md:pt-2 border-t border-white/20">
+                            <span className="text-[8px] md:text-[9px] text-zinc-400 block mb-1 uppercase tracking-wider font-semibold">
+                              Por que foi selecionado:
+                            </span>
+                            {primaryTag && (
+                              <div className="mb-1.5 px-2 py-1 rounded bg-amber-500/15 border border-amber-500/25 text-amber-200 text-[10px] md:text-[11px] font-medium leading-snug line-clamp-2">
+                                {primaryTag}
+                              </div>
+                            )}
+                            {otherTags.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {otherTags.map((tag, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="px-1.5 py-0.5 rounded bg-white/15 text-zinc-200 text-[9px] md:text-[10px] font-medium leading-none"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
 
                     {/* Top Right Action Buttons (Add to List + Menu de Opções) */}
