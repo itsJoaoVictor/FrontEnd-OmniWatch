@@ -7,6 +7,12 @@ import { useMyListStore } from '@/store/useMyListStore';
 import { MediaItem } from "@/components/home/MediaCard";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
+import {
+  getUpToDateShowsFromCache,
+  saveUpToDateShowsToCache,
+  getCorrectedEpisodesFromCache,
+  saveCorrectedEpisodesToCache
+} from '@/lib/seriesCache';
 
 export default function HomePage() {
   const { items, isLoading, fetchMyList, episodeProgress, fetchProgress } = useMyListStore();
@@ -33,8 +39,9 @@ export default function HomePage() {
 
   const [priorityHeroId, setPriorityHeroId] = useState<number | null>(null);
   const [trendingPlanToWatchId, setTrendingPlanToWatchId] = useState<number | null>(null);
-  const [correctedNextEpisodes, setCorrectedNextEpisodes] = useState<Record<number, {season: number, episode: number}>>({});
-  const [upToDateShows, setUpToDateShows] = useState<Set<number>>(new Set());
+  const [correctedNextEpisodes, setCorrectedNextEpisodes] = useState<Record<number, {season: number, episode: number}>>(() => getCorrectedEpisodesFromCache());
+  const [upToDateShows, setUpToDateShows] = useState<Set<number>>(() => getUpToDateShowsFromCache());
+  const [verifiedShows, setVerifiedShows] = useState<Set<number>>(() => getUpToDateShowsFromCache());
 
   useEffect(() => {
     const checkNewEpisodes = async () => {
@@ -49,10 +56,18 @@ export default function HomePage() {
       let foundPriority = false;
       const newCorrections: Record<number, {season: number, episode: number}> = {};
       const newUpToDate = new Set<number>();
+      const newlyVerified = new Set<number>(verifiedShows);
       
       for (const item of tvWatching) {
         const prog = episodeProgress[item.tmdb_id];
-        if (!prog) continue;
+        if (!prog) {
+          // Se o progresso da série ainda está sendo carregado, mas ela já constava no cache como upToDate,
+          // preserva para evitar que ela apareça temporariamente enquanto a API responde.
+          if (upToDateShows.has(item.tmdb_id)) {
+            newUpToDate.add(item.tmdb_id);
+          }
+          continue;
+        }
 
         let maxSeason = 0;
         let maxEp = 0;
@@ -90,7 +105,7 @@ export default function HomePage() {
             }
           }
 
-          if (foundPriority) continue; // Skip 48h rule if we already found a priority
+          newlyVerified.add(item.tmdb_id);
 
           const epData = episodes.find((e: any) => e.episode_number === nextEpNum);
           
@@ -105,7 +120,7 @@ export default function HomePage() {
               newUpToDate.add(item.tmdb_id);
             }
             
-            if (diffHours >= -24 && diffHours <= 48) {
+            if (!foundPriority && diffHours >= -24 && diffHours <= 48) {
               setPriorityHeroId(item.tmdb_id);
               foundPriority = true;
             }
@@ -114,17 +129,23 @@ export default function HomePage() {
             newUpToDate.add(item.tmdb_id);
           }
         } catch (e) {
-          // Ignore
+          newlyVerified.add(item.tmdb_id);
         }
       }
       
       if (Object.keys(newCorrections).length > 0) {
-        setCorrectedNextEpisodes(prev => ({ ...prev, ...newCorrections }));
+        setCorrectedNextEpisodes(prev => {
+          const updated = { ...prev, ...newCorrections };
+          saveCorrectedEpisodesToCache(updated);
+          return updated;
+        });
       }
       setUpToDateShows(newUpToDate);
+      saveUpToDateShowsToCache(newUpToDate);
+      setVerifiedShows(newlyVerified);
     };
     
-    if (Object.keys(episodeProgress).length > 0) {
+    if (Object.keys(items).length > 0) {
       checkNewEpisodes();
     }
   }, [episodeProgress, items]);
@@ -166,6 +187,14 @@ export default function HomePage() {
       const dateB = b.last_watched_at ? new Date(b.last_watched_at).getTime() : 0;
       return dateB - dateA; // Most recent first
     });
+
+    const activeWatchingItems = watchingItems.filter(i => {
+      if (upToDateShows.has(i.tmdb_id)) return false;
+      if (i.media_type === 'tv') {
+        return verifiedShows.has(i.tmdb_id);
+      }
+      return true;
+    });
     
     // Pick the hero
     let hero = null;
@@ -177,8 +206,8 @@ export default function HomePage() {
     } else if (trendingPlanToWatchId && items[trendingPlanToWatchId]) {
       hero = items[trendingPlanToWatchId];
       heroReason = 'trending_plan_to_watch';
-    } else if (watchingItems.length > 0) {
-      hero = watchingItems[0];
+    } else if (activeWatchingItems.length > 0) {
+      hero = activeWatchingItems[0];
       heroReason = 'continue_watching';
     } else {
       hero = itemsArray.find(i => i.status === 'plan_to_watch') || itemsArray.find(i => i.status === 'upcoming') || itemsArray[0];
@@ -258,12 +287,12 @@ export default function HomePage() {
 
     return {
       heroFeature: heroMediaItem,
-      continueWatching: watchingItems.filter(i => !upToDateShows.has(i.tmdb_id)).map(mapToMediaItem),
+      continueWatching: activeWatchingItems.map(mapToMediaItem),
       moviesInQueue: itemsArray.filter(i => i.status === 'plan_to_watch' && i.media_type === 'movie').map(mapToMediaItem),
       tvInQueue: itemsArray.filter(i => i.status === 'plan_to_watch' && i.media_type === 'tv').map(mapToMediaItem),
       upcomingMedia: itemsArray.filter(i => i.status === 'upcoming').map(mapToMediaItem),
     };
-  }, [items, episodeProgress, priorityHeroId, trendingPlanToWatchId, correctedNextEpisodes, upToDateShows]);
+  }, [items, episodeProgress, priorityHeroId, trendingPlanToWatchId, correctedNextEpisodes, upToDateShows, verifiedShows]);
 
   if (!isMounted) return null;
 

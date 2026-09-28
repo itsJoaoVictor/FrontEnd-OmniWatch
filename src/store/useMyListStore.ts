@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { api } from '@/lib/axios';
 import { resilientFetch } from '@/lib/resilient-fetch';
 import { toast } from '@/components/ui/toast';
+import { removeUpToDateShowFromCache } from '@/lib/seriesCache';
 
 export type ListStatus = 'plan_to_watch' | 'watching' | 'completed' | 'dropped' | 'upcoming';
 
@@ -140,6 +141,9 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
 
     // Optimistic update
     const prevProgress = get().episodeProgress[tmdb_id] || [];
+    if (!isWatched) {
+      removeUpToDateShowFromCache(tmdb_id);
+    }
     set((state) => ({
       episodeProgress: {
         ...state.episodeProgress,
@@ -426,6 +430,7 @@ export const useMyListStore = create<MyListStore>((set, get) => ({
     }
 
     // Optimistic update
+    removeUpToDateShowFromCache(tmdb_id);
     set((state) => {
       const newItems = { ...state.items };
       delete newItems[tmdb_id];
