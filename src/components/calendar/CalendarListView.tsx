@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { ReleaseEvent } from '@/types/calendar';
 import { ReleaseDetailsSheet } from './ReleaseDetailsSheet';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { CalendarX2, Compass } from 'lucide-react';
 
 interface CalendarListViewProps {
   releases: ReleaseEvent[];
@@ -49,8 +52,20 @@ export function CalendarListView({ releases, loading }: CalendarListViewProps) {
 
   if (releases.length === 0) {
     return (
-      <div className="bg-zinc-900 rounded-xl p-10 border border-zinc-800 text-center">
-        <p className="text-zinc-400 text-sm">Nenhum lançamento encontrado para o filtro selecionado.</p>
+      <div className="bg-zinc-900 rounded-2xl p-8 sm:p-12 border border-zinc-800 text-center max-w-lg mx-auto shadow-lg">
+        <div className="w-16 h-16 rounded-2xl bg-red-600/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
+          <CalendarX2 className="w-8 h-8 text-red-500" />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Nenhum lançamento encontrado</h3>
+        <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+          Você não possui filmes ou novos episódios agendados para este filtro. Explore novos títulos e adicione à sua lista para acompanhar seu calendário pessoal!
+        </p>
+        <Link href="/explore">
+          <Button className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2.5 rounded-xl shadow-md transition-all inline-flex items-center gap-2">
+            <Compass className="w-4 h-4" />
+            Explorar Novos Títulos
+          </Button>
+        </Link>
       </div>
     );
   }

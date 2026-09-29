@@ -6,6 +6,9 @@ import { ReleaseDetailsSheet } from './ReleaseDetailsSheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getDaysInMonth, startOfMonth, getDay, format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { CalendarX2, Compass } from 'lucide-react';
 
 interface CalendarGridViewProps {
   releases: ReleaseEvent[];
@@ -205,6 +208,27 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
         })}
       </div>
 
+      {/* Empty Month Banner / Call to Action */}
+      {releases.length === 0 && (
+        <div className="mt-4 p-4 sm:p-5 bg-zinc-800/40 rounded-xl border border-zinc-800 text-center flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-left">
+            <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center shrink-0">
+              <CalendarX2 className="w-5 h-5 text-red-500" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Nenhum lançamento previsto para este mês</h4>
+              <p className="text-xs text-zinc-400">Adicione filmes e séries à sua lista para preencher este mês no calendário.</p>
+            </div>
+          </div>
+          <Link href="/explore">
+            <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-4 py-2 rounded-lg shrink-0 inline-flex items-center gap-1.5 shadow-sm">
+              <Compass className="w-3.5 h-3.5" />
+              Explorar Catálogo
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Mini-legenda cromática */}
       <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-5 mt-3 pt-3 border-t border-zinc-800/60 text-xs text-zinc-400">
         <div className="flex items-center gap-1.5">
@@ -294,8 +318,13 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
               })}
             </div>
           ) : (
-            <div className="py-6 text-center text-xs text-zinc-500 bg-zinc-800/30 rounded-lg border border-zinc-800/50">
-              Nenhum lançamento previsto para este dia.
+            <div className="py-6 px-4 text-center bg-zinc-800/30 rounded-xl border border-zinc-800/50 flex flex-col items-center justify-center">
+              <CalendarX2 className="w-6 h-6 text-zinc-500 mb-1.5" />
+              <p className="text-xs text-zinc-400">Nenhum lançamento previsto para este dia.</p>
+              <Link href="/explore" className="text-xs text-red-400 hover:text-red-300 font-semibold mt-2 inline-flex items-center gap-1">
+                <Compass className="w-3.5 h-3.5" />
+                Explorar novos títulos &rarr;
+              </Link>
             </div>
           )
         ) : (
