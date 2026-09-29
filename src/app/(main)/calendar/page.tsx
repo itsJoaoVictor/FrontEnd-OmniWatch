@@ -7,15 +7,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ReleaseEvent } from '@/types/calendar';
 import { api } from '@/lib/axios';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { format, parse, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { MonthYearPickerModal } from '@/components/calendar/MonthYearPickerModal';
 
 export default function CalendarPage() {
   const [gridReleases, setGridReleases] = useState<ReleaseEvent[]>([]);
   const [agendaReleases, setAgendaReleases] = useState<ReleaseEvent[]>([]);
   const [gridLoading, setGridLoading] = useState(true);
   const [agendaLoading, setAgendaLoading] = useState(true);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('grid');
   const [mediaFilter, setMediaFilter] = useState<'all' | 'movie' | 'tv'>('all');
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -129,10 +131,15 @@ export default function CalendarPage() {
               <ChevronLeft className="h-4 w-4" />
             </Button>
 
-            <div className="flex items-center gap-2 px-2">
-              <span className="text-sm font-semibold text-white min-w-[130px] text-center">
-                {displayMonth}
-              </span>
+            <div className="flex items-center gap-1.5 px-1">
+              <button
+                onClick={() => setIsPickerOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold text-white hover:bg-zinc-800 transition-colors group cursor-pointer"
+                title="Escolher mês e ano diretamente"
+              >
+                <span>{displayMonth}</span>
+                <ChevronDown className="h-3.5 w-3.5 text-zinc-400 group-hover:text-white transition-transform" />
+              </button>
               {!isCurrentMonthNow && (
                 <Button 
                   variant="outline" 
@@ -234,6 +241,13 @@ export default function CalendarPage() {
           <CalendarListView releases={filteredReleases} loading={agendaLoading} />
         </TabsContent>
       </Tabs>
+
+      <MonthYearPickerModal
+        isOpen={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        currentMonth={currentMonth}
+        onSelectMonth={(m) => setCurrentMonth(m)}
+      />
     </div>
   );
 }
