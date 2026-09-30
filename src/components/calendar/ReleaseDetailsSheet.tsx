@@ -4,7 +4,8 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ReleaseEvent } from '@/types/calendar';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { parseReleaseDate } from '@/lib/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 
@@ -46,7 +47,7 @@ export function ReleaseDetailsSheet({ isOpen, onClose, release }: ReleaseDetails
           </div>
           <DialogTitle className="text-xl font-bold text-white">{release.media.title}</DialogTitle>
           <DialogDescription className="text-zinc-400 text-xs sm:text-sm">
-            {format(parseISO(release.release_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            {format(parseReleaseDate(release.release_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </DialogDescription>
         </DialogHeader>
         

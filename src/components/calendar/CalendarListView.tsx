@@ -6,7 +6,8 @@ import { ReleaseEvent } from '@/types/calendar';
 import { ReleaseDetailsSheet } from './ReleaseDetailsSheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { parseReleaseDate } from '@/lib/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { CalendarX2, Compass } from 'lucide-react';
 
@@ -23,7 +24,7 @@ export function CalendarListView({ releases, loading }: CalendarListViewProps) {
     const map = new Map<string, ReleaseEvent[]>();
 
     for (const release of releases) {
-      const d = parseISO(release.release_date);
+      const d = parseReleaseDate(release.release_date);
       const monthKey = format(d, 'yyyy-MM');
       const list = map.get(monthKey) || [];
       list.push(release);
@@ -96,7 +97,7 @@ export function CalendarListView({ releases, loading }: CalendarListViewProps) {
                 ? "Lançamento nos Cinemas / Streaming"
                 : release.title.replace(/Lancamento/gi, 'Lançamento');
 
-              const releaseDate = parseISO(release.release_date);
+              const releaseDate = parseReleaseDate(release.release_date);
 
               return (
                 <div 

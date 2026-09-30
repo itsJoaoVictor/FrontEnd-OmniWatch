@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { ReleaseEvent } from '@/types/calendar';
 import { ReleaseDetailsSheet } from './ReleaseDetailsSheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDaysInMonth, startOfMonth, getDay, format, parseISO } from 'date-fns';
+import { getDaysInMonth, startOfMonth, getDay, format } from 'date-fns';
+import { parseReleaseDate } from '@/lib/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,7 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
   const releasesByDay = React.useMemo(() => {
     const map = new Map<number, ReleaseEvent[]>();
     for (const r of releases) {
-      const d = parseISO(r.release_date);
+      const d = parseReleaseDate(r.release_date);
       if (d.getMonth() === month && d.getFullYear() === year) {
         const day = d.getDate();
         const list = map.get(day) || [];
@@ -64,11 +65,11 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
       setSelectedDay(now.getDate());
     } else {
       const firstWithRelease = releases.find(r => {
-        const d = parseISO(r.release_date);
+        const d = parseReleaseDate(r.release_date);
         return d.getMonth() === month && d.getFullYear() === year;
       });
       if (firstWithRelease) {
-        setSelectedDay(parseISO(firstWithRelease.release_date).getDate());
+        setSelectedDay(parseReleaseDate(firstWithRelease.release_date).getDate());
       } else {
         setSelectedDay(1);
       }
