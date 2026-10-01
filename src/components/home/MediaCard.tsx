@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Check } from "lucide-react";
+import { Check, Star, StarOff, Play, Clock } from "lucide-react";
 import { useState } from "react";
 import { cn, hasMissingPreviousEpisodes } from "@/lib/utils";
 import Link from "next/link";
@@ -158,20 +158,61 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
           className="transition-transform duration-500 group-hover:scale-105"
         />
         
-        {/* Status Badge e Avaliação */}
+        {/* Status Badge, Avaliação e Progresso */}
         {savedItem && (
-          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-            <StatusBadge tmdb_id={parseInt(item.id)} />
-            <UserRatingBadge tmdb_id={parseInt(item.id)} />
+          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start max-w-[calc(100%-48px)]">
+            {/* Linha 1: Status com indicador de progresso para Séries */}
+            {savedItem.status === 'watching' && item.type === 'tv' ? (
+              <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-md backdrop-blur-md uppercase tracking-wider border border-white/15 bg-black/90 text-amber-400 flex items-center gap-1.5 whitespace-nowrap">
+                <span>Assistindo</span>
+                <span className="text-white/30 text-[10px]">•</span>
+                {(savedItem.is_up_to_date ?? item.isUpToDate) ? (
+                  <span className="text-emerald-400 font-semibold flex items-center gap-1 lowercase first-letter:uppercase">
+                    <Check className="w-3 h-3 stroke-[2.5]" />
+                    <span>Em dia</span>
+                  </span>
+                ) : (savedItem.next_episode || item.nextEpisodeToWatch) ? (
+                  <span className="text-sky-300 font-semibold flex items-center gap-1">
+                    <Play className="w-2.5 h-2.5 fill-sky-300" />
+                    <span>
+                      {savedItem.next_episode
+                        ? `T${savedItem.next_episode.season_number}:E${savedItem.next_episode.episode_number}`
+                        : `T${item.nextEpisodeToWatch!.season}:E${item.nextEpisodeToWatch!.episode}`}
+                    </span>
+                  </span>
+                ) : null}
+              </span>
+            ) : (
+              <StatusBadge tmdb_id={parseInt(item.id)} />
+            )}
+            
+            {/* Linha 2: Avaliação ou Sem Nota */}
+            {savedItem.rating ? (
+              <UserRatingBadge tmdb_id={parseInt(item.id)} />
+            ) : (savedItem.status === 'completed' || savedItem.status === 'watching') ? (
+              <div 
+                className="flex items-center gap-1 bg-black/90 backdrop-blur-md border border-amber-500/60 px-2 py-0.5 rounded-full text-amber-300 text-[11px] font-semibold shadow-md"
+                title="Pendente de avaliação"
+              >
+                <StarOff className="w-3 h-3 text-amber-400 stroke-[2.2]" />
+                <span>Sem nota</span>
+              </div>
+            ) : null}
           </div>
         )}
 
         {/* Overlay do Poster - sempre dark para garantir leitura sobre imagem */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-          <div className="flex items-center justify-between translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-            <h3 className="text-white font-bold text-sm line-clamp-2 leading-tight flex-1">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3.5">
+          <div className="flex flex-col gap-1 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+            <h3 className="text-white font-bold text-sm line-clamp-2 leading-tight">
               {item.title}
             </h3>
+            {savedItem && !savedItem.rating && (savedItem.status === 'completed' || savedItem.status === 'watching') && (
+              <span className="text-[11px] text-amber-400/90 font-medium flex items-center gap-1">
+                <Star className="w-3 h-3 text-amber-400" />
+                Sem avaliação
+              </span>
+            )}
           </div>
         </div>
 

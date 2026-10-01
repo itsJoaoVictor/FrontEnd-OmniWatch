@@ -24,7 +24,7 @@ export function StatusBadge({ tmdb_id, className }: StatusBadgeProps) {
 
   return (
     <span className={cn(
-      "px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-md backdrop-blur-md uppercase tracking-wider border border-white/10 bg-black/70",
+      "px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-md backdrop-blur-md uppercase tracking-wider border border-white/15 bg-black/90",
       savedItem.status === "plan_to_watch" && "text-blue-400",
       savedItem.status === "watching" && "text-amber-400",
       savedItem.status === "completed" && "text-green-400",
