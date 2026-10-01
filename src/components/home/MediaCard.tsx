@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import { Check, Star, StarOff, Play, Clock } from "lucide-react";
-import { useState } from "react";
-import { cn, hasMissingPreviousEpisodes } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { AddToListButton } from "@/components/shared/AddToListButton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -39,45 +38,50 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
   // Layout para "Continue Assistindo" (Estilo Tracker/TV Time)
   if (layout === "tracking") {
     return (
-      <Link href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`} className="group relative flex gap-4 bg-card hover:bg-accent border border-border hover:border-primary/50 rounded-xl p-3 transition-all duration-300 cursor-pointer block">
-        <div className="relative w-32 md:w-40 aspect-video rounded-lg overflow-hidden shrink-0 shadow-md bg-muted">
-          <PosterImage
-            src={item.coverHorizontal || item.coverVertical}
-            fallbackSrc={item.coverVertical}
-            alt={item.title}
-            title={item.title}
-            type={item.type}
-            fill
-            priority={priority}
-            sizes="(max-width: 768px) 160px, 200px"
-            className="transition-transform duration-500 group-hover:scale-110"
-          />
-          {/* Overlay escuro leve na imagem */}
-          <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors pointer-events-none" />
-        </div>
-        
-        <div className="flex-1 flex flex-col justify-center py-1 overflow-hidden">
-          <p className="text-xs text-primary font-medium mb-1 tracking-wider uppercase">
-            {item.currentEpisode ? `Próximo: ${item.currentEpisode}` : "Novo"}
-          </p>
-          <h3 className="text-foreground font-bold text-base md:text-lg truncate mb-2">
-            {item.title}
-          </h3>
+      <div className="group relative flex gap-4 bg-card hover:bg-accent border border-border hover:border-primary/50 rounded-xl p-3 transition-all duration-300">
+        <Link 
+          href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`} 
+          className="flex-1 flex gap-4 cursor-pointer overflow-hidden min-w-0"
+        >
+          <div className="relative w-32 md:w-40 aspect-video rounded-lg overflow-hidden shrink-0 shadow-md bg-muted">
+            <PosterImage
+              src={item.coverHorizontal || item.coverVertical}
+              fallbackSrc={item.coverVertical}
+              alt={item.title}
+              title={item.title}
+              type={item.type}
+              fill
+              priority={priority}
+              sizes="(max-width: 768px) 160px, 200px"
+              className="transition-transform duration-500 group-hover:scale-110"
+            />
+            {/* Overlay escuro leve na imagem */}
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors pointer-events-none" />
+          </div>
           
-          {item.progress !== undefined && (
-            <div className="mt-auto flex items-center gap-3">
-              <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary rounded-full"
-                  style={{ width: `${item.progress}%` }}
-                />
+          <div className="flex-1 flex flex-col justify-center py-1 overflow-hidden">
+            <p className="text-xs text-primary font-medium mb-1 tracking-wider uppercase">
+              {item.currentEpisode ? `Próximo: ${item.currentEpisode}` : "Novo"}
+            </p>
+            <h3 className="text-foreground font-bold text-base md:text-lg truncate mb-2">
+              {item.title}
+            </h3>
+            
+            {item.progress !== undefined && (
+              <div className="mt-auto flex items-center gap-3">
+                <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary rounded-full"
+                    style={{ width: `${item.progress}%` }}
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">{item.progress}%</span>
               </div>
-              <span className="text-xs text-muted-foreground font-medium">{item.progress}%</span>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </Link>
 
-        <div className="flex items-center justify-center pr-2">
+        <div className="flex items-center justify-center pr-2 shrink-0 z-10">
           {item.type === 'tv' && item.isUpToDate ? (
             <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full whitespace-nowrap shadow-sm select-none" title="Você assistiu a todos os episódios disponíveis até o momento">
               Em dia
@@ -100,14 +104,6 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
                 
                 if (item.type === 'tv' && item.nextEpisodeToWatch) {
                   await toggleEpisode(tmdbId, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode, true);
-                  if (item.nextEpisodeToWatch.season > 1 || item.nextEpisodeToWatch.episode > 1) {
-                    const progress = useMyListStore.getState().episodeProgress[tmdbId];
-                    if (hasMissingPreviousEpisodes(progress, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode)) {
-                      if (window.confirm(`Você marcou o episódio ${item.nextEpisodeToWatch.episode}. Deseja marcar todos os anteriores da série como assistidos?`)) {
-                        useMyListStore.getState().bulkMarkEpisodes(tmdbId, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode);
-                      }
-                    }
-                  }
                 } else {
                   if (isWatched) {
                     await updateStatus(tmdbId, 'watching');
@@ -138,7 +134,7 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
             </button>
           )}
         </div>
-      </Link>
+      </div>
     );
   }
 

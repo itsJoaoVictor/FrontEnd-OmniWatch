@@ -145,11 +145,11 @@ export const useMyListStore = create<MyListStore>()(
     const item = get().items[tmdb_id];
     if (!item) return;
     try {
-      const res = await api.get(`/api/my-list/${item.id}/progress`);
+      const data = await resilientFetch<EpisodeProgress[]>(`/api/my-list/${item.id}/progress`);
       set((state) => ({
         episodeProgress: {
           ...state.episodeProgress,
-          [tmdb_id]: res.data
+          [tmdb_id]: data || []
         }
       }));
     } catch (error) {
@@ -195,33 +195,87 @@ export const useMyListStore = create<MyListStore>()(
 
     // Optimistic update
     const prevProgress = get().episodeProgress[tmdb_id] || [];
-    if (!isWatched) {
+    const prevItem = get().items[tmdb_id];
+
+    let optimisticNextEpisode: NextEpisodeData | null = prevItem?.next_episode ? { ...prevItem.next_episode } : null;
+    let optimisticIsUpToDate = prevItem?.is_up_to_date ?? false;
+
+    if (isWatched) {
+      const curS = prevItem?.next_episode?.season_number ?? season;
+      const curE = prevItem?.next_episode?.episode_number ?? episode;
+      if (season > curS || (season === curS && episode >= curE)) {
+        optimisticNextEpisode = {
+          season_number: season,
+          episode_number: episode + 1,
+          name: `Episódio ${episode + 1}`,
+          is_released: true
+        };
+        saveCorrectedEpisodesToCache({ [tmdb_id]: { season, episode: episode + 1 } });
+      }
+    } else {
       removeUpToDateShowFromCache(tmdb_id);
+      optimisticIsUpToDate = false;
+      const curS = prevItem?.next_episode?.season_number;
+      const curE = prevItem?.next_episode?.episode_number;
+      if (!curS || season < curS || (season === curS && curE !== undefined && episode <= curE)) {
+        optimisticNextEpisode = {
+          season_number: season,
+          episode_number: episode,
+          name: `Episódio ${episode}`,
+          is_released: true
+        };
+        saveCorrectedEpisodesToCache({ [tmdb_id]: { season, episode } });
+      }
     }
+
+    const optimisticItem: SavedItem | undefined = prevItem ? {
+      ...prevItem,
+      status: (prevItem.status === 'plan_to_watch' && isWatched) ? 'watching' : prevItem.status,
+      last_watched_at: new Date().toISOString(),
+      is_up_to_date: optimisticIsUpToDate,
+      next_episode: optimisticNextEpisode
+    } : undefined;
+
     set((state) => ({
+      items: optimisticItem ? { ...state.items, [tmdb_id]: optimisticItem } : state.items,
       episodeProgress: {
         ...state.episodeProgress,
         [tmdb_id]: isWatched 
-          ? [...prevProgress, { season_number: season, episode_number: episode }]
+          ? [...prevProgress.filter(p => !(p.season_number === season && p.episode_number === episode)), { season_number: season, episode_number: episode }]
           : prevProgress.filter(p => !(p.season_number === season && p.episode_number === episode))
       }
     }));
 
     try {
       if (isWatched) {
-        await api.post(`/api/my-list/${item.id}/progress`, { season_number: season, episode_number: episode });
+        await resilientFetch(`/api/my-list/${item.id}/progress`, {
+          method: 'POST',
+          body: { season_number: season, episode_number: episode }
+        });
       } else {
-        await api.delete(`/api/my-list/${item.id}/progress/${season}/${episode}`);
+        await resilientFetch(`/api/my-list/${item.id}/progress/${season}/${episode}`, {
+          method: 'DELETE'
+        });
+      }
+      get().fetchMyList();
+      if (get().episodeProgress[tmdb_id]) {
+        get().fetchProgress(tmdb_id);
       }
     } catch (error) {
       console.error('Failed to toggle episode', error);
-      // Revert
+      // Revert optimistic update
       set((state) => ({
+        items: prevItem ? { ...state.items, [tmdb_id]: prevItem } : state.items,
         episodeProgress: {
           ...state.episodeProgress,
           [tmdb_id]: prevProgress
         }
       }));
+      toast.add({
+        title: "Erro ao atualizar episódio",
+        description: "Não foi possível salvar o progresso. Tente novamente.",
+        type: "error"
+      });
     }
   },
 
@@ -326,19 +380,23 @@ export const useMyListStore = create<MyListStore>()(
     }
 
     const oldStatus = item.status;
+    const oldRating = item.rating;
     
     // Optimistic update
     const shouldClearRating = ['plan_to_watch', 'upcoming'].includes(newStatus);
-    set((state) => ({
-      items: {
-        ...state.items,
-        [tmdb_id]: { 
-          ...item, 
-          status: newStatus,
-          rating: shouldClearRating ? undefined : item.rating,
+    set((state) => {
+      const currentItem = state.items[tmdb_id] || item;
+      return {
+        items: {
+          ...state.items,
+          [tmdb_id]: { 
+            ...currentItem, 
+            status: newStatus,
+            rating: shouldClearRating ? undefined : currentItem.rating,
+          }
         }
-      }
-    }));
+      };
+    });
 
     try {
       const data = await resilientFetch<any>(`/api/my-list/${item.id}`, {
@@ -347,28 +405,35 @@ export const useMyListStore = create<MyListStore>()(
       });
       const finalStatus = data?.status || newStatus;
       const finalShouldClearRating = ['plan_to_watch', 'upcoming'].includes(finalStatus);
-      set((state) => ({
-        items: {
-          ...state.items,
-          [tmdb_id]: { 
-            ...item, 
-            status: finalStatus,
-            rating: finalShouldClearRating ? undefined : (data?.rating ?? (shouldClearRating ? undefined : item.rating)),
+      set((state) => {
+        const currentItem = state.items[tmdb_id] || item;
+        return {
+          items: {
+            ...state.items,
+            [tmdb_id]: { 
+              ...currentItem, 
+              status: finalStatus,
+              // Preserva a nota atual de currentItem caso o usuário tenha acabado de avaliar!
+              rating: finalShouldClearRating ? undefined : (currentItem.rating ?? (data?.rating != null ? data.rating : undefined)),
+            }
           }
-        }
-      }));
+        };
+      });
       if (item.media_type === 'tv' && (newStatus === 'completed' || finalStatus === 'watching')) {
-        await get().fetchProgress(tmdb_id);
+        get().fetchProgress(tmdb_id);
       }
     } catch (error: any) {
       console.error('Failed to update status', error);
       // Revert
-      set((state) => ({
-        items: {
-          ...state.items,
-          [tmdb_id]: { ...item, status: oldStatus }
-        }
-      }));
+      set((state) => {
+        const currentItem = state.items[tmdb_id] || item;
+        return {
+          items: {
+            ...state.items,
+            [tmdb_id]: { ...currentItem, status: oldStatus, rating: oldRating }
+          }
+        };
+      });
       const errorDetail = error?.response?.data?.detail;
       if (errorDetail) {
         toast.add({
@@ -395,26 +460,55 @@ export const useMyListStore = create<MyListStore>()(
     }
 
     const oldRating = item.rating;
-    set((state) => ({
-      items: {
-        ...state.items,
-        [tmdb_id]: { ...item, rating }
-      }
-    }));
+    const oldStatus = item.status;
+    const targetStatus = (item.status === 'plan_to_watch' || item.status === 'upcoming') ? 'watching' : item.status;
 
-    try {
-      await resilientFetch(`/api/my-list/${item.id}`, {
-        method: 'PATCH',
-        body: { rating },
-      });
-    } catch (error) {
-      console.error('Failed to update rating', error);
-      set((state) => ({
+    set((state) => {
+      const currentItem = state.items[tmdb_id] || item;
+      return {
         items: {
           ...state.items,
-          [tmdb_id]: { ...item, rating: oldRating }
+          [tmdb_id]: { ...currentItem, rating, status: targetStatus }
         }
-      }));
+      };
+    });
+
+    try {
+      const data = await resilientFetch<any>(`/api/my-list/${item.id}`, {
+        method: 'PATCH',
+        body: { rating, status: targetStatus },
+      });
+      if (data) {
+        set((state) => {
+          const currentItem = state.items[tmdb_id] || item;
+          return {
+            items: {
+              ...state.items,
+              [tmdb_id]: {
+                ...currentItem,
+                rating: data.rating ?? rating,
+                status: data.status || targetStatus,
+              }
+            }
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update rating', error);
+      set((state) => {
+        const currentItem = state.items[tmdb_id] || item;
+        return {
+          items: {
+            ...state.items,
+            [tmdb_id]: { ...currentItem, rating: oldRating, status: oldStatus }
+          }
+        };
+      });
+      toast.add({
+        title: "Erro ao registrar nota",
+        description: "Não foi possível salvar a nota. Tente novamente.",
+        type: "error"
+      });
     }
   },
 
@@ -521,12 +615,51 @@ export const useMyListStore = create<MyListStore>()(
       if (!item || item.id.startsWith('temp-')) return;
     }
 
+    const prevItem = get().items[tmdb_id];
+    if (prevItem) {
+      set((state) => ({
+        items: {
+          ...state.items,
+          [tmdb_id]: {
+            ...prevItem,
+            status: 'watching',
+            last_watched_at: new Date().toISOString(),
+            is_up_to_date: false,
+            next_episode: {
+              season_number: season,
+              episode_number: episode + 1,
+              name: `Episódio ${episode + 1}`,
+              is_released: true
+            }
+          }
+        }
+      }));
+      saveCorrectedEpisodesToCache({ [tmdb_id]: { season, episode: episode + 1 } });
+    }
+
     try {
-      await api.post(`/api/my-list/${item.id}/progress/bulk`, { season_number: season, episode_number: episode });
-      // Sync progress
-      await get().fetchProgress(tmdb_id);
+      await resilientFetch(`/api/my-list/${item.id}/progress/bulk`, {
+        method: 'POST',
+        body: { season_number: season, episode_number: episode }
+      });
+      // Sync progress in background
+      get().fetchProgress(tmdb_id);
+      get().fetchMyList();
     } catch (error) {
       console.error('Failed to bulk mark episodes', error);
+      if (prevItem) {
+        set((state) => ({
+          items: {
+            ...state.items,
+            [tmdb_id]: prevItem
+          }
+        }));
+      }
+      toast.add({
+        title: "Erro ao marcar episódios",
+        description: "Não foi possível marcar em lote. Tente novamente.",
+        type: "error"
+      });
     }
   }
 }),

@@ -177,7 +177,11 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
                             e.stopPropagation();
                             await toggleEpisode(seriesId, season.season_number, episode.episode_number, !isWatched);
                             if (!isWatched && (season.season_number > 1 || episode.episode_number > 1)) {
-                              const progress = useMyListStore.getState().episodeProgress[seriesId];
+                              let progress = useMyListStore.getState().episodeProgress[seriesId];
+                              if (!progress) {
+                                await useMyListStore.getState().fetchProgress(seriesId);
+                                progress = useMyListStore.getState().episodeProgress[seriesId];
+                              }
                               if (hasMissingPreviousEpisodes(progress, season.season_number, episode.episode_number)) {
                                 if (window.confirm(`Você marcou o episódio ${episode.episode_number}. Deseja marcar todos os anteriores da série como assistidos?`)) {
                                   useMyListStore.getState().bulkMarkEpisodes(seriesId, season.season_number, episode.episode_number);

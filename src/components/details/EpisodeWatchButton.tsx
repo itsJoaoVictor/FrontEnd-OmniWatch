@@ -40,7 +40,11 @@ export function EpisodeWatchButton({ seriesId, seasonNumber, episodeNumber, airD
       onClick={async () => {
         await toggleEpisode(seriesId, seasonNumber, episodeNumber, !isWatched);
         if (!isWatched && (seasonNumber > 1 || episodeNumber > 1)) {
-          const progress = useMyListStore.getState().episodeProgress[seriesId];
+          let progress = useMyListStore.getState().episodeProgress[seriesId];
+          if (!progress) {
+            await useMyListStore.getState().fetchProgress(seriesId);
+            progress = useMyListStore.getState().episodeProgress[seriesId];
+          }
           if (hasMissingPreviousEpisodes(progress, seasonNumber, episodeNumber)) {
             if (window.confirm(`Você marcou o episódio ${episodeNumber}. Deseja marcar todos os anteriores da série como assistidos?`)) {
               useMyListStore.getState().bulkMarkEpisodes(seriesId, seasonNumber, episodeNumber);
