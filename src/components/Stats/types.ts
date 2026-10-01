@@ -50,3 +50,35 @@ export interface StatisticsResponse {
 
 export type PeriodFilter = 'all' | 'year' | '6months' | '30days';
 export type MediaTypeFilter = 'all' | 'movie' | 'tv';
+
+export interface MediaRankingItem {
+  rank: number;
+  id: string;
+  media_id: string;
+  tmdb_id: number;
+  title: string;
+  media_type: 'movie' | 'tv';
+  poster_path?: string | null;
+  release_date?: string | null;
+  runtime?: number;
+  genres: string[];
+  rating?: number | null;
+  rewatch_count: number;
+  total_time_minutes: number;
+  episodes_watched: number;
+  status: string;
+  last_watched_at?: string | null;
+}
+
+export interface MediaRankingResponse {
+  items: MediaRankingItem[];
+  total_items: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  media_type: string;
+  sort_by: string;
+  period: string;
+}
+
+export type MediaSortField = 'time' | 'rating' | 'rewatch' | 'episodes' | 'recent' | 'title';

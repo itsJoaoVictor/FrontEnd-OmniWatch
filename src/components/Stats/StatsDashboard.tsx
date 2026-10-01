@@ -143,11 +143,12 @@ export function StatsDashboard() {
       {/* Gráficos Interativos */}
       <StatsCharts data={data} />
 
-      {/* Tabela de Ranking de Gêneros */}
+      {/* Central de Rankings: Filmes, Séries e Gêneros */}
       <StatsRankingTable
         genres={data.rankings?.genres || data.topGenres || []}
         overallAverageRating={data.kpis?.averageRating}
         mediaType={mediaType}
+        period={period}
       />
     </div>
   );
