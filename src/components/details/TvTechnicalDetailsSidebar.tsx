@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { NetworkItem, EpisodeItem } from "@/types/details";
+import { formatReleaseDate } from "@/lib/dateUtils";
 
 interface TvTechnicalDetailsSidebarProps {
   status: string;
@@ -88,7 +89,7 @@ export function TvTechnicalDetailsSidebar({
               <p className="font-semibold">{nextEpisodeToAir.name}</p>
               <p className="text-muted-foreground text-xs mt-1">
                 T{nextEpisodeToAir.season_number} E{nextEpisodeToAir.episode_number} 
-                {nextEpisodeToAir.air_date ? ` • ${new Date(nextEpisodeToAir.air_date).toLocaleDateString('pt-BR')}` : ""}
+                {nextEpisodeToAir.air_date ? ` • ${formatReleaseDate(nextEpisodeToAir.air_date)}` : ""}
               </p>
             </div>
           </div>
@@ -101,7 +102,7 @@ export function TvTechnicalDetailsSidebar({
               <p className="font-semibold">{lastEpisodeToAir.name}</p>
               <p className="text-muted-foreground text-xs mt-1">
                 T{lastEpisodeToAir.season_number} E{lastEpisodeToAir.episode_number}
-                {lastEpisodeToAir.air_date ? ` • ${new Date(lastEpisodeToAir.air_date).toLocaleDateString('pt-BR')}` : ""}
+                {lastEpisodeToAir.air_date ? ` • ${formatReleaseDate(lastEpisodeToAir.air_date)}` : ""}
               </p>
             </div>
           </div>

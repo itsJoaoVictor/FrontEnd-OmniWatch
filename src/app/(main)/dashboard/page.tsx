@@ -13,6 +13,7 @@ import {
   getCorrectedEpisodesFromCache,
   saveCorrectedEpisodesToCache
 } from '@/lib/seriesCache';
+import { parseReleaseDate } from '@/lib/dateUtils';
 
 export default function HomePage() {
   const { items, isLoading, fetchMyList, episodeProgress, fetchProgress } = useMyListStore();
@@ -133,7 +134,7 @@ export default function HomePage() {
           if (!epData) {
             newUpToDate.add(item.tmdb_id);
           } else if (epData.air_date) {
-            const airDate = new Date(epData.air_date);
+            const airDate = parseReleaseDate(epData.air_date);
             const now = new Date();
             const diffHours = (now.getTime() - airDate.getTime()) / (1000 * 60 * 60);
             

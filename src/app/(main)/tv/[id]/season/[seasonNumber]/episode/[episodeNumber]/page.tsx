@@ -6,6 +6,7 @@ import Link from "next/link";
 import { EpisodeWatchButton } from "@/components/details/EpisodeWatchButton";
 import { EpisodeRatingControl } from "@/components/details/EpisodeRatingControl";
 import { ProgressFetcher } from "@/components/details/ProgressFetcher";
+import { formatReleaseDate } from "@/lib/dateUtils";
 
 async function getEpisodeData(id: string, seasonNumber: string, episodeNumber: string): Promise<EpisodeDetailsResponse | null> {
   try {
@@ -87,7 +88,7 @@ export default async function EpisodeDetailsPage({ params }: { params: Promise<{
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300 mb-6">
               {episode.air_date && (
                 <div className="bg-muted/50 px-3 py-1.5 rounded-md">
-                  Data de Estreia: <span className="font-semibold text-white">{new Date(episode.air_date).toLocaleDateString('pt-BR')}</span>
+                  Data de Estreia: <span className="font-semibold text-white">{formatReleaseDate(episode.air_date)}</span>
                 </div>
               )}
               {episode.runtime && (

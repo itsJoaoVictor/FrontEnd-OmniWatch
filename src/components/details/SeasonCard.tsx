@@ -10,6 +10,7 @@ import { useMyListStore } from "@/store/useMyListStore";
 
 import { hasMissingPreviousEpisodes } from "@/lib/utils";
 import { toast } from '@/components/ui/toast';
+import { formatReleaseDate, isFutureDate, parseReleaseDate } from "@/lib/dateUtils";
 
 interface SeasonCardProps {
   season: SeasonItem;
@@ -30,7 +31,7 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
   const stillUrl = "https://image.tmdb.org/t/p/w300";
 
   const imagePath = season.poster_path ?? fallbackPosterPath ?? null;
-  const isUpcoming = !season.air_date || new Date(season.air_date) > new Date();
+  const isUpcoming = !season.air_date || isFutureDate(season.air_date);
 
   const toggleExpand = async () => {
     if (!expanded && episodes.length === 0) {
@@ -85,7 +86,7 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
           <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
             {season.air_date ? (
               <>
-                <span>{new Date(season.air_date).getFullYear()}</span>
+                <span>{parseReleaseDate(season.air_date).getFullYear()}</span>
                 <span>•</span>
               </>
             ) : (
@@ -153,7 +154,7 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
                         </div>
                         {episode.air_date && (
                           <span className="text-xs text-gray-500 mb-2">
-                            {new Date(episode.air_date).toLocaleDateString('pt-BR')}
+                            {formatReleaseDate(episode.air_date)}
                           </span>
                         )}
                         <p className="text-sm text-gray-400 line-clamp-3">
@@ -162,10 +163,10 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
                       </div>
                     </Link>
                     <div className="flex items-center justify-center pr-4">
-                      {(!episode.air_date || new Date(episode.air_date) > new Date()) && !isWatched ? (
+                      {(!episode.air_date || isFutureDate(episode.air_date)) && !isWatched ? (
                         <div 
                           className="flex items-center gap-1.5 text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full whitespace-nowrap select-none"
-                          title={`Estreia em ${episode.air_date ? new Date(episode.air_date).toLocaleDateString('pt-BR') : 'Data a definir'}`}
+                          title={`Estreia em ${episode.air_date ? formatReleaseDate(episode.air_date) : 'Data a definir'}`}
                         >
                           <Clock className="w-3.5 h-3.5" />
                           <span>Não lançado</span>
