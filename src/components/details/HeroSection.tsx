@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Star } from "lucide-react";
 import { GenreItem, CrewItem, WatchProviderItem } from "@/types/details";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { FavoriteButton } from "@/components/shared/FavoriteButton";
 import { MatchScoreBadge } from "./MatchScoreBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UserRatingBadge } from "@/components/shared/UserRatingBadge";
@@ -103,6 +104,10 @@ export function HeroSection({
                   backdrop_path={backdropPath ?? undefined}
                   release_date={releaseDate}
                   className="w-12 h-12 [&>svg]:w-6 [&>svg]:h-6"
+                />
+                <FavoriteButton
+                  tmdb_id={tmdbId}
+                  size="lg"
                 />
               </div>
             </div>

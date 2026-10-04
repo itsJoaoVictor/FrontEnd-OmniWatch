@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { Check, Star, StarOff, Play, Clock } from "lucide-react";
+import { Check, Star, StarOff, Play, Clock, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { FavoriteButton } from "@/components/shared/FavoriteButton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UserRatingBadge } from "@/components/shared/UserRatingBadge";
 import { useMyListStore } from "@/store/useMyListStore";
@@ -194,6 +195,17 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
                 <span>Sem nota</span>
               </div>
             ) : null}
+
+            {/* Linha 3: Indicador de Favorito */}
+            {savedItem.is_favorite && (
+              <div
+                className="flex items-center gap-1 bg-black/90 backdrop-blur-md border border-rose-500/60 px-2 py-0.5 rounded-full text-rose-400 text-[11px] font-semibold shadow-md"
+                title="Obra Favorita (Mais peso nas recomendações)"
+              >
+                <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
+                <span>Favorito</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -212,9 +224,13 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
           </div>
         </div>
 
-        {/* Botão de adicionar sempre visível no canto superior direito */}
+        {/* Botões de ação no canto superior direito */}
         {!isNaN(tmdbId) && tmdbId > 0 && (
-          <div className="absolute top-2 right-2 z-10">
+          <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
+            <FavoriteButton
+              tmdb_id={tmdbId}
+              size="sm"
+            />
             <AddToListButton
               tmdb_id={tmdbId}
               media_type={item.type as 'movie' | 'tv'}

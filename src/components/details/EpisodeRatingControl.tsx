@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Star, StarHalf } from "lucide-react";
 import { useMyListStore } from "@/store/useMyListStore";
 import { cn } from "@/lib/utils";
+import { getRatingLabel } from "@/lib/ratingLabel";
 
 interface EpisodeRatingControlProps {
   seriesId: number;
@@ -81,6 +82,14 @@ export function EpisodeRatingControl({
           );
         })}
       </div>
+      {(() => {
+        const info = getRatingLabel(activeRating);
+        return info ? (
+          <span className={cn("text-xs font-semibold whitespace-nowrap min-w-[5.5rem]", info.colorClass)}>
+            {info.label}
+          </span>
+        ) : null;
+      })()}
     </div>
   );
 }

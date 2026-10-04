@@ -28,6 +28,7 @@ export interface SavedItem {
   poster_path?: string;
   backdrop_path?: string;
   rating?: number;
+  is_favorite?: boolean;
   last_watched_at?: string;
   release_date?: string | null;
   is_up_to_date?: boolean | null;
@@ -56,11 +57,13 @@ interface MyListStore {
       backdrop_path?: string | null;
       release_date?: string | null;
       status?: ListStatus;
+      is_favorite?: boolean;
     }
   ) => Promise<void>;
   updateStatus: (tmdb_id: number, newStatus: ListStatus) => Promise<void>;
   updateRating: (tmdb_id: number, rating: number) => Promise<void>;
   updateEpisodeRating: (tmdb_id: number, season: number, episode: number, rating: number) => Promise<void>;
+  toggleFavorite: (tmdb_id: number) => Promise<void>;
   removeFromList: (tmdb_id: number) => Promise<void>;
   bulkMarkEpisodes: (tmdb_id: number, season: number, episode: number) => Promise<void>;
 }
@@ -86,10 +89,25 @@ export const useMyListStore = create<MyListStore>()(
           }
           try {
             const res = await api.get('/api/my-list');
+            const rawList = Array.isArray(res?.data)
+              ? res.data
+              : (Array.isArray(res)
+                ? res
+                : (Array.isArray(res?.data?.items)
+                  ? res.data.items
+                  : (Array.isArray(res?.data?.data)
+                    ? res.data.data
+                    : null)));
+
+            if (!rawList) {
+              console.warn('[useMyListStore] Formato inesperado na resposta de /api/my-list:', res?.data);
+              return;
+            }
+
             const itemsMap: Record<number, SavedItem> = {};
             const newCorrections: Record<number, { season: number; episode: number }> = {};
             
-            res.data.forEach((item: any) => {
+            rawList.forEach((item: any) => {
               const rawTmdbId = item.media?.tmdb_id ?? item.tmdb_id;
               const parsedTmdbId = typeof rawTmdbId === 'string' ? parseInt(rawTmdbId, 10) : Number(rawTmdbId);
               const tmdbId = (!isNaN(parsedTmdbId) && parsedTmdbId > 0) ? parsedTmdbId : (typeof item.id === 'number' ? item.id : undefined);
@@ -99,6 +117,7 @@ export const useMyListStore = create<MyListStore>()(
                   tmdb_id: tmdbId,
                   status: item.status || 'plan_to_watch',
                   rating: item.rating,
+                  is_favorite: Boolean(item.is_favorite),
                   media_type: item.media?.media_type || item.media_type || 'movie',
                   title: item.media?.title || item.title || 'Título Desconhecido',
                   poster_path: item.media?.poster_path || item.poster_path,
@@ -149,7 +168,7 @@ export const useMyListStore = create<MyListStore>()(
       set((state) => ({
         episodeProgress: {
           ...state.episodeProgress,
-          [tmdb_id]: data || []
+          [tmdb_id]: Array.isArray(data) ? data : []
         }
       }));
     } catch (error) {
@@ -381,9 +400,11 @@ export const useMyListStore = create<MyListStore>()(
 
     const oldStatus = item.status;
     const oldRating = item.rating;
+    const oldFavorite = item.is_favorite;
     
     // Optimistic update
     const shouldClearRating = ['plan_to_watch', 'upcoming'].includes(newStatus);
+    const shouldClearFavorite = !['watching', 'completed'].includes(newStatus);
     set((state) => {
       const currentItem = state.items[tmdb_id] || item;
       return {
@@ -393,6 +414,7 @@ export const useMyListStore = create<MyListStore>()(
             ...currentItem, 
             status: newStatus,
             rating: shouldClearRating ? undefined : currentItem.rating,
+            is_favorite: shouldClearFavorite ? false : currentItem.is_favorite,
           }
         }
       };
@@ -405,6 +427,7 @@ export const useMyListStore = create<MyListStore>()(
       });
       const finalStatus = data?.status || newStatus;
       const finalShouldClearRating = ['plan_to_watch', 'upcoming'].includes(finalStatus);
+      const finalShouldClearFavorite = !['watching', 'completed'].includes(finalStatus);
       set((state) => {
         const currentItem = state.items[tmdb_id] || item;
         return {
@@ -415,6 +438,7 @@ export const useMyListStore = create<MyListStore>()(
               status: finalStatus,
               // Preserva a nota atual de currentItem caso o usuário tenha acabado de avaliar!
               rating: finalShouldClearRating ? undefined : (currentItem.rating ?? (data?.rating != null ? data.rating : undefined)),
+              is_favorite: finalShouldClearFavorite ? false : (data?.is_favorite !== undefined ? Boolean(data.is_favorite) : currentItem.is_favorite),
             }
           }
         };
@@ -430,7 +454,7 @@ export const useMyListStore = create<MyListStore>()(
         return {
           items: {
             ...state.items,
-            [tmdb_id]: { ...currentItem, status: oldStatus, rating: oldRating }
+            [tmdb_id]: { ...currentItem, status: oldStatus, rating: oldRating, is_favorite: oldFavorite }
           }
         };
       });
@@ -552,6 +576,94 @@ export const useMyListStore = create<MyListStore>()(
           [tmdb_id]: prevProgress
         }
       }));
+    }
+  },
+
+  toggleFavorite: async (tmdb_id) => {
+    let item = get().items[tmdb_id];
+    if (!item) return;
+
+    if (item.id.startsWith('temp-')) {
+      let retries = 0;
+      while (get().items[tmdb_id]?.id?.startsWith('temp-') && retries < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        retries++;
+      }
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    }
+
+    if (!['watching', 'completed'].includes(item.status)) {
+      toast.add({
+        title: "Ação não permitida",
+        description: "Apenas mídias com status 'Assistindo' ou 'Assistido' podem ser favoritadas.",
+        type: "warning"
+      });
+      return;
+    }
+
+    const oldFavorite = !!item.is_favorite;
+    const newFavorite = !oldFavorite;
+
+    // Optimistic update
+    set((state) => {
+      const currentItem = state.items[tmdb_id] || item;
+      return {
+        items: {
+          ...state.items,
+          [tmdb_id]: {
+            ...currentItem,
+            is_favorite: newFavorite,
+          }
+        }
+      };
+    });
+
+    try {
+      const data = await resilientFetch<any>(`/api/my-list/${item.id}`, {
+        method: 'PATCH',
+        body: { is_favorite: newFavorite },
+      });
+      set((state) => {
+        const currentItem = state.items[tmdb_id] || item;
+        return {
+          items: {
+            ...state.items,
+            [tmdb_id]: {
+              ...currentItem,
+              is_favorite: data?.is_favorite !== undefined ? Boolean(data.is_favorite) : newFavorite,
+            }
+          }
+        };
+      });
+      toast.add({
+        title: newFavorite ? "Adicionado aos Favoritos! ❤️" : "Removido dos Favoritos",
+        description: newFavorite 
+          ? "Esta obra terá peso maior nas suas recomendações no Explorar." 
+          : "O título foi desmarcado como favorito.",
+        type: "success"
+      });
+    } catch (error: any) {
+      console.error('Failed to toggle favorite', error);
+      // Revert optimistic update
+      set((state) => {
+        const currentItem = state.items[tmdb_id] || item;
+        return {
+          items: {
+            ...state.items,
+            [tmdb_id]: {
+              ...currentItem,
+              is_favorite: oldFavorite,
+            }
+          }
+        };
+      });
+      const errorDetail = error?.response?.data?.detail;
+      toast.add({
+        title: "Erro ao atualizar favorito",
+        description: errorDetail || "Não foi possível atualizar o favorito.",
+        type: "error"
+      });
     }
   },
 

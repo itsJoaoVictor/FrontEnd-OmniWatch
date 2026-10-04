@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { getRatingLabel } from '@/lib/ratingLabel';
 import { toast } from '@/components/ui/toast';
 
 interface AddToListButtonProps {
@@ -306,7 +307,14 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-muted-foreground text-center">Clique na estrela para salvar</p>
+                {(() => {
+                  const info = getRatingLabel(hoverRating !== null ? hoverRating : savedItem.rating);
+                  return info ? (
+                    <p className={cn("text-xs font-semibold text-center", info.colorClass)}>{info.label}</p>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground text-center">Clique na estrela para salvar</p>
+                  );
+                })()}
               </div>
               <DropdownMenuSeparator />
             </div>

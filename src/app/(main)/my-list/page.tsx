@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { getFollowedCollections } from '@/services/collections';
 import { UserFollowedCollection } from '@/types/collections';
 import { FollowedCollectionCard } from '@/components/collections/FollowedCollectionCard';
-import { Layers, Compass, Star, StarOff, CheckCircle2, Clock, Play } from 'lucide-react';
+import { Layers, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
 
@@ -18,9 +18,10 @@ export default function MyListPage() {
   const [mediaTab, setMediaTab] = useState<'all' | 'movie' | 'tv' | 'collections'>('all');
   const [statusFilter, setStatusFilter] = useState<ListStatus | 'all'>('all');
 
-  // Sub-filters for rating & progress
+  // Sub-filters for rating & progress & favorites
   const [ratingFilter, setRatingFilter] = useState<'all' | 'unrated' | 'rated'>('all');
   const [watchProgressFilter, setWatchProgressFilter] = useState<'all' | 'up_to_date' | 'pending'>('all');
+  const [favoriteFilter, setFavoriteFilter] = useState<boolean>(false);
 
   // Collections state
   const [collections, setCollections] = useState<UserFollowedCollection[]>([]);
@@ -80,15 +81,19 @@ export default function MyListPage() {
   const ratedCount = baseItems.filter((i) => typeof i.rating === 'number' && i.rating > 0).length;
   const upToDateCount = baseItems.filter((i) => i.media_type === 'tv' && i.is_up_to_date === true).length;
   const pendingCount = baseItems.filter((i) => i.media_type === 'tv' && i.is_up_to_date === false).length;
+  const favoriteCount = baseItems.filter((i) => i.is_favorite).length;
   const hasSeries = baseItems.some((i) => i.media_type === 'tv');
 
   // Filter items
   const filteredItems = baseItems.filter((item) => {
-    // 3. Filter by rating
+    // 1. Filter by favorites
+    if (favoriteFilter && !item.is_favorite) return false;
+
+    // 2. Filter by rating
     if (ratingFilter === 'unrated' && (item.rating && item.rating > 0)) return false;
     if (ratingFilter === 'rated' && (!item.rating || item.rating === 0)) return false;
 
-    // 4. Filter by watch progress (for watching series)
+    // 3. Filter by watch progress (for watching series)
     if (watchProgressFilter === 'up_to_date' && (!item.is_up_to_date || item.media_type !== 'tv')) return false;
     if (watchProgressFilter === 'pending' && (item.is_up_to_date || item.media_type !== 'tv')) return false;
 
@@ -202,6 +207,29 @@ export default function MyListPage() {
               onClick={() => handleStatusChange('dropped')}
             >
               Abandonados
+            </Button>
+
+            <div className="h-6 w-px bg-border/60 self-center mx-1 shrink-0" />
+
+            <Button
+              variant={favoriteFilter ? 'default' : 'outline'}
+              className={cn(
+                "rounded-full cursor-pointer transition-all flex items-center gap-1.5 shrink-0",
+                favoriteFilter
+                  ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-500/25"
+                  : "border-border hover:border-rose-500/50 hover:text-rose-400"
+              )}
+              onClick={() => setFavoriteFilter(!favoriteFilter)}
+              title={favoriteFilter ? "Remover filtro de favoritos" : "Mostrar apenas favoritos"}
+            >
+              <Heart className={cn("w-3.5 h-3.5", favoriteFilter ? "fill-white text-white" : "fill-rose-500 text-rose-500")} />
+              <span>Favoritos</span>
+              <span className={cn(
+                "px-1.5 py-0.2 rounded-full text-[10px]",
+                favoriteFilter ? "bg-white/20 text-white font-bold" : "bg-muted text-muted-foreground"
+              )}>
+                {favoriteCount}
+              </span>
             </Button>
           </div>
 
