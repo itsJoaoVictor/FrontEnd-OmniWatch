@@ -49,16 +49,17 @@ export function FollowedCollectionCard({
     setIsSyncing(true);
     try {
       const res = await syncCollection(collection.tmdb_id);
-      if (res.new_parts_count > 0) {
+      const totalAdded = (res.new_parts_count || 0) + (res.reconciled_count || 0);
+      if (totalAdded > 0) {
         toast.add({
-          title: "Coleção atualizada!",
-          description: `${res.new_parts_count} novo(s) filme(s) foram adicionados à sua lista.`,
+          title: "Coleção sincronizada!",
+          description: `${totalAdded} filme(s) foram colocados na sua lista em "Quero Ver".`,
           type: "success",
         });
       } else {
         toast.add({
           title: "Tudo atualizado!",
-          description: "Não há novos filmes lançados no TMDB para esta franquia.",
+          description: "Todos os filmes da franquia já estão na sua lista e não há lançamentos novos no TMDB.",
           type: "info",
         });
       }
@@ -147,6 +148,11 @@ export function FollowedCollectionCard({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <Link
+          href={`/collection/${collection.tmdb_id}`}
+          aria-label={`Abrir ${collection.name}`}
+          className="absolute inset-0 z-[5]"
+        />
 
         {/* Action buttons no topo direito */}
         <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
@@ -174,7 +180,7 @@ export function FollowedCollectionCard({
         </div>
 
         {/* Info no rodapé da imagem */}
-        <div className="absolute bottom-3 left-4 right-4 z-10">
+        <div className="absolute bottom-3 left-4 right-4 z-10 pointer-events-none">
           <div className="flex items-center gap-2 mb-1">
             {isCompleted ? (
               <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-700/60">
