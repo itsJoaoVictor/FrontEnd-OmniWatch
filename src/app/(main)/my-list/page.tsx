@@ -10,7 +10,7 @@ import { getFollowedCollections, getCollectionSuggestions } from '@/services/col
 import { UserFollowedCollection, CollectionSuggestion } from '@/types/collections';
 import { FollowedCollectionCard } from '@/components/collections/FollowedCollectionCard';
 import { CollectionSuggestionCard } from '@/components/collections/CollectionSuggestionCard';
-import { Layers, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles } from 'lucide-react';
+import { Layers, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
 
@@ -28,7 +28,44 @@ export default function MyListPage() {
   const [collections, setCollections] = useState<UserFollowedCollection[]>([]);
   const [isLoadingCollections, setIsLoadingCollections] = useState(false);
   const [suggestions, setSuggestions] = useState<CollectionSuggestion[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [, setIsLoadingSuggestions] = useState(false);
+  const [isSuggestionsCollapsed, setIsSuggestionsCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('omniwatch_suggestions_collapsed');
+      if (saved !== null) {
+        queueMicrotask(() => {
+          setIsSuggestionsCollapsed(saved === 'true');
+        });
+      }
+    } catch (e) {
+      console.error('Failed to read suggestions collapsed state from localStorage', e);
+    }
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'omniwatch_suggestions_collapsed' && e.newValue !== null) {
+        setIsSuggestionsCollapsed(e.newValue === 'true');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  const toggleSuggestionsCollapsed = () => {
+    setIsSuggestionsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('omniwatch_suggestions_collapsed', String(next));
+      } catch (e) {
+        console.error('Failed to save suggestions collapsed state to localStorage', e);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchMyList();
@@ -92,7 +129,7 @@ export default function MyListPage() {
   };
 
   const handleMediaTabChange = (val: string) => {
-    setMediaTab(val as any);
+    setMediaTab(val as 'all' | 'movie' | 'tv' | 'collections');
     setRatingFilter('all');
     setWatchProgressFilter('all');
   };
@@ -180,9 +217,9 @@ export default function MyListPage() {
             </div>
           </div>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
-            className="border-amber-500/40 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs shrink-0 cursor-pointer self-start sm:self-auto font-medium"
+            className="bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-amber-500/40 text-xs shrink-0 cursor-pointer self-start sm:self-auto font-medium px-3.5 py-1.5 transition-all shadow-sm"
             onClick={() => handleMediaTabChange('collections')}
           >
             Ver Sugestões na aba Coleções →
@@ -194,36 +231,72 @@ export default function MyListPage() {
         <div className="space-y-8">
           {/* Seção de Alertas e Sugestões de Coleções */}
           {suggestions.length > 0 && (
-            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-2xl p-5 sm:p-6 transition-all duration-300">
-              <div className="flex items-start justify-between gap-4 mb-5">
-                <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-2xl transition-all duration-300",
+                isSuggestionsCollapsed ? "p-4 sm:p-5 hover:border-amber-500/40" : "p-5 sm:p-6"
+              )}
+            >
+              <div
+                className={cn(
+                  "flex justify-between gap-3 sm:gap-4",
+                  isSuggestionsCollapsed ? "items-center cursor-pointer select-none" : "flex-col sm:flex-row items-start mb-5"
+                )}
+                onClick={isSuggestionsCollapsed ? toggleSuggestionsCollapsed : undefined}
+                role={isSuggestionsCollapsed ? "button" : undefined}
+                tabIndex={isSuggestionsCollapsed ? 0 : undefined}
+                onKeyDown={isSuggestionsCollapsed ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSuggestionsCollapsed(); } } : undefined}
+              >
+                <div className={cn("flex gap-3", isSuggestionsCollapsed ? "items-center" : "items-start")}>
                   <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
-                    <Sparkles className="w-5 h-5" />
+                    <Sparkles className="w-5 h-5" aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-bold text-foreground flex flex-wrap items-center gap-2">
                       Sugestões de Franquias
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30">
                         {suggestions.length} {suggestions.length === 1 ? 'identificada' : 'identificadas'}
                       </span>
                     </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                      Você já tem filmes dessas franquias na sua lista. Siga a coleção para acompanhar tudo e adicionar os próximos filmes automaticamente!
-                    </p>
+                    {!isSuggestionsCollapsed && (
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                        Você já tem filmes dessas franquias na sua lista. Siga a coleção para acompanhar tudo e adicionar os próximos filmes automaticamente!
+                      </p>
+                    )}
                   </div>
                 </div>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSuggestionsCollapsed();
+                  }}
+                  className="bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-zinc-700 hover:border-zinc-600 shadow-sm text-xs shrink-0 cursor-pointer font-medium gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-lg transition-all"
+                  aria-controls="collection-suggestions-content"
+                >
+                  <span className="font-semibold text-zinc-100">{isSuggestionsCollapsed ? 'Mostrar Sugestões' : 'Ocultar Sugestões'}</span>
+                  {isSuggestionsCollapsed ? (
+                    <ChevronDown className="w-4 h-4 text-zinc-300" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 text-zinc-300" />
+                  )}
+                </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {suggestions.map((suggestion) => (
-                  <CollectionSuggestionCard
-                    key={suggestion.id}
-                    suggestion={suggestion}
-                    onFollow={handleFollowSuggestion}
-                    onDismiss={handleDismissSuggestion}
-                  />
-                ))}
-              </div>
+              {!isSuggestionsCollapsed && (
+                <div id="collection-suggestions-content" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in duration-200">
+                  {suggestions.map((suggestion) => (
+                    <CollectionSuggestionCard
+                      key={suggestion.id}
+                      suggestion={suggestion}
+                      onFollow={handleFollowSuggestion}
+                      onDismiss={handleDismissSuggestion}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -249,7 +322,7 @@ export default function MyListPage() {
                 <h3 className="text-xl font-semibold mb-2">Nenhuma coleção seguida</h3>
                 <p className="text-sm text-muted-foreground mb-6">
                   Ao navegar pelos filmes de sagas como Demon Slayer, John Wick ou Harry Potter, clique em{' '}
-                  <strong className="text-foreground">"Seguir Coleção"</strong> para adicionar e acompanhar
+                  <strong className="text-foreground">&ldquo;Seguir Coleção&rdquo;</strong> para adicionar e acompanhar
                   todos os filmes automaticamente.
                 </p>
                 <Link href="/explore">
