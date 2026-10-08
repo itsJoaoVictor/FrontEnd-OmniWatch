@@ -6,10 +6,11 @@ import { useMyListStore, ListStatus } from '@/store/useMyListStore';
 import { MediaCard } from '@/components/home/MediaCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { getFollowedCollections } from '@/services/collections';
-import { UserFollowedCollection } from '@/types/collections';
+import { getFollowedCollections, getCollectionSuggestions } from '@/services/collections';
+import { UserFollowedCollection, CollectionSuggestion } from '@/types/collections';
 import { FollowedCollectionCard } from '@/components/collections/FollowedCollectionCard';
-import { Layers, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart } from 'lucide-react';
+import { CollectionSuggestionCard } from '@/components/collections/CollectionSuggestionCard';
+import { Layers, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
 
@@ -23,9 +24,11 @@ export default function MyListPage() {
   const [watchProgressFilter, setWatchProgressFilter] = useState<'all' | 'up_to_date' | 'pending'>('all');
   const [favoriteFilter, setFavoriteFilter] = useState<boolean>(false);
 
-  // Collections state
+  // Collections & Suggestions state
   const [collections, setCollections] = useState<UserFollowedCollection[]>([]);
   const [isLoadingCollections, setIsLoadingCollections] = useState(false);
+  const [suggestions, setSuggestions] = useState<CollectionSuggestion[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
   useEffect(() => {
     fetchMyList();
@@ -43,14 +46,42 @@ export default function MyListPage() {
     }
   }, []);
 
+  const loadSuggestions = useCallback(async () => {
+    try {
+      setIsLoadingSuggestions(true);
+      const data = await getCollectionSuggestions();
+      setSuggestions(data);
+    } catch (err) {
+      console.error('Failed to load collection suggestions:', err);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  }, []);
+
+  // Carrega sugestões para preencher o badge da aba
+  useEffect(() => {
+    loadSuggestions();
+  }, [loadSuggestions]);
+
   useEffect(() => {
     if (mediaTab === 'collections') {
       loadCollections();
+      loadSuggestions();
     }
-  }, [mediaTab, loadCollections]);
+  }, [mediaTab, loadCollections, loadSuggestions]);
 
   function handleUnfollowCollection(tmdbId: number) {
     setCollections((prev) => prev.filter((c) => c.tmdb_id !== tmdbId));
+  }
+
+  function handleFollowSuggestion(tmdbId: number) {
+    setSuggestions((prev) => prev.filter((s) => s.tmdb_id !== tmdbId));
+    loadCollections();
+    fetchMyList();
+  }
+
+  function handleDismissSuggestion(tmdbId: number) {
+    setSuggestions((prev) => prev.filter((s) => s.tmdb_id !== tmdbId));
   }
 
   // Reset sub-filters when status or media tab changes
@@ -109,7 +140,7 @@ export default function MyListPage() {
       <h1 className="text-3xl md:text-4xl font-bold mb-8">Minha Lista</h1>
 
       <Tabs
-        defaultValue="all"
+        value={mediaTab}
         onValueChange={handleMediaTabChange}
         className="w-full mb-8"
       >
@@ -120,12 +151,83 @@ export default function MyListPage() {
           <TabsTrigger value="collections" className="px-6 flex items-center gap-1.5">
             <Layers className="w-4 h-4" />
             <span>Coleções</span>
+            {suggestions.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 text-[11px] bg-amber-500/20 text-amber-500 dark:text-amber-400 font-semibold rounded-full border border-amber-500/30">
+                {suggestions.length}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
+      {/* Banner de Alerta de Franquias nas outras abas */}
+      {suggestions.length > 0 && mediaTab !== 'collections' && (
+        <div className="mb-8 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                {suggestions.length === 1 ? '1 Franquia Sugerida' : `${suggestions.length} Franquias Sugeridas`}
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                  {suggestions.length}
+                </span>
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Identificamos filmes de uma mesma coleção na sua lista ({suggestions.map(s => s.name).slice(0, 2).join(', ')}). Deseja acompanhar a saga completa?
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-amber-500/40 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs shrink-0 cursor-pointer self-start sm:self-auto font-medium"
+            onClick={() => handleMediaTabChange('collections')}
+          >
+            Ver Sugestões na aba Coleções →
+          </Button>
+        </div>
+      )}
+
       {mediaTab === 'collections' ? (
-        <div>
+        <div className="space-y-8">
+          {/* Seção de Alertas e Sugestões de Coleções */}
+          {suggestions.length > 0 && (
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-2xl p-5 sm:p-6 transition-all duration-300">
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                      Sugestões de Franquias
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30">
+                        {suggestions.length} {suggestions.length === 1 ? 'identificada' : 'identificadas'}
+                      </span>
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                      Você já tem filmes dessas franquias na sua lista. Siga a coleção para acompanhar tudo e adicionar os próximos filmes automaticamente!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {suggestions.map((suggestion) => (
+                  <CollectionSuggestionCard
+                    key={suggestion.id}
+                    suggestion={suggestion}
+                    onFollow={handleFollowSuggestion}
+                    onDismiss={handleDismissSuggestion}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Seção de Coleções Seguidas */}
           {isLoadingCollections ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -133,33 +235,48 @@ export default function MyListPage() {
               ))}
             </div>
           ) : collections.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
-              <div className="w-14 h-14 rounded-full bg-secondary/60 flex items-center justify-center mb-4 text-muted-foreground">
-                <Layers className="w-7 h-7" />
+            suggestions.length > 0 ? (
+              <div className="text-center py-10 bg-card/40 border border-border/40 rounded-xl p-6">
+                <p className="text-sm text-muted-foreground">
+                  Você ainda não possui coleções fixas na sua lista. Comece seguindo uma das sugestões acima!
+                </p>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Nenhuma coleção seguida</h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                Ao navegar pelos filmes de sagas como Demon Slayer, John Wick ou Harry Potter, clique em{' '}
-                <strong className="text-foreground">"Seguir Coleção"</strong> para adicionar e acompanhar
-                todos os filmes automaticamente.
-              </p>
-              <Link href="/explore">
-                <Button className="gap-2 cursor-pointer">
-                  <Compass className="w-4 h-4" />
-                  Explorar Títulos
-                </Button>
-              </Link>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
+                <div className="w-14 h-14 rounded-full bg-secondary/60 flex items-center justify-center mb-4 text-muted-foreground">
+                  <Layers className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Nenhuma coleção seguida</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Ao navegar pelos filmes de sagas como Demon Slayer, John Wick ou Harry Potter, clique em{' '}
+                  <strong className="text-foreground">"Seguir Coleção"</strong> para adicionar e acompanhar
+                  todos os filmes automaticamente.
+                </p>
+                <Link href="/explore">
+                  <Button className="gap-2 cursor-pointer">
+                    <Compass className="w-4 h-4" />
+                    Explorar Títulos
+                  </Button>
+                </Link>
+              </div>
+            )
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {collections.map((col) => (
-                <FollowedCollectionCard
-                  key={col.id}
-                  collection={col}
-                  onUnfollow={handleUnfollowCollection}
-                  onSyncComplete={loadCollections}
-                />
-              ))}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground">
+                  Coleções Seguidas ({collections.length})
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {collections.map((col) => (
+                  <FollowedCollectionCard
+                    key={col.id}
+                    collection={col}
+                    onUnfollow={handleUnfollowCollection}
+                    onSyncComplete={loadCollections}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>

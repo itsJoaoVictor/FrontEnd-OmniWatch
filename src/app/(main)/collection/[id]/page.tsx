@@ -4,10 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Film, RotateCw, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, Film, RotateCw, Star, Trash2, BookmarkPlus } from "lucide-react";
 import { UserFollowedCollection } from "@/types/collections";
 import {
   getFollowedCollections,
+  getCollectionDetails,
+  followCollection,
   syncCollection,
   unfollowCollection,
 } from "@/services/collections";
@@ -31,6 +33,7 @@ export default function CollectionPage() {
   const tmdbId = Number(params.id);
 
   const [collection, setCollection] = useState<UserFollowedCollection | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const listItems = useMyListStore((s) => s.items);
@@ -43,17 +46,80 @@ export default function CollectionPage() {
   const load = useCallback(async () => {
     try {
       const all = await getFollowedCollections();
-      setCollection(all.find((c) => c.tmdb_id === tmdbId) ?? null);
+      const existing = all.find((c) => c.tmdb_id === tmdbId);
+      if (existing) {
+        setCollection(existing);
+        setIsFollowing(true);
+      } else {
+        // Busca dados públicos da coleção no TMDB/Backend se ainda não for seguida
+        const tmdbData = await getCollectionDetails(tmdbId);
+        if (tmdbData) {
+          const parts = tmdbData.parts || [];
+          const total = parts.length;
+          const watched = parts.filter(
+            (p: any) => listItems[p.id]?.status === "completed"
+          ).length;
+          const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
+          setCollection({
+            id: String(tmdbData.id),
+            tmdb_id: tmdbData.id,
+            name: tmdbData.name,
+            overview: tmdbData.overview,
+            poster_path: tmdbData.poster_path,
+            backdrop_path: tmdbData.backdrop_path,
+            total_movies: total,
+            watched_movies: watched,
+            completion_percentage: pct,
+            items: parts.map((p: any) => ({
+              id: String(p.id),
+              tmdb_id: p.id,
+              title: p.title,
+              release_date: p.release_date,
+              poster_path: p.poster_path,
+              backdrop_path: p.backdrop_path,
+              status: listItems[p.id]?.status ?? null,
+              rating: listItems[p.id]?.rating ?? null,
+            })),
+            created_at: new Date().toISOString(),
+          });
+          setIsFollowing(false);
+        } else {
+          setCollection(null);
+        }
+      }
     } catch {
       setCollection(null);
     } finally {
       setLoading(false);
     }
-  }, [tmdbId]);
+  }, [tmdbId, listItems]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  async function handleFollow() {
+    if (!collection || busy) return;
+    setBusy(true);
+    try {
+      const res = await followCollection(collection.tmdb_id);
+      toast.add({
+        title: "Coleção seguida!",
+        description: `Você começou a acompanhar ${collection.name}. ${res.movies_added} novos filmes foram adicionados à sua lista.`,
+        type: "success",
+      });
+      setIsFollowing(true);
+      await Promise.all([load(), fetchMyList()]);
+    } catch (err: any) {
+      toast.add({
+        title: "Erro ao seguir coleção",
+        description: err.response?.data?.detail || "Falha ao seguir coleção.",
+        type: "error",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function handleSync() {
     if (!collection || busy) return;
@@ -102,7 +168,7 @@ export default function CollectionPage() {
   if (!collection) {
     return (
       <div className="p-8 space-y-4">
-        <p className="text-muted-foreground">Coleção não encontrada ou não monitorada.</p>
+        <p className="text-muted-foreground">Coleção não encontrada ou indisponível.</p>
         <Link href="/my-list" className="underline">Voltar para minha lista</Link>
       </div>
     );
@@ -132,13 +198,26 @@ export default function CollectionPage() {
         >
           <ArrowLeft className="w-4 h-4" /> Minha lista
         </Link>
-        <div className="absolute top-4 right-4 flex gap-2">
-          <Button variant="secondary" size="icon" className="rounded-full" onClick={handleSync} disabled={busy} title="Sincronizar novos filmes com TMDB">
-            <RotateCw className={`w-4 h-4 ${busy ? "animate-spin" : ""}`} />
-          </Button>
-          <Button variant="destructive" size="icon" className="rounded-full" onClick={handleUnfollow} disabled={busy} title="Deixar de seguir esta coleção">
-            <Trash2 className="w-4 h-4" />
-          </Button>
+        <div className="absolute top-4 right-4 flex gap-2 items-center">
+          {isFollowing ? (
+            <>
+              <Button variant="secondary" size="icon" className="rounded-full cursor-pointer" onClick={handleSync} disabled={busy} title="Sincronizar novos filmes com TMDB">
+                <RotateCw className={`w-4 h-4 ${busy ? "animate-spin" : ""}`} />
+              </Button>
+              <Button variant="destructive" size="icon" className="rounded-full cursor-pointer" onClick={handleUnfollow} disabled={busy} title="Deixar de seguir esta coleção">
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={handleFollow}
+              disabled={busy}
+              className="rounded-full gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm px-4 shadow-lg cursor-pointer"
+            >
+              <BookmarkPlus className="w-4 h-4" />
+              {busy ? "Seguindo..." : "Seguir Coleção"}
+            </Button>
+          )}
         </div>
         <h1 className="absolute bottom-4 left-6 right-6 text-2xl sm:text-4xl font-bold drop-shadow">
           {collection.name}

@@ -41,3 +41,17 @@ export interface CollectionFollowResponse {
   movies_added: number;
   movies_already_in_list: number;
 }
+
+export interface CollectionSuggestion {
+  id: string;
+  tmdb_id: number;
+  name: string;
+  overview?: string | null;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  total_movies: number;
+  movies_in_list: number;
+  matched_movie_titles: string[];
+  created_at: string;
+}
+
