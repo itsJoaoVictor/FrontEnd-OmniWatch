@@ -181,6 +181,26 @@ export default function CollectionPage() {
     collection.total_movies > 0 && collection.watched_movies === collection.total_movies;
   const pct = Math.min(100, Math.max(0, collection.completion_percentage));
 
+  // Calcula média de notas dos filmes avaliados
+  const ratedItems = (collection.items || []).filter((item) => {
+    const saved = listItems[item.tmdb_id];
+    const r = saved?.rating ?? item.rating;
+    return typeof r === "number" && r > 0;
+  });
+  const ratedCount = collection.rated_movies_count ?? ratedItems.length;
+  const averageRating =
+    collection.user_average_rating !== undefined && collection.user_average_rating !== null
+      ? collection.user_average_rating.toFixed(1)
+      : ratedItems.length > 0
+      ? (
+          ratedItems.reduce((acc, item) => {
+            const saved = listItems[item.tmdb_id];
+            const r = saved?.rating ?? item.rating ?? 0;
+            return acc + r;
+          }, 0) / ratedItems.length
+        ).toFixed(1)
+      : null;
+
   return (
     <div className="max-w-6xl mx-auto pb-12">
       <div className="relative h-56 sm:h-80 w-full overflow-hidden bg-muted">
@@ -199,6 +219,12 @@ export default function CollectionPage() {
           <ArrowLeft className="w-4 h-4" /> Minha lista
         </Link>
         <div className="absolute top-4 right-4 flex gap-2 items-center">
+          {averageRating && (
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-300 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-amber-500/30 shadow-md">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              <span>{averageRating}</span>
+            </div>
+          )}
           {isFollowing ? (
             <>
               <Button variant="secondary" size="icon" className="rounded-full cursor-pointer" onClick={handleSync} disabled={busy} title="Sincronizar novos filmes com TMDB">
@@ -229,18 +255,43 @@ export default function CollectionPage() {
           <p className="text-sm sm:text-base text-muted-foreground">{collection.overview}</p>
         )}
 
-        <div>
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-muted-foreground font-medium">Progresso da Coleção</span>
-            <span className="font-semibold">
-              {collection.watched_movies} de {collection.total_movies} assistidos ({collection.completion_percentage}%)
-            </span>
+        {/* Métricas: Progresso e Avaliação */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card/60 border border-border/50 rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-col justify-between">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground font-medium">Progresso da Coleção</span>
+              <span className="font-semibold">
+                {collection.watched_movies} de {collection.total_movies} assistidos ({collection.completion_percentage}%)
+              </span>
+            </div>
+            <div className="w-full bg-secondary/80 rounded-full h-2.5 overflow-hidden">
+              <div
+                className={`h-2.5 rounded-full transition-all duration-500 ${isCompleted ? "bg-emerald-500" : "bg-primary"}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
           </div>
-          <div className="w-full bg-secondary/80 rounded-full h-2.5 overflow-hidden">
-            <div
-              className={`h-2.5 rounded-full ${isCompleted ? "bg-emerald-500" : "bg-primary"}`}
-              style={{ width: `${pct}%` }}
-            />
+
+          <div className="flex flex-col justify-between pt-2 md:pt-0 border-t md:border-t-0 md:border-l md:pl-4 border-border/40">
+            <div className="flex justify-between items-center text-sm mb-1">
+              <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                Sua Nota Média
+              </span>
+              {averageRating ? (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-base font-bold text-amber-400">{averageRating}</span>
+                  <span className="text-xs text-muted-foreground">/ 5.0</span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Sem avaliações</span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {averageRating
+                ? `${ratedCount} de ${collection.total_movies} ${collection.total_movies === 1 ? "filme" : "filmes"} avaliados nesta franquia`
+                : "Atribua notas aos filmes assistidos para calcular sua média."}
+            </p>
           </div>
         </div>
 

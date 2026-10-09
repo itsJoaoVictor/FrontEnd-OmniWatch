@@ -44,6 +44,21 @@ export function FollowedCollectionCard({
     collection.total_movies > 0 &&
     collection.watched_movies === collection.total_movies;
 
+  // Calcula média de notas dos filmes avaliados da coleção
+  const ratedItems = (collection.items || []).filter(
+    (item) => typeof item.rating === "number" && item.rating > 0
+  );
+  const ratedCount = collection.rated_movies_count ?? ratedItems.length;
+  const averageRating =
+    collection.user_average_rating !== undefined && collection.user_average_rating !== null
+      ? collection.user_average_rating.toFixed(1)
+      : ratedItems.length > 0
+      ? (
+          ratedItems.reduce((acc, curr) => acc + (curr.rating || 0), 0) /
+          ratedItems.length
+        ).toFixed(1)
+      : null;
+
   async function handleSync() {
     if (isSyncing) return;
     setIsSyncing(true);
@@ -154,6 +169,14 @@ export function FollowedCollectionCard({
           className="absolute inset-0 z-[5]"
         />
 
+        {/* Badge flutuante de Nota Média no topo esquerdo */}
+        {averageRating && (
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-500/30 shadow-sm pointer-events-none">
+            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+            <span>{averageRating}</span>
+          </div>
+        )}
+
         {/* Action buttons no topo direito */}
         <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
           <Button
@@ -210,13 +233,31 @@ export function FollowedCollectionCard({
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-secondary/80 rounded-full h-2.5 overflow-hidden mb-4">
+        <div className="w-full bg-secondary/80 rounded-full h-2.5 overflow-hidden mb-3">
           <div
             className={`h-2.5 rounded-full transition-all duration-500 ${
               isCompleted ? "bg-emerald-500" : "bg-primary"
             }`}
             style={{ width: `${Math.min(100, Math.max(0, collection.completion_percentage))}%` }}
           />
+        </div>
+
+        {/* Linha de Avaliação da Franquia */}
+        <div className="flex items-center justify-between text-xs mb-3 py-1.5 px-3 rounded-lg bg-secondary/30 border border-border/40">
+          <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30" />
+            Sua Avaliação
+          </span>
+          {averageRating ? (
+            <span className="font-semibold text-foreground flex items-center gap-1.5">
+              <span className="text-amber-400 font-bold">{averageRating}</span>
+              <span className="text-[11px] text-muted-foreground font-normal">
+                ({ratedCount} de {collection.total_movies} {collection.total_movies === 1 ? "filme" : "filmes"} avaliados)
+              </span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-[11px]">Sem avaliações</span>
+          )}
         </div>
 
         {collection.overview && (

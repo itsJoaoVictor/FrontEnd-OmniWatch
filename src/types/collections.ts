@@ -20,6 +20,8 @@ export interface UserFollowedCollection {
   total_movies: number;
   watched_movies: number;
   completion_percentage: number;
+  user_average_rating?: number | null;
+  rated_movies_count?: number;
   items: CollectionFollowedItem[];
   created_at: string;
 }
