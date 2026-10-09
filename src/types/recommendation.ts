@@ -29,3 +29,22 @@ export interface PersonaCarousel {
   recommendations: RecommendationItem[];
 }
 
+export interface TogetherFriendInfo {
+  id: string;
+  name: string;
+  username?: string | null;
+}
+
+export interface TogetherRecommendationItem extends RecommendationItem {
+  user_score?: number;
+  friend_score?: number;
+  watched_by_user?: boolean;
+  watched_by_friend?: boolean;
+}
+
+export interface TogetherResponse {
+  friend: TogetherFriendInfo;
+  items: TogetherRecommendationItem[];
+  total: number;
+}
+

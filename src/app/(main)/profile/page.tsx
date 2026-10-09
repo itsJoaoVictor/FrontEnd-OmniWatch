@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, EyeOff, RotateCcw, Calendar, Film, Tv, Sparkles, ListPlus, AtSign } from "lucide-react";
+import { User, Users, EyeOff, RotateCcw, Calendar, Film, Tv, Sparkles, ListPlus, AtSign } from "lucide-react";
 import { EditUsernameModal } from "@/components/profile/EditUsernameModal";
 import { useUserStore } from "@/store/useUserStore";
 
@@ -156,6 +156,13 @@ export default function ProfilePage() {
                 <AtSign className="w-3.5 h-3.5 mr-1.5 text-primary" />
                 {user?.username ? "Alterar @username" : "Definir @username"}
               </Button>
+
+              <Link href="/friends">
+                <Button variant="outline" className="border-zinc-700 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-white">
+                  <Users className="w-4 h-4 mr-2 text-primary" />
+                  Amigos
+                </Button>
+              </Link>
 
               <Link href="/lists">
                 <Button variant="outline" className="border-zinc-700 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-white">

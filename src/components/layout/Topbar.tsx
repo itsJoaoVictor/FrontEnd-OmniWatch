@@ -8,18 +8,23 @@ import { SearchInput } from "./SearchInput";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/axios";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useUserStore } from "@/store/useUserStore";
+import { useFriendsStore } from "@/store/useFriendsStore";
 
 export function Topbar() {
   const router = useRouter();
   const { user, clearUser } = useUserStore();
+  const { pendingCount, fetchPendingCount } = useFriendsStore();
+
+  useEffect(() => {
+    fetchPendingCount();
+    // Atualiza periodicamente a cada 45 segundos
+    const interval = setInterval(() => {
+      fetchPendingCount();
+    }, 45000);
+    return () => clearInterval(interval);
+  }, [fetchPendingCount]);
 
   const handleLogout = async () => {
     try {
@@ -45,47 +50,20 @@ export function Topbar() {
             <Link href="/explore" className="text-foreground/80 hover:text-primary transition-colors">Explorar</Link>
             <Link href="/my-list" className="text-foreground/80 hover:text-primary transition-colors">Minha Lista</Link>
             <Link href="/lists" className="text-foreground/80 hover:text-primary transition-colors">Listas</Link>
+            <Link href="/friends" className="text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
+              <span>Amigos</span>
+              {pendingCount > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary text-primary-foreground shadow-sm animate-pulse">
+                  {pendingCount}
+                </span>
+              )}
+            </Link>
+            <Link href="/feed" className="text-foreground/80 hover:text-primary transition-colors">Feed</Link>
             <Link href="/calendar" className="text-foreground/80 hover:text-primary transition-colors">Calendário</Link>
             <Link href="/stats" className="text-foreground/80 hover:text-primary transition-colors">Estatísticas</Link>
           </nav>
         </div>
         <div className="flex items-center gap-2 lg:gap-4 text-foreground">
-          {/* Mobile Hamburger Menu */}
-          <div className="lg:hidden">
-            <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-9 w-9" />}>
-                <Menu className="h-5 w-5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem render={<Link href="/dashboard" className="w-full cursor-pointer" />}>
-                  Início
-                </DropdownMenuItem>
-                <DropdownMenuItem render={<Link href="/explore" className="w-full cursor-pointer" />}>
-                  Explorar
-                </DropdownMenuItem>
-                <DropdownMenuItem render={<Link href="/my-list" className="w-full cursor-pointer" />}>
-                  Minha Lista
-                </DropdownMenuItem>
-                <DropdownMenuItem render={<Link href="/lists" className="w-full cursor-pointer" />}>
-                  Listas
-                </DropdownMenuItem>
-                <DropdownMenuItem render={<Link href="/calendar" className="w-full cursor-pointer" />}>
-                  Calendário
-                </DropdownMenuItem>
-                <DropdownMenuItem render={<Link href="/stats" className="w-full cursor-pointer" />}>
-                  Estatísticas
-                </DropdownMenuItem>
-                <DropdownMenuItem render={<Link href="/profile" className="w-full cursor-pointer flex justify-between items-center" />}>
-                  <span>Perfil</span>
-                  {user?.name && <span className="text-xs text-muted-foreground truncate max-w-[120px]">{user.name}</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500 cursor-pointer">
-                  Sair
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
           <SearchInput />
           <NotificationBell />
           <div className="hidden lg:flex items-center gap-2">

@@ -7,6 +7,8 @@ import { useMyListStore } from '@/store/useMyListStore';
 import { MediaItem } from "@/components/home/MediaCard";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
+import { UserPlus, ArrowRight } from 'lucide-react';
+import { useFriendsStore } from '@/store/useFriendsStore';
 import {
   getUpToDateShowsFromCache,
   saveUpToDateShowsToCache,
@@ -17,13 +19,15 @@ import { parseReleaseDate } from '@/lib/dateUtils';
 
 export default function HomePage() {
   const { items, isLoading, fetchMyList, episodeProgress, fetchProgress } = useMyListStore();
+  const { pendingCount, fetchPendingCount } = useFriendsStore();
   const [isMounted, setIsMounted] = useState(false);
   const fetchedProgressRef = useRef(new Set<number>());
 
   useEffect(() => {
     setIsMounted(true);
     fetchMyList();
-  }, [fetchMyList]);
+    fetchPendingCount();
+  }, [fetchMyList, fetchPendingCount]);
 
   useEffect(() => {
     const tvWatching = Object.values(items).filter(i => i && i.status === 'watching' && i.media_type === 'tv' && i.tmdb_id);
@@ -348,6 +352,32 @@ export default function HomePage() {
 
   return (
     <div className="pb-8 overflow-hidden min-h-screen">
+      {pendingCount > 0 && (
+        <div className="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="bg-primary/10 border border-primary/20 backdrop-blur-md rounded-xl p-3.5 sm:p-4 flex items-center justify-between gap-4 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Você tem {pendingCount} {pendingCount === 1 ? 'solicitação de amizade pendente' : 'solicitações de amizade pendentes'}!
+                </p>
+                <p className="text-xs text-muted-foreground hidden sm:block">
+                  Alguém enviou uma solicitação para se conectar com você no OmniWatch.
+                </p>
+              </div>
+            </div>
+            <Link href="/friends">
+              <Button size="sm" className="gap-1.5 shrink-0 text-xs font-semibold">
+                Ver solicitações
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {heroFeature ? (
         <HeroBanner data={heroFeature} />
       ) : (

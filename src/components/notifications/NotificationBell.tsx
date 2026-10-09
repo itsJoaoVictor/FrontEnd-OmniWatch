@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Bell } from 'lucide-react';
+import { Bell, UserPlus } from 'lucide-react';
 import { api } from '@/lib/axios';
+import { useRouter } from 'next/navigation';
+import { useFriendsStore } from '@/store/useFriendsStore';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -18,6 +20,8 @@ interface NotificationItem {
 }
 
 export function NotificationBell() {
+  const router = useRouter();
+  const { fetchPendingCount } = useFriendsStore();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   
   useEffect(() => {
@@ -58,24 +62,35 @@ export function NotificationBell() {
           {notifications.length === 0 ? (
             <div className="p-4 text-center text-sm text-zinc-500">Sem notificações no momento.</div>
           ) : (
-            notifications.map(notification => (
-              <DropdownMenuItem 
-                key={notification.id} 
-                className={`flex flex-col items-start p-3 cursor-pointer ${notification.is_read ? 'opacity-60' : 'bg-zinc-800/50'}`}
-                onClick={() => {
-                  if (!notification.is_read) markAsRead(notification.id);
-                  // Optional: navigate to media page if media_id exists
-                }}
-              >
-                <div className="flex justify-between w-full mb-1">
-                  <span className="font-bold text-sm">{notification.title}</span>
-                  <span className="text-[10px] text-zinc-400">
-                    {formatDistanceToNow(parseISO(notification.created_at), { addSuffix: true, locale: ptBR })}
-                  </span>
-                </div>
-                <span className="text-xs text-zinc-300">{notification.message}</span>
-              </DropdownMenuItem>
-            ))
+            notifications.map(notification => {
+              const isFriendRequest = notification.title.toLowerCase().includes('amizade') || notification.title.toLowerCase().includes('amigo');
+              return (
+                <DropdownMenuItem 
+                  key={notification.id} 
+                  className={`flex flex-col items-start p-3 cursor-pointer ${notification.is_read ? 'opacity-60' : 'bg-zinc-800/50'}`}
+                  onClick={() => {
+                    if (!notification.is_read) markAsRead(notification.id);
+                    if (isFriendRequest) {
+                      fetchPendingCount();
+                      router.push('/friends');
+                    } else if (notification.media_id) {
+                      router.push(`/media/${notification.media_id}`);
+                    }
+                  }}
+                >
+                  <div className="flex justify-between w-full mb-1">
+                    <span className="font-bold text-sm flex items-center gap-1.5">
+                      {isFriendRequest && <UserPlus className="w-3.5 h-3.5 text-primary" />}
+                      {notification.title}
+                    </span>
+                    <span className="text-[10px] text-zinc-400">
+                      {formatDistanceToNow(parseISO(notification.created_at), { addSuffix: true, locale: ptBR })}
+                    </span>
+                  </div>
+                  <span className="text-xs text-zinc-300">{notification.message}</span>
+                </DropdownMenuItem>
+              );
+            })
           )}
         </div>
       </DropdownMenuContent>

@@ -4,6 +4,7 @@ import { TrendingSkeleton } from "@/components/explore/trending-skeleton";
 import { RecommendationsSection } from "@/components/explore/recommendations-section";
 import { UpcomingSection } from "@/components/explore/upcoming-section";
 import { PersonasSection } from "@/components/explore/personas-section";
+import { TogetherBanner } from "@/components/explore/together-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ export default function Page() {
         <h1 className="text-2xl md:text-3xl font-bold">Explorar</h1>
         <p className="text-sm md:text-base text-muted-foreground mt-2">Descubra novas obras, o que está em alta e suas recomendações personalizadas.</p>
       </div>
+
+      <TogetherBanner />
 
       <Suspense fallback={<TrendingSkeleton />}>
         <RecommendationsSection />
