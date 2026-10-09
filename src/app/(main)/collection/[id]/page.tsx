@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Film, RotateCw, Star, Trash2, BookmarkPlus } from "lucide-react";
+import { ArrowLeft, Film, RotateCw, Star, Trash2, BookmarkPlus, Search, X } from "lucide-react";
 import { UserFollowedCollection } from "@/types/collections";
 import {
   getFollowedCollections,
@@ -14,6 +14,7 @@ import {
   unfollowCollection,
 } from "@/services/collections";
 import { Button } from "@/components/ui/button";
+import { FilterSearchInput } from "@/components/shared/FilterSearchInput";
 import { toast } from "@/components/ui/toast";
 import { AddToListButton } from "@/components/shared/AddToListButton";
 import { FavoriteButton } from "@/components/shared/FavoriteButton";
@@ -36,6 +37,7 @@ export default function CollectionPage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const listItems = useMyListStore((s) => s.items);
   const fetchMyList = useMyListStore((s) => s.fetchMyList);
 
@@ -295,57 +297,105 @@ export default function CollectionPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {collection.items.map((item) => {
-            const saved = listItems[item.tmdb_id];
-            const status = saved?.status ?? item.status;
-            const rating = saved?.rating ?? item.rating;
-            return (
-              <div key={item.id} className="group relative">
-                <Link href={`/movie/${item.tmdb_id}`} className="block">
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted">
-                    {item.poster_path ? (
-                      <Image
-                        src={`https://image.tmdb.org/t/p/w342${item.poster_path}`}
-                        alt={item.title}
-                        fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        sizes="(max-width: 640px) 50vw, 20vw"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">N/A</div>
-                    )}
-                    <span className="absolute bottom-2 left-2 text-[11px] font-medium bg-background/80 backdrop-blur-sm px-2 py-0.5 rounded-full">
-                      {(status && STATUS_LABEL[status]) || "Não na lista"}
-                    </span>
+        {/* Seção de Filmes da Coleção com Campo de Busca */}
+        {(() => {
+          const filteredItems = (collection.items || []).filter((item) => {
+            if (!searchQuery.trim()) return true;
+            return (item.title || "").toLowerCase().includes(searchQuery.toLowerCase().trim());
+          });
+
+          return (
+            <div className="space-y-4 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                  Filmes da Coleção
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                    {filteredItems.length}
+                    {searchQuery.trim() ? ` de ${collection.items.length}` : ''}
+                  </span>
+                </h2>
+
+                {collection.items && collection.items.length > 2 && (
+                  <div className="w-full sm:w-72">
+                    <FilterSearchInput
+                      value={searchQuery}
+                      onChange={setSearchQuery}
+                      placeholder="Buscar filme na franquia..."
+                      size="sm"
+                      showCount={Boolean(searchQuery.trim())}
+                      resultCount={filteredItems.length}
+                      totalCount={collection.items.length}
+                    />
                   </div>
-                  <p className="mt-2 text-sm font-medium truncate group-hover:underline">{item.title}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {item.release_date && <span>{item.release_date.split("-")[0]}</span>}
-                    {rating ? (
-                      <span className="flex items-center text-yellow-500">
-                        <Star className="w-3 h-3 fill-yellow-500 mr-0.5" />
-                        {rating}
-                      </span>
-                    ) : null}
-                  </div>
-                </Link>
-                <div className="absolute top-2 right-2 flex flex-col gap-1.5">
-                  <AddToListButton
-                    tmdb_id={item.tmdb_id}
-                    media_type="movie"
-                    title={item.title}
-                    poster_path={item.poster_path}
-                    backdrop_path={item.backdrop_path}
-                    release_date={item.release_date}
-                    className="h-8 w-8"
-                  />
-                  <FavoriteButton tmdb_id={item.tmdb_id} size="sm" />
-                </div>
+                )}
               </div>
-            );
-          })}
-        </div>      </div>
+
+              {filteredItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center bg-card/30 border border-border/40 rounded-xl p-6">
+                  <p className="text-muted-foreground mb-3 text-sm">
+                    Nenhum filme encontrado para &ldquo;{searchQuery}&rdquo;.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => setSearchQuery('')} className="cursor-pointer">
+                    Limpar Busca
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {filteredItems.map((item) => {
+                    const saved = listItems[item.tmdb_id];
+                    const status = saved?.status ?? item.status;
+                    const rating = saved?.rating ?? item.rating;
+                    return (
+                      <div key={item.id} className="group relative">
+                        <Link href={`/movie/${item.tmdb_id}`} className="block">
+                          <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted">
+                            {item.poster_path ? (
+                              <Image
+                                src={`https://image.tmdb.org/t/p/w342${item.poster_path}`}
+                                alt={item.title}
+                                fill
+                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                sizes="(max-width: 640px) 50vw, 20vw"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">N/A</div>
+                            )}
+                            <span className="absolute bottom-2 left-2 text-[11px] font-medium bg-background/80 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                              {(status && STATUS_LABEL[status]) || "Não na lista"}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm font-medium truncate group-hover:underline">{item.title}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {item.release_date && <span>{item.release_date.split("-")[0]}</span>}
+                            {rating ? (
+                              <span className="flex items-center text-yellow-500">
+                                <Star className="w-3 h-3 fill-yellow-500 mr-0.5" />
+                                {rating}
+                              </span>
+                            ) : null}
+                          </div>
+                        </Link>
+                        <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                          <AddToListButton
+                            tmdb_id={item.tmdb_id}
+                            media_type="movie"
+                            title={item.title}
+                            poster_path={item.poster_path}
+                            backdrop_path={item.backdrop_path}
+                            release_date={item.release_date}
+                            className="h-8 w-8"
+                          />
+                          <FavoriteButton tmdb_id={item.tmdb_id} size="sm" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }

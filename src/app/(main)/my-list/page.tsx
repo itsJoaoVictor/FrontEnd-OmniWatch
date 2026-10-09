@@ -6,11 +6,12 @@ import { useMyListStore, ListStatus } from '@/store/useMyListStore';
 import { MediaCard } from '@/components/home/MediaCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { FilterSearchInput } from '@/components/shared/FilterSearchInput';
 import { getFollowedCollections, getCollectionSuggestions } from '@/services/collections';
 import { UserFollowedCollection, CollectionSuggestion } from '@/types/collections';
 import { FollowedCollectionCard } from '@/components/collections/FollowedCollectionCard';
 import { CollectionSuggestionCard } from '@/components/collections/CollectionSuggestionCard';
-import { Layers, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { Layers, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +19,7 @@ export default function MyListPage() {
   const { items, isLoading, fetchMyList } = useMyListStore();
   const [mediaTab, setMediaTab] = useState<'all' | 'movie' | 'tv' | 'collections'>('all');
   const [statusFilter, setStatusFilter] = useState<ListStatus | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Sub-filters for rating & progress & favorites
   const [ratingFilter, setRatingFilter] = useState<'all' | 'unrated' | 'rated'>('all');
@@ -137,11 +139,15 @@ export default function MyListPage() {
   // Convert dictionary to array for mapping
   const itemsArray = Object.values(items);
 
-  // Base filtered by mediaTab and statusFilter (for counts)
+  // Base filtered by mediaTab, statusFilter, and searchQuery (for counts)
   const baseItems = itemsArray.filter((item) => {
     if (!item || (!item.tmdb_id && !item.id)) return false;
     if (mediaTab !== 'all' && item.media_type !== mediaTab) return false;
     if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      if (!(item.title || '').toLowerCase().includes(q)) return false;
+    }
     return true;
   });
 
@@ -168,13 +174,59 @@ export default function MyListPage() {
     return true;
   });
 
+  // Filter collections and suggestions by search query
+  const filteredCollections = collections.filter((c) => {
+    if (!searchQuery.trim()) return true;
+    return c.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+  });
+
+  const filteredSuggestions = suggestions.filter((s) => {
+    if (!searchQuery.trim()) return true;
+    return s.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+  });
+
   // Pré-carrega em segundo plano os pôsteres dos itens não visíveis (a partir do 13º card)
   const posterPathsToPreload = filteredItems.map((item) => item.poster_path);
   useImagePreloader(posterPathsToPreload, { initialSkip: 12, batchSize: 4 });
 
   return (
     <div className="min-h-screen pt-24 px-4 md:px-8 max-w-[1600px] mx-auto pb-20">
-      <h1 className="text-3xl md:text-4xl font-bold mb-8">Minha Lista</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Minha Lista</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Gerencie seus filmes, séries e coleções acompanhadas
+          </p>
+        </div>
+
+        {/* Campo de Busca Redesenhado */}
+        <div className="w-full sm:w-80 md:w-96">
+          <FilterSearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={
+              mediaTab === 'collections'
+                ? "Buscar coleções..."
+                : mediaTab === 'movie'
+                ? "Buscar filmes na lista..."
+                : mediaTab === 'tv'
+                ? "Buscar séries na lista..."
+                : "Buscar em minha lista..."
+            }
+            showCount={Boolean(searchQuery.trim())}
+            resultCount={
+              mediaTab === 'collections'
+                ? filteredCollections.length
+                : filteredItems.length
+            }
+            totalCount={
+              mediaTab === 'collections'
+                ? collections.length
+                : baseItems.length
+            }
+          />
+        </div>
+      </div>
 
       <Tabs
         value={mediaTab}
@@ -230,7 +282,7 @@ export default function MyListPage() {
       {mediaTab === 'collections' ? (
         <div className="space-y-8">
           {/* Seção de Alertas e Sugestões de Coleções */}
-          {suggestions.length > 0 && (
+          {filteredSuggestions.length > 0 && (
             <div
               className={cn(
                 "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-2xl transition-all duration-300",
@@ -255,7 +307,7 @@ export default function MyListPage() {
                     <h3 className="text-base sm:text-lg font-bold text-foreground flex flex-wrap items-center gap-2">
                       Sugestões de Franquias
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30">
-                        {suggestions.length} {suggestions.length === 1 ? 'identificada' : 'identificadas'}
+                        {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'identificada' : 'identificadas'}
                       </span>
                     </h3>
                     {!isSuggestionsCollapsed && (
@@ -287,7 +339,7 @@ export default function MyListPage() {
 
               {!isSuggestionsCollapsed && (
                 <div id="collection-suggestions-content" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in duration-200">
-                  {suggestions.map((suggestion) => (
+                  {filteredSuggestions.map((suggestion) => (
                     <CollectionSuggestionCard
                       key={suggestion.id}
                       suggestion={suggestion}
@@ -333,15 +385,29 @@ export default function MyListPage() {
                 </Link>
               </div>
             )
+          ) : filteredCollections.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center max-w-md mx-auto">
+              <div className="w-12 h-12 rounded-full bg-secondary/60 flex items-center justify-center mb-3 text-muted-foreground">
+                <Search className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-semibold mb-1">Nenhuma coleção encontrada</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Nenhuma coleção corresponde à pesquisa &ldquo;{searchQuery}&rdquo;.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => setSearchQuery('')} className="cursor-pointer">
+                Limpar busca
+              </Button>
+            </div>
           ) : (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base sm:text-lg font-semibold text-foreground">
-                  Coleções Seguidas ({collections.length})
+                  Coleções Seguidas ({filteredCollections.length}
+                  {searchQuery.trim() ? ` de ${collections.length}` : ''})
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {collections.map((col) => (
+                {filteredCollections.map((col) => (
                   <FollowedCollectionCard
                     key={col.id}
                     collection={col}
@@ -588,6 +654,22 @@ export default function MyListPage() {
             </div>
           )}
 
+          {/* Feedback de busca quando filtros de status não estão em 'completed' ou 'watching' */}
+          {searchQuery.trim() && statusFilter !== 'completed' && statusFilter !== 'watching' && (
+            <div className="flex items-center justify-between mb-6 text-xs text-muted-foreground bg-secondary/30 px-3.5 py-2 rounded-xl border border-border/40">
+              <span>
+                Exibindo <strong className="text-foreground">{filteredItems.length}</strong> {filteredItems.length === 1 ? 'resultado' : 'resultados'} para &ldquo;<strong className="text-foreground">{searchQuery}</strong>&rdquo;
+              </span>
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer"
+              >
+                Limpar busca
+              </button>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 animate-pulse">
               {Array.from({ length: 12 }).map((_, i) => (
@@ -596,12 +678,17 @@ export default function MyListPage() {
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <p className="text-xl text-muted-foreground mb-4">Nenhum título encontrado com estes filtros.</p>
+              <p className="text-xl text-muted-foreground mb-4">
+                {searchQuery.trim()
+                  ? `Nenhum título encontrado para "${searchQuery}".`
+                  : 'Nenhum título encontrado com estes filtros.'}
+              </p>
               <Button
                 variant="outline"
                 onClick={() => {
                   handleMediaTabChange('all');
                   handleStatusChange('all');
+                  setSearchQuery('');
                 }}
               >
                 Limpar Filtros
