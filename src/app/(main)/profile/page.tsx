@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { api } from "@/lib/axios";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, EyeOff, RotateCcw, Calendar, Film, Tv, Sparkles } from "lucide-react";
+import { User, EyeOff, RotateCcw, Calendar, Film, Tv, Sparkles, ListPlus, AtSign } from "lucide-react";
+import { EditUsernameModal } from "@/components/profile/EditUsernameModal";
+import { useUserStore } from "@/store/useUserStore";
 
 interface DismissedItem {
   id: string;
@@ -23,6 +26,7 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
+  username?: string | null;
   created_at?: string;
 }
 
@@ -46,6 +50,8 @@ export default function ProfilePage() {
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingDismissed, setIsLoadingDismissed] = useState(true);
   const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [isEditUsernameOpen, setIsEditUsernameOpen] = useState(false);
+  const { setUser: setStoreUser } = useUserStore();
 
   useEffect(() => {
     async function loadData() {
@@ -53,6 +59,7 @@ export default function ProfilePage() {
       try {
         const userRes = await api.get("/api/users/me");
         setUser(userRes.data);
+        setStoreUser(userRes.data);
       } catch (err) {
         console.error("Erro ao carregar perfil do usuário:", err);
       } finally {
@@ -119,7 +126,18 @@ export default function ProfilePage() {
                 {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-7 h-7" />}
               </div>
               <div>
-                <h1 className="text-xl md:text-2xl font-bold">{user?.name || "Usuário"}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl md:text-2xl font-bold">{user?.name || "Usuário"}</h1>
+                  {user?.username ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-primary/10 text-primary border border-primary/20">
+                      @{user.username}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      Sem username
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
                 {user?.created_at && (
                   <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1">
@@ -127,6 +145,24 @@ export default function ProfilePage() {
                   </p>
                 )}
               </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditUsernameOpen(true)}
+                className="border-zinc-700 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-white cursor-pointer"
+              >
+                <AtSign className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                {user?.username ? "Alterar @username" : "Definir @username"}
+              </Button>
+
+              <Link href="/lists">
+                <Button variant="outline" className="border-zinc-700 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-white">
+                  <ListPlus className="w-4 h-4 mr-2 text-primary" />
+                  Minhas Listas Personalizadas
+                </Button>
+              </Link>
             </div>
           </div>
         )}
@@ -230,6 +266,15 @@ export default function ProfilePage() {
           </div>
         )}
       </section>
+
+      <EditUsernameModal
+        open={isEditUsernameOpen}
+        onOpenChange={setIsEditUsernameOpen}
+        currentUsername={user?.username}
+        onSuccess={(newUsername) => {
+          setUser((prev) => (prev ? { ...prev, username: newUsername } : null));
+        }}
+      />
     </div>
   );
 }

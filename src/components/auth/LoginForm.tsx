@@ -10,6 +10,7 @@ import { AxiosError } from "axios";
 
 import { loginSchema, LoginInput } from "@/lib/validations/auth";
 import { api } from "@/lib/axios";
+import { useUserStore } from "@/store/useUserStore";
 
 import {
   Card,
@@ -48,7 +49,12 @@ export function LoginForm() {
 
   async function onSubmit(data: LoginInput) {
     try {
-      await api.post("/api/auth/login", data);
+      const res = await api.post("/api/auth/login", data);
+      
+      // Armazena no Zustand store imediatamente
+      if (res.data?.user) {
+        useUserStore.getState().setUser(res.data.user);
+      }
       
       // Seta um cookie no domínio do frontend para o middleware.ts saber que o usuário está logado
       document.cookie = "is_logged_in=true; path=/; max-age=31536000; samesite=lax";
@@ -59,7 +65,7 @@ export function LoginForm() {
         type: "success"
       });
       
-      router.push("/dashboard"); // Or wherever the main route is
+      router.push("/dashboard");
     } catch (error) {
       if (error instanceof AxiosError) {
         if (error.response?.status === 401) {
@@ -98,11 +104,11 @@ export function LoginForm() {
         <form onSubmit={handleSubmit(onSubmit)}>
           <fieldset disabled={isSubmitting} className="space-y-4 group">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email">E-mail ou Usuário</Label>
               <Input
                 id="email"
-                type="email"
-                placeholder="joao@exemplo.com"
+                type="text"
+                placeholder="joao@exemplo.com ou joaosilva"
                 autoComplete="username"
                 className="focus-visible:ring-primary"
                 {...register("email")}

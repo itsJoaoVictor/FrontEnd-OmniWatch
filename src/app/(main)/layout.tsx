@@ -1,5 +1,6 @@
 import { Topbar } from "@/components/layout/Topbar";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { UsernameSetupModal } from "@/components/auth/UsernameSetupModal";
 
 export default function MainLayout({
   children,
@@ -13,6 +14,7 @@ export default function MainLayout({
         {children}
       </main>
       <BottomNav />
+      <UsernameSetupModal />
     </div>
   );
 }

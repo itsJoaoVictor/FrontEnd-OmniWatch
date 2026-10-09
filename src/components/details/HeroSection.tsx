@@ -1,8 +1,12 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
-import { Star } from "lucide-react";
+import { Star, ListPlus } from "lucide-react";
 import { GenreItem, CrewItem, WatchProviderItem } from "@/types/details";
 import { AddToListButton } from "@/components/shared/AddToListButton";
 import { FavoriteButton } from "@/components/shared/FavoriteButton";
+import { SaveToCustomListModal } from "@/components/custom_lists/SaveToCustomListModal";
 import { MatchScoreBadge } from "./MatchScoreBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UserRatingBadge } from "@/components/shared/UserRatingBadge";
@@ -39,6 +43,7 @@ export function HeroSection({
   watchProviders,
   releaseDate
 }: HeroSectionProps) {
+  const [customListModalOpen, setCustomListModalOpen] = useState(false);
   const imageUrl = "https://image.tmdb.org/t/p/w1280";
 
   return (
@@ -105,6 +110,14 @@ export function HeroSection({
                   release_date={releaseDate}
                   className="w-12 h-12 [&>svg]:w-6 [&>svg]:h-6"
                 />
+                <button
+                  type="button"
+                  onClick={() => setCustomListModalOpen(true)}
+                  className="w-12 h-12 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(0,0,0,0.5)] bg-black/60 hover:bg-black/80 text-white border border-white/40 backdrop-blur-md transition-all hover:scale-105 hover:border-primary hover:text-primary cursor-pointer"
+                  title="Salvar em Lista Personalizada"
+                >
+                  <ListPlus className="w-5 h-5" />
+                </button>
                 <FavoriteButton
                   tmdb_id={tmdbId}
                   size="lg"
@@ -168,6 +181,19 @@ export function HeroSection({
           </div>
         </div>
       </div>
+
+      <SaveToCustomListModal
+        open={customListModalOpen}
+        onOpenChange={setCustomListModalOpen}
+        media={{
+          tmdb_id: tmdbId,
+          media_type: mediaType,
+          title,
+          poster_path: posterPath,
+          backdrop_path: backdropPath,
+          release_date: releaseDate,
+        }}
+      />
     </div>
   );
 }

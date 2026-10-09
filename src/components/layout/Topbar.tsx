@@ -15,9 +15,11 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useUserStore } from "@/store/useUserStore";
 
 export function Topbar() {
   const router = useRouter();
+  const { user, clearUser } = useUserStore();
 
   const handleLogout = async () => {
     try {
@@ -25,6 +27,7 @@ export function Topbar() {
     } catch (error) {
       console.error("Erro ao fazer logout", error);
     } finally {
+      clearUser();
       document.cookie = "is_logged_in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       router.push('/');
     }
@@ -41,6 +44,7 @@ export function Topbar() {
             <Link href="/dashboard" className="text-foreground/80 hover:text-primary transition-colors">Início</Link>
             <Link href="/explore" className="text-foreground/80 hover:text-primary transition-colors">Explorar</Link>
             <Link href="/my-list" className="text-foreground/80 hover:text-primary transition-colors">Minha Lista</Link>
+            <Link href="/lists" className="text-foreground/80 hover:text-primary transition-colors">Listas</Link>
             <Link href="/calendar" className="text-foreground/80 hover:text-primary transition-colors">Calendário</Link>
             <Link href="/stats" className="text-foreground/80 hover:text-primary transition-colors">Estatísticas</Link>
           </nav>
@@ -62,14 +66,18 @@ export function Topbar() {
                 <DropdownMenuItem render={<Link href="/my-list" className="w-full cursor-pointer" />}>
                   Minha Lista
                 </DropdownMenuItem>
+                <DropdownMenuItem render={<Link href="/lists" className="w-full cursor-pointer" />}>
+                  Listas
+                </DropdownMenuItem>
                 <DropdownMenuItem render={<Link href="/calendar" className="w-full cursor-pointer" />}>
                   Calendário
                 </DropdownMenuItem>
                 <DropdownMenuItem render={<Link href="/stats" className="w-full cursor-pointer" />}>
                   Estatísticas
                 </DropdownMenuItem>
-                <DropdownMenuItem render={<Link href="/profile" className="w-full cursor-pointer" />}>
-                  Perfil
+                <DropdownMenuItem render={<Link href="/profile" className="w-full cursor-pointer flex justify-between items-center" />}>
+                  <span>Perfil</span>
+                  {user?.name && <span className="text-xs text-muted-foreground truncate max-w-[120px]">{user.name}</span>}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500 cursor-pointer">
                   Sair
@@ -81,8 +89,19 @@ export function Topbar() {
           <SearchInput />
           <NotificationBell />
           <div className="hidden lg:flex items-center gap-2">
-            <Link href="/profile" className="p-2 hover:bg-foreground/10 rounded-full transition-colors">
-              <User className="w-5 h-5" />
+            <Link 
+              href="/profile" 
+              className="flex items-center gap-2 py-1.5 px-2.5 hover:bg-foreground/10 rounded-full transition-colors text-xs font-medium"
+              title={user?.name || "Perfil"}
+            >
+              <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
+                {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-3.5 h-3.5" />}
+              </div>
+              {user?.name && (
+                <span className="hidden xl:inline text-muted-foreground hover:text-foreground">
+                  {user.name}
+                </span>
+              )}
             </Link>
             <button onClick={handleLogout} className="p-2 hover:bg-foreground/10 text-red-500 rounded-full transition-colors" title="Sair">
               <LogOut className="w-5 h-5" />
