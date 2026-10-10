@@ -40,6 +40,7 @@ export interface TogetherRecommendationItem extends RecommendationItem {
   friend_score?: number;
   watched_by_user?: boolean;
   watched_by_friend?: boolean;
+  in_both_watchlists?: boolean;
 }
 
 export interface TogetherResponse {

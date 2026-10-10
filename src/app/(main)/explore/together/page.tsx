@@ -17,6 +17,7 @@ import {
   Search,
   MoreVertical,
   EyeOff,
+  Bookmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -421,7 +422,8 @@ export default function TogetherPage() {
                 <div
                   key={item.id}
                   className={cn(
-                    "group relative flex flex-col rounded-xl overflow-hidden border border-border/80 bg-card hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md",
+                    "group relative flex flex-col rounded-xl overflow-hidden border bg-card hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md",
+                    item.in_both_watchlists ? "border-amber-500/70 shadow-amber-500/10 ring-1 ring-amber-500/40" : "border-border/80",
                     isHiding && "opacity-0 scale-90 pointer-events-none"
                   )}
                 >
@@ -446,6 +448,14 @@ export default function TogetherPage() {
                         <Activity className="w-3 h-3 mr-1" />
                         {Math.round(item.match_score)}%
                       </div>
+
+                      {/* Destaque se estiver no Quero Ver de ambos */}
+                      {item.in_both_watchlists && (
+                        <div className="bg-amber-400 text-zinc-950 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-md flex items-center gap-1 border border-amber-300">
+                          <Bookmark className="w-2.5 h-2.5 fill-zinc-950" />
+                          <span>No Quero Ver de ambos</span>
+                        </div>
+                      )}
 
                       {/* Watched tags for unseen_mode = 'one' */}
                       {item.watched_by_user && (
