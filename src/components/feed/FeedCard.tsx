@@ -101,13 +101,16 @@ export function FeedCard({ item }: FeedCardProps) {
     <div className="bg-card/70 border border-border/60 hover:border-border transition-all duration-300 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md flex flex-col gap-4">
       {/* Top Header: Friend info & action badge */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
+        <Link
+          href={item.username ? `/profile/${item.username}` : `/profile/${item.user_id}`}
+          className="flex items-center gap-3 min-w-0 group hover:opacity-90 transition-opacity"
+        >
+          <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm shrink-0 shadow-inner group-hover:ring-1 group-hover:ring-primary transition-all">
             {item.user_name ? item.user_name.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold text-sm text-foreground truncate">
+              <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
                 {item.user_name}
               </span>
               {item.username && (
@@ -120,7 +123,7 @@ export function FeedCard({ item }: FeedCardProps) {
               {getRelativeTime(item.watched_at)}
             </span>
           </div>
-        </div>
+        </Link>
 
         <div className="shrink-0">
           {renderBadge()}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { friendsService } from '@/services/friendsService';
 import {
   FriendUser,
@@ -458,12 +459,15 @@ export default function FriendsPage() {
                   className="border border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700 transition-all shadow-sm rounded-xl overflow-hidden"
                 >
                   <CardContent className="p-4 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-11 h-11 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-base shrink-0 shadow-inner">
+                    <Link
+                      href={friend.username ? `/profile/${friend.username}` : `/profile/${friend.id}`}
+                      className="flex items-center gap-3.5 min-w-0 group/friend hover:opacity-90 transition-opacity"
+                    >
+                      <div className="w-11 h-11 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-base shrink-0 shadow-inner group-hover/friend:border-primary transition-colors">
                         {friend.name ? friend.name.charAt(0).toUpperCase() : <Users className="w-5 h-5" />}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-semibold text-sm truncate text-zinc-100" title={friend.name}>
+                        <h3 className="font-semibold text-sm truncate text-zinc-100 group-hover/friend:text-primary transition-colors" title={friend.name}>
                           {friend.name}
                         </h3>
                         {friend.username && (
@@ -476,7 +480,7 @@ export default function FriendsPage() {
                           Amigos desde {formatDate(friend.since)}
                         </p>
                       </div>
-                    </div>
+                    </Link>
 
                     <Button
                       variant="ghost"
@@ -533,12 +537,15 @@ export default function FriendsPage() {
                 {receivedRequests.map((req) => (
                   <Card key={req.friendship_id} className="border border-zinc-800 bg-zinc-950/70 rounded-xl">
                     <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                      <Link
+                        href={req.user.username ? `/profile/${req.user.username}` : `/profile/${req.user.id}`}
+                        className="flex items-center gap-3 min-w-0 group/req hover:opacity-90 transition-opacity"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm shrink-0 group-hover/req:border-primary transition-colors">
                           {req.user.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="font-semibold text-sm truncate text-zinc-100">{req.user.name}</h4>
+                          <h4 className="font-semibold text-sm truncate text-zinc-100 group-hover/req:text-primary transition-colors">{req.user.name}</h4>
                           {req.user.username && (
                             <p className="text-xs text-primary font-mono">@{req.user.username}</p>
                           )}
@@ -546,7 +553,7 @@ export default function FriendsPage() {
                             Enviado em {formatDate(req.created_at)}
                           </p>
                         </div>
-                      </div>
+                      </Link>
 
                       <div className="flex items-center gap-2 self-end sm:self-auto">
                         <Button
@@ -600,12 +607,15 @@ export default function FriendsPage() {
                 {sentRequests.map((req) => (
                   <Card key={req.friendship_id} className="border border-zinc-800 bg-zinc-950/50 rounded-xl">
                     <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300 font-bold text-sm shrink-0">
+                      <Link
+                        href={req.user.username ? `/profile/${req.user.username}` : `/profile/${req.user.id}`}
+                        className="flex items-center gap-3 min-w-0 group/sent hover:opacity-90 transition-opacity"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300 font-bold text-sm shrink-0 group-hover/sent:ring-1 group-hover/sent:ring-zinc-600 transition-all">
                           {req.user.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="font-semibold text-sm truncate text-zinc-100">{req.user.name}</h4>
+                          <h4 className="font-semibold text-sm truncate text-zinc-100 group-hover/sent:text-primary transition-colors">{req.user.name}</h4>
                           {req.user.username && (
                             <p className="text-xs text-zinc-400 font-mono">@{req.user.username}</p>
                           )}
@@ -614,7 +624,7 @@ export default function FriendsPage() {
                             {formatDate(req.created_at)}
                           </p>
                         </div>
-                      </div>
+                      </Link>
 
                       <Button
                         size="sm"
@@ -714,19 +724,22 @@ export default function FriendsPage() {
                 {searchResults.map((user) => (
                   <Card key={user.id} className="border border-zinc-800 bg-zinc-950/80 rounded-xl">
                     <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="w-11 h-11 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                      <Link
+                        href={user.username ? `/profile/${user.username}` : `/profile/${user.id}`}
+                        className="flex items-center gap-3.5 min-w-0 group/search hover:opacity-90 transition-opacity"
+                      >
+                        <div className="w-11 h-11 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm shrink-0 group-hover/search:border-primary transition-colors">
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="font-semibold text-sm truncate text-zinc-100">{user.name}</h4>
+                          <h4 className="font-semibold text-sm truncate text-zinc-100 group-hover/search:text-primary transition-colors">{user.name}</h4>
                           {user.username ? (
                             <p className="text-xs text-primary font-mono">@{user.username}</p>
                           ) : (
                             <p className="text-xs text-zinc-500">Sem @username</p>
                           )}
                         </div>
-                      </div>
+                      </Link>
 
                       {/* Botões Dinâmicos de Ação */}
                       <div className="flex items-center gap-2 self-end sm:self-auto">

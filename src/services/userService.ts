@@ -1,5 +1,5 @@
 import { api } from '@/lib/axios';
-import { UserProfile } from '@/types/user';
+import { UserProfile, PublicUserProfile } from '@/types/user';
 
 export interface UsernameCheckResponse {
   available: boolean;
@@ -9,6 +9,11 @@ export interface UsernameCheckResponse {
 export const userService = {
   async getMe(): Promise<UserProfile> {
     const res = await api.get<UserProfile>('/api/users/me');
+    return res.data;
+  },
+
+  async getPublicProfile(identifier: string): Promise<PublicUserProfile> {
+    const res = await api.get<PublicUserProfile>(`/api/users/profile/${encodeURIComponent(identifier)}`);
     return res.data;
   },
 
@@ -24,3 +29,4 @@ export const userService = {
     return res.data;
   },
 };
+

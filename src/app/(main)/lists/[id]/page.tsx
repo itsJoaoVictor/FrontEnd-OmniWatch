@@ -241,8 +241,16 @@ export default function CustomListDetailPage() {
                     Lista Ranqueada
                   </span>
                 )}
+                {list.user_name && (
+                  <Link
+                    href={`/profile/${list.user_id}`}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                  >
+                    Por {list.user_name}
+                  </Link>
+                )}
                 <span className="text-xs text-zinc-400">
-                  Criada em {new Date(list.created_at).toLocaleDateString('pt-BR')}
+                  {list.user_name ? '• ' : ''}Criada em {new Date(list.created_at).toLocaleDateString('pt-BR')}
                 </span>
               </div>
 
