@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMyListStore, ListStatus } from '@/store/useMyListStore';
 import { Button } from '@/components/ui/button';
-import { Plus, Check, Star, StarHalf, Bookmark, Play, XCircle, Clock, Trash2 } from 'lucide-react';
+import { Plus, Check, Star, StarHalf, Bookmark, Play, XCircle, Clock, Trash2, RotateCcw, Minus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,7 +70,7 @@ const statusConfig: Record<ListStatus, {
 };
 
 export function AddToListButton({ tmdb_id, media_type, className, title, poster_path, backdrop_path, release_date }: AddToListButtonProps) {
-  const { items, addToList, updateStatus, updateRating, removeFromList } = useMyListStore();
+  const { items, addToList, updateStatus, updateRating, updateRewatchCount, removeFromList } = useMyListStore();
   const [isOpen, setIsOpen] = useState(false);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
@@ -316,6 +316,69 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
                   );
                 })()}
               </div>
+
+              {/* Controle de Reassistido (Filmes e Séries) */}
+              <div className="px-2.5 py-2 flex flex-col gap-1.5 bg-muted/40 rounded-lg mx-1 my-1 border border-border/50">
+                <div className="text-xs font-semibold text-muted-foreground flex justify-between items-center">
+                  <span className="flex items-center gap-1.5">
+                    <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Reassistido</span>
+                  </span>
+                  {(savedItem.rewatch_count || 0) > 0 ? (
+                    <span className="text-emerald-400 font-bold text-[11px]">
+                      {savedItem.rewatch_count}x ({(savedItem.rewatch_count || 0) + 1}x total)
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground font-normal">1ª vez</span>
+                  )}
+                </div>
+
+                {(savedItem.rewatch_count || 0) === 0 ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      updateRewatchCount(numericTmdbId, 1);
+                    }}
+                    className="w-full py-1.5 px-2.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Marcar como Reassistido</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-between gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        updateRewatchCount(numericTmdbId, (savedItem.rewatch_count || 1) - 1);
+                      }}
+                      className="flex-1 py-1 rounded-md bg-background/80 hover:bg-background border border-border text-muted-foreground hover:text-foreground text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                      title="Diminuir contagem de reassistido"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-xs font-bold text-emerald-400 min-w-[60px] text-center">
+                      {savedItem.rewatch_count}x reassistido
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        updateRewatchCount(numericTmdbId, (savedItem.rewatch_count || 0) + 1);
+                      }}
+                      className="flex-1 py-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                      title="Adicionar mais uma revisão"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <DropdownMenuSeparator />
             </div>
           )}

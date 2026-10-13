@@ -178,6 +178,14 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
                     </span>
                   </span>
                 ) : null}
+                {(savedItem.rewatch_count || 0) > 0 && (
+                  <>
+                    <span className="text-white/30 text-[10px]">•</span>
+                    <span className="text-emerald-300 font-semibold normal-case">
+                      {(savedItem.rewatch_count || 0) > 1 ? `Reassistido ${savedItem.rewatch_count}x` : 'Reassistido'}
+                    </span>
+                  </>
+                )}
               </span>
             ) : (
               <StatusBadge tmdb_id={parseInt(item.id)} />

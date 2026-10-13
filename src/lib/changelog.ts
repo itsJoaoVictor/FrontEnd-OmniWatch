@@ -75,6 +75,34 @@ export const APP_RELEASES: AppRelease[] = [
       },
     ],
   },
+  {
+    id: 3,
+    version: "v1.5.0",
+    date: "Outubro 2026",
+    title: "Controle de Obras e Episódios Reassistidos & Boost no Match Score",
+    summary:
+      "Agora você pode registrar quantas vezes reassistiu seus filmes, séries, temporadas e episódios favoritos, com impacto direto nas suas recomendações.",
+    highlights: [
+      {
+        title: "Marcar Filmes e Séries como Reassistidos",
+        description:
+          "Registre e ajuste o contador de revisões diretamente pelo menu da sua lista, com selo visual de 'Reassistido' nos cards e no ranking de estatísticas.",
+        tag: "Rastreamento",
+      },
+      {
+        title: "Reassistir por Episódio ou Temporada Completa",
+        description:
+          "Em séries de TV, marque episódios individuais ou temporadas inteiras como reassistidos. Ao reassistir todos os episódios lançados, a série toda é marcada como reassistida automaticamente.",
+        tag: "Séries & Automação",
+      },
+      {
+        title: "Peso Maior no Match Score e Recomendações",
+        description:
+          "Obras e episódios que você reassiste agora têm peso reforçado no seu perfil de gosto, nas Personas e no cálculo de Match Score com novas tags explicativas.",
+        tag: "Algoritmo",
+      },
+    ],
+  },
 ];
 
 export const LATEST_RELEASE_ID = APP_RELEASES.reduce(

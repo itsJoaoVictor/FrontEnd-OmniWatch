@@ -28,6 +28,7 @@ export interface SavedItem {
   poster_path?: string;
   backdrop_path?: string;
   rating?: number;
+  rewatch_count?: number;
   is_favorite?: boolean;
   last_watched_at?: string;
   release_date?: string | null;
@@ -39,6 +40,7 @@ export interface EpisodeProgress {
   season_number: number;
   episode_number: number;
   rating?: number | null;
+  rewatch_count?: number;
 }
 
 interface MyListStore {
@@ -62,7 +64,10 @@ interface MyListStore {
   ) => Promise<void>;
   updateStatus: (tmdb_id: number, newStatus: ListStatus) => Promise<void>;
   updateRating: (tmdb_id: number, rating: number) => Promise<void>;
+  updateRewatchCount: (tmdb_id: number, rewatchCount: number) => Promise<void>;
   updateEpisodeRating: (tmdb_id: number, season: number, episode: number, rating: number) => Promise<void>;
+  updateEpisodeRewatch: (tmdb_id: number, season: number, episode: number, rewatchCount: number) => Promise<void>;
+  updateSeasonRewatch: (tmdb_id: number, season: number, rewatchCount: number) => Promise<void>;
   toggleFavorite: (tmdb_id: number) => Promise<void>;
   removeFromList: (tmdb_id: number) => Promise<void>;
   bulkMarkEpisodes: (tmdb_id: number, season: number, episode: number) => Promise<void>;
@@ -118,6 +123,7 @@ export const useMyListStore = create<MyListStore>()(
                   tmdb_id: tmdbId,
                   status: item.status || 'plan_to_watch',
                   rating: item.rating,
+                  rewatch_count: item.rewatch_count ?? 0,
                   is_favorite: Boolean(item.is_favorite),
                   media_type: item.media?.media_type || item.media_type || 'movie',
                   title: item.media?.title || item.title || 'Título Desconhecido',
@@ -251,6 +257,7 @@ export const useMyListStore = create<MyListStore>()(
     const optimisticItem: SavedItem | undefined = prevItem ? {
       ...prevItem,
       status: (prevItem.status === 'plan_to_watch' && isWatched) ? 'watching' : prevItem.status,
+      rewatch_count: isWatched ? prevItem.rewatch_count : 0,
       last_watched_at: new Date().toISOString(),
       is_up_to_date: optimisticIsUpToDate,
       next_episode: optimisticNextEpisode
@@ -261,7 +268,7 @@ export const useMyListStore = create<MyListStore>()(
       episodeProgress: {
         ...state.episodeProgress,
         [tmdb_id]: isWatched 
-          ? [...prevProgress.filter(p => !(p.season_number === season && p.episode_number === episode)), { season_number: season, episode_number: episode }]
+          ? [...prevProgress.filter(p => !(p.season_number === season && p.episode_number === episode)), { season_number: season, episode_number: episode, rewatch_count: 0 }]
           : prevProgress.filter(p => !(p.season_number === season && p.episode_number === episode))
       }
     }));
@@ -402,6 +409,7 @@ export const useMyListStore = create<MyListStore>()(
     const oldStatus = item.status;
     const oldRating = item.rating;
     const oldFavorite = item.is_favorite;
+    const oldRewatch = item.rewatch_count ?? 0;
     
     // Optimistic update
     const shouldClearRating = ['plan_to_watch', 'upcoming'].includes(newStatus);
@@ -415,6 +423,7 @@ export const useMyListStore = create<MyListStore>()(
             ...currentItem, 
             status: newStatus,
             rating: shouldClearRating ? undefined : currentItem.rating,
+            rewatch_count: shouldClearRating ? 0 : currentItem.rewatch_count,
             is_favorite: shouldClearFavorite ? false : currentItem.is_favorite,
           }
         }
@@ -439,6 +448,7 @@ export const useMyListStore = create<MyListStore>()(
               status: finalStatus,
               // Preserva a nota atual de currentItem caso o usuário tenha acabado de avaliar!
               rating: finalShouldClearRating ? undefined : (currentItem.rating ?? (data?.rating != null ? data.rating : undefined)),
+              rewatch_count: finalShouldClearRating ? 0 : (data?.rewatch_count !== undefined ? data.rewatch_count : currentItem.rewatch_count),
               is_favorite: finalShouldClearFavorite ? false : (data?.is_favorite !== undefined ? Boolean(data.is_favorite) : currentItem.is_favorite),
             }
           }
@@ -455,7 +465,7 @@ export const useMyListStore = create<MyListStore>()(
         return {
           items: {
             ...state.items,
-            [tmdb_id]: { ...currentItem, status: oldStatus, rating: oldRating, is_favorite: oldFavorite }
+            [tmdb_id]: { ...currentItem, status: oldStatus, rating: oldRating, rewatch_count: oldRewatch, is_favorite: oldFavorite }
           }
         };
       });
@@ -537,6 +547,106 @@ export const useMyListStore = create<MyListStore>()(
     }
   },
 
+  updateRewatchCount: async (tmdb_id, rewatchCount) => {
+    let item = get().items[tmdb_id];
+    if (!item) return;
+
+    if (item.id.startsWith('temp-')) {
+      let retries = 0;
+      while (get().items[tmdb_id]?.id?.startsWith('temp-') && retries < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        retries++;
+      }
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    }
+
+    const clampedCount = Math.max(0, rewatchCount);
+    const oldRewatch = item.rewatch_count ?? 0;
+    const oldStatus = item.status;
+    const prevProgress = get().episodeProgress[tmdb_id] || [];
+
+    const targetStatus: ListStatus = (clampedCount > 0 && item.media_type === 'movie' && item.status !== 'completed')
+      ? 'completed'
+      : item.status;
+
+    set((state) => {
+      const currentItem = state.items[tmdb_id] || item;
+      const nextEpProgress = item.media_type === 'tv' && state.episodeProgress[tmdb_id]
+        ? state.episodeProgress[tmdb_id].map(p => ({
+            ...p,
+            rewatch_count: clampedCount === 0
+              ? 0
+              : (clampedCount > oldRewatch
+                  ? Math.max(p.rewatch_count ?? 0, clampedCount)
+                  : Math.min(p.rewatch_count ?? 0, clampedCount))
+          }))
+        : state.episodeProgress[tmdb_id];
+
+      return {
+        items: {
+          ...state.items,
+          [tmdb_id]: {
+            ...currentItem,
+            rewatch_count: clampedCount,
+            status: targetStatus,
+            last_watched_at: clampedCount > oldRewatch ? new Date().toISOString() : currentItem.last_watched_at,
+          }
+        },
+        episodeProgress: nextEpProgress
+          ? { ...state.episodeProgress, [tmdb_id]: nextEpProgress }
+          : state.episodeProgress
+      };
+    });
+
+    try {
+      const data = await resilientFetch<any>(`/api/my-list/${item.id}`, {
+        method: 'PATCH',
+        body: { rewatch_count: clampedCount },
+      });
+      if (data) {
+        set((state) => {
+          const currentItem = state.items[tmdb_id] || item;
+          return {
+            items: {
+              ...state.items,
+              [tmdb_id]: {
+                ...currentItem,
+                rewatch_count: data.rewatch_count ?? clampedCount,
+                status: data.status || currentItem.status,
+              }
+            }
+          };
+        });
+      }
+      if (item.media_type === 'tv') {
+        await get().fetchProgress(tmdb_id);
+        get().fetchMyList();
+      }
+    } catch (error: any) {
+      console.error('Failed to update rewatch count', error);
+      set((state) => {
+        const currentItem = state.items[tmdb_id] || item;
+        return {
+          items: {
+            ...state.items,
+            [tmdb_id]: { ...currentItem, rewatch_count: oldRewatch, status: oldStatus }
+          },
+          episodeProgress: {
+            ...state.episodeProgress,
+            [tmdb_id]: prevProgress
+          }
+        };
+      });
+      const errorDetail = error?.response?.data?.detail;
+      toast.add({
+        title: "Erro ao atualizar reassistido",
+        description: errorDetail || "Não foi possível salvar. Tente novamente.",
+        type: "error"
+      });
+    }
+  },
+
   updateEpisodeRating: async (tmdb_id, season, episode, rating) => {
     let item = get().items[tmdb_id];
     if (!item) {
@@ -577,6 +687,131 @@ export const useMyListStore = create<MyListStore>()(
           [tmdb_id]: prevProgress
         }
       }));
+    }
+  },
+
+  updateEpisodeRewatch: async (tmdb_id, season, episode, rewatchCount) => {
+    let item = get().items[tmdb_id];
+    if (!item) {
+      if (rewatchCount <= 0) return;
+      await get().addToList(tmdb_id, 'tv');
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    } else if (item.id.startsWith('temp-')) {
+      let retries = 0;
+      while (get().items[tmdb_id]?.id?.startsWith('temp-') && retries < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        retries++;
+      }
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    }
+
+    const clampedCount = Math.max(0, rewatchCount);
+    const prevProgress = get().episodeProgress[tmdb_id] || [];
+    const prevSeriesRewatch = get().items[tmdb_id]?.rewatch_count ?? 0;
+    const exists = prevProgress.find(p => p.season_number === season && p.episode_number === episode);
+
+    // Optimistic update
+    set((state) => ({
+      episodeProgress: {
+        ...state.episodeProgress,
+        [tmdb_id]: exists
+          ? prevProgress.map(p => (p.season_number === season && p.episode_number === episode ? { ...p, rewatch_count: clampedCount } : p))
+          : [...prevProgress, { season_number: season, episode_number: episode, rewatch_count: clampedCount }]
+      }
+    }));
+
+    try {
+      await resilientFetch(`/api/my-list/${item.id}/progress/${season}/${episode}/rewatch`, {
+        method: 'PATCH',
+        body: { rewatch_count: clampedCount }
+      });
+      await get().fetchMyList();
+      const newSeriesRewatch = get().items[tmdb_id]?.rewatch_count ?? 0;
+      if (newSeriesRewatch > prevSeriesRewatch) {
+        toast.add({
+          title: "Série marcada como Reassistida! 🔄",
+          description: `Todos os episódios foram reassistidos (${newSeriesRewatch}x).`,
+          type: "success"
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to update episode rewatch', error);
+      set((state) => ({
+        episodeProgress: {
+          ...state.episodeProgress,
+          [tmdb_id]: prevProgress
+        }
+      }));
+      const errorDetail = error?.response?.data?.detail;
+      toast.add({
+        title: "Erro ao atualizar episódio",
+        description: errorDetail || "Não foi possível salvar a revisão do episódio.",
+        type: "error"
+      });
+    }
+  },
+
+  updateSeasonRewatch: async (tmdb_id, season, rewatchCount) => {
+    let item = get().items[tmdb_id];
+    if (!item) {
+      if (rewatchCount <= 0) return;
+      await get().addToList(tmdb_id, 'tv');
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    } else if (item.id.startsWith('temp-')) {
+      let retries = 0;
+      while (get().items[tmdb_id]?.id?.startsWith('temp-') && retries < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        retries++;
+      }
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    }
+
+    const clampedCount = Math.max(0, rewatchCount);
+    const prevProgress = get().episodeProgress[tmdb_id] || [];
+    const prevSeriesRewatch = get().items[tmdb_id]?.rewatch_count ?? 0;
+
+    set((state) => ({
+      episodeProgress: {
+        ...state.episodeProgress,
+        [tmdb_id]: prevProgress.map(p =>
+          p.season_number === season ? { ...p, rewatch_count: clampedCount } : p
+        )
+      }
+    }));
+
+    try {
+      await resilientFetch(`/api/my-list/${item.id}/progress/season/${season}/rewatch`, {
+        method: 'POST',
+        body: { rewatch_count: clampedCount }
+      });
+      await get().fetchProgress(tmdb_id);
+      await get().fetchMyList();
+      const newSeriesRewatch = get().items[tmdb_id]?.rewatch_count ?? 0;
+      if (newSeriesRewatch > prevSeriesRewatch) {
+        toast.add({
+          title: "Série marcada como Reassistida! 🔄",
+          description: `Todos os episódios foram reassistidos (${newSeriesRewatch}x).`,
+          type: "success"
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to update season rewatch', error);
+      set((state) => ({
+        episodeProgress: {
+          ...state.episodeProgress,
+          [tmdb_id]: prevProgress
+        }
+      }));
+      const errorDetail = error?.response?.data?.detail;
+      toast.add({
+        title: "Erro ao atualizar temporada",
+        description: errorDetail || "Não foi possível atualizar a revisão da temporada.",
+        type: "error"
+      });
     }
   },
 
@@ -830,7 +1065,7 @@ export const useMyListStore = create<MyListStore>()(
       const otherSeasons = prevProgress.filter(p => p.season_number !== season);
       const seasonEpisodes: EpisodeProgress[] = [];
       for (let e = 1; e <= episodeCount; e++) {
-        seasonEpisodes.push(existingMap.get(e) || { season_number: season, episode_number: e });
+        seasonEpisodes.push(existingMap.get(e) || { season_number: season, episode_number: e, rewatch_count: 0 });
       }
       nextProgress = [...otherSeasons, ...seasonEpisodes];
     } else {
@@ -843,6 +1078,7 @@ export const useMyListStore = create<MyListStore>()(
       status: isWatched
         ? (prevItem.status === 'plan_to_watch' ? 'watching' : prevItem.status)
         : (prevItem.status === 'completed' ? 'watching' : prevItem.status),
+      rewatch_count: isWatched ? prevItem.rewatch_count : 0,
       last_watched_at: isWatched ? new Date().toISOString() : prevItem.last_watched_at,
       is_up_to_date: isWatched ? prevItem.is_up_to_date : false,
       next_episode: isWatched

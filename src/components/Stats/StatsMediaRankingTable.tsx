@@ -146,19 +146,7 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
             Melhor Avaliados
           </button>
 
-          {isMovie ? (
-            <button
-              onClick={() => handleSortChange('rewatch')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                sortBy === 'rewatch'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-              }`}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Mais Reassistidos
-            </button>
-          ) : (
+          {!isMovie && (
             <button
               onClick={() => handleSortChange('episodes')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
@@ -171,6 +159,18 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
               Mais Episódios
             </button>
           )}
+
+          <button
+            onClick={() => handleSortChange('rewatch')}
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              sortBy === 'rewatch'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+            }`}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Mais Reassistidos
+          </button>
 
           <button
             onClick={() => handleSortChange('recent')}
@@ -302,9 +302,19 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
                           item.runtime ? <span className="text-zinc-500">{Math.floor(item.runtime / 60)}h {item.runtime % 60}m</span> : null
                         )
                       ) : (
-                        <span className="text-purple-400 font-medium">
-                          {item.episodes_watched} {item.episodes_watched === 1 ? 'ep assistido' : 'eps assistidos'}
-                        </span>
+                        <>
+                          <span className="text-purple-400 font-medium">
+                            {item.episodes_watched} {item.episodes_watched === 1 ? 'ep assistido' : 'eps assistidos'}
+                          </span>
+                          {item.rewatch_count > 0 && (
+                            <>
+                              <span className="text-zinc-600">•</span>
+                              <span className="text-emerald-400 font-medium">
+                                {item.rewatch_count + 1}x assistida
+                              </span>
+                            </>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -341,9 +351,7 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
               <th className="py-3 px-3 sm:px-4 text-center hidden md:table-cell">
                 {isMovie ? 'Duração' : 'Episódios'}
               </th>
-              {isMovie && (
-                <th className="py-3 px-3 sm:px-4 text-center hidden lg:table-cell">Rewatches</th>
-              )}
+              <th className="py-3 px-3 sm:px-4 text-center hidden lg:table-cell">Rewatches</th>
               <th className="py-3 px-3 sm:px-4 text-right">Tempo Assistido</th>
               <th className="py-3 px-3 sm:px-4 text-right">Sua Nota</th>
             </tr>
@@ -367,11 +375,9 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
                   <td className="py-3.5 px-4 text-center hidden md:table-cell">
                     <div className="h-3 bg-zinc-800 rounded w-16 mx-auto" />
                   </td>
-                  {isMovie && (
-                    <td className="py-3.5 px-4 text-center hidden lg:table-cell">
-                      <div className="h-3 bg-zinc-800 rounded w-10 mx-auto" />
-                    </td>
-                  )}
+                  <td className="py-3.5 px-4 text-center hidden lg:table-cell">
+                    <div className="h-3 bg-zinc-800 rounded w-10 mx-auto" />
+                  </td>
                   <td className="py-3.5 px-4 text-right">
                     <div className="h-3 bg-zinc-800 rounded w-16 ml-auto" />
                   </td>
@@ -472,19 +478,17 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
                       )}
                     </td>
 
-                    {/* Rewatches para filmes */}
-                    {isMovie && (
-                      <td className="py-3 px-3 sm:px-4 text-center hidden lg:table-cell">
-                        {item.rewatch_count > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium text-[11px]">
-                            <RotateCcw className="w-3 h-3" />
-                            {item.rewatch_count + 1}x
-                          </span>
-                        ) : (
-                          <span className="text-zinc-500 text-[11px]">1x</span>
-                        )}
-                      </td>
-                    )}
+                    {/* Rewatches para filmes e séries */}
+                    <td className="py-3 px-3 sm:px-4 text-center hidden lg:table-cell">
+                      {item.rewatch_count > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium text-[11px]">
+                          <RotateCcw className="w-3 h-3" />
+                          {item.rewatch_count + 1}x
+                        </span>
+                      ) : (
+                        <span className="text-zinc-500 text-[11px]">1x</span>
+                      )}
+                    </td>
 
                     {/* Tempo Assistido Total */}
                     <td className="py-3 px-3 sm:px-4 text-right text-zinc-200 font-semibold whitespace-nowrap">
