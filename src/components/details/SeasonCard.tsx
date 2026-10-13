@@ -22,16 +22,56 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
   const [expanded, setExpanded] = useState(false);
   const [episodes, setEpisodes] = useState<EpisodeItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [markingSeason, setMarkingSeason] = useState(false);
   
   const episodeProgress = useMyListStore(state => state.episodeProgress[seriesId]);
   const toggleEpisode = useMyListStore(state => state.toggleEpisode);
-  const isInList = useMyListStore(state => !!state.items[seriesId]);
+  const toggleSeason = useMyListStore(state => state.toggleSeason);
 
   const posterUrl = "https://image.tmdb.org/t/p/w185";
   const stillUrl = "https://image.tmdb.org/t/p/w300";
 
   const imagePath = season.poster_path ?? fallbackPosterPath ?? null;
   const isUpcoming = !season.air_date || isFutureDate(season.air_date);
+
+  const watchedInSeason = (episodeProgress || []).filter(
+    p => p.season_number === season.season_number
+  ).length;
+
+  const releasedEpisodesCount = episodes.length > 0
+    ? episodes.filter(ep => ep.air_date && !isFutureDate(ep.air_date)).length
+    : season.episode_count;
+
+  const isSeasonWatched = releasedEpisodesCount > 0 && watchedInSeason >= releasedEpisodesCount;
+  const progressPercent = season.episode_count > 0
+    ? Math.min(100, Math.round((watchedInSeason / season.episode_count) * 100))
+    : 0;
+
+  const handleToggleSeason = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (markingSeason || isUpcoming || season.episode_count === 0) return;
+
+    const targetWatched = !isSeasonWatched;
+    setMarkingSeason(true);
+    try {
+      await toggleSeason(seriesId, season.season_number, releasedEpisodesCount || season.episode_count, targetWatched);
+      if (targetWatched && season.season_number > 1) {
+        let progress = useMyListStore.getState().episodeProgress[seriesId];
+        if (!progress) {
+          await useMyListStore.getState().fetchProgress(seriesId);
+          progress = useMyListStore.getState().episodeProgress[seriesId];
+        }
+        if (hasMissingPreviousEpisodes(progress, season.season_number, 1)) {
+          if (window.confirm(`Você marcou a ${season.name}. Deseja marcar também todas as temporadas anteriores como assistidas?`)) {
+            await useMyListStore.getState().bulkMarkEpisodes(seriesId, season.season_number, season.episode_count);
+          }
+        }
+      }
+    } finally {
+      setMarkingSeason(false);
+    }
+  };
 
   const toggleExpand = async () => {
     if (!expanded && episodes.length === 0) {
@@ -79,21 +119,67 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
         </div>
 
         <div className="flex-1 flex flex-col justify-center">
-          <div className="flex justify-between items-start">
-            <h4 className="text-xl font-bold mb-2">{season.name}</h4>
-            {expanded ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
+          <div className="flex justify-between items-start gap-3">
+            <div>
+              <h4 className="text-xl font-bold mb-1">{season.name}</h4>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400 mb-2">
+                {season.air_date ? (
+                  <>
+                    <span>{parseReleaseDate(season.air_date).getFullYear()}</span>
+                    <span>•</span>
+                  </>
+                ) : (
+                  <span className="text-primary font-medium">Data a confirmar</span>
+                )}
+                <span>{season.episode_count} episódios</span>
+                {watchedInSeason > 0 && (
+                  <>
+                    <span>•</span>
+                    <span className="text-primary font-medium">
+                      {watchedInSeason}/{season.episode_count} assistidos
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {!isUpcoming && season.episode_count > 0 && (
+                <button
+                  type="button"
+                  onClick={handleToggleSeason}
+                  disabled={markingSeason}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${
+                    isSeasonWatched
+                      ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
+                      : "bg-background/60 text-muted-foreground border-muted hover:text-foreground hover:bg-background"
+                  } disabled:opacity-50`}
+                  title={isSeasonWatched ? "Desmarcar temporada como assistida" : "Marcar temporada toda como assistida"}
+                >
+                  {markingSeason ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : isSeasonWatched ? (
+                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                  ) : (
+                    <Circle className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {isSeasonWatched ? "Temporada assistida" : "Marcar temporada"}
+                  </span>
+                </button>
+              )}
+              {expanded ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-            {season.air_date ? (
-              <>
-                <span>{parseReleaseDate(season.air_date).getFullYear()}</span>
-                <span>•</span>
-              </>
-            ) : (
-              <span className="text-primary font-medium">Data a confirmar</span>
-            )}
-            <span>{season.episode_count} episódios</span>
-          </div>
+
+          {watchedInSeason > 0 && season.episode_count > 0 && (
+            <div className="w-full max-w-xs h-1.5 bg-muted rounded-full overflow-hidden mt-1">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          )}
         </div>
       </div>
 

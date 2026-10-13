@@ -47,6 +47,34 @@ export const APP_RELEASES: AppRelease[] = [
       },
     ],
   },
+  {
+    id: 2,
+    version: "v1.4.0",
+    date: "Outubro 2026",
+    title: "Marcação Rápida de Temporadas Inteiras em Séries",
+    summary:
+      "Agora você pode marcar ou desmarcar uma temporada completa como assistida com apenas um clique, sem precisar abrir a lista de episódios.",
+    highlights: [
+      {
+        title: "Botão 'Marcar temporada' Direto no Card",
+        description:
+          "Marque ou desmarque todos os episódios já lançados de uma temporada diretamente pelo cabeçalho da temporada na página da série.",
+        tag: "Praticidade",
+      },
+      {
+        title: "Barra de Progresso e Contador por Temporada",
+        description:
+          "Visualize rapidamente quantos episódios já foram assistidos em cada temporada (ex: 10/10 assistidos) com indicador de progresso visual.",
+        tag: "Interface",
+      },
+      {
+        title: "Preenchimento Inteligente de Temporadas Anteriores",
+        description:
+          "Ao marcar uma temporada mais avançada, o OmniWatch pergunta se você deseja marcar automaticamente todas as temporadas anteriores como assistidas.",
+        tag: "Automação",
+      },
+    ],
+  },
 ];
 
 export const LATEST_RELEASE_ID = APP_RELEASES.reduce(

@@ -66,6 +66,7 @@ interface MyListStore {
   toggleFavorite: (tmdb_id: number) => Promise<void>;
   removeFromList: (tmdb_id: number) => Promise<void>;
   bulkMarkEpisodes: (tmdb_id: number, season: number, episode: number) => Promise<void>;
+  toggleSeason: (tmdb_id: number, season: number, episodeCount: number, isWatched: boolean) => Promise<void>;
 }
 
 let inFlightFetchMyList: Promise<void> | null = null;
@@ -715,7 +716,11 @@ export const useMyListStore = create<MyListStore>()(
 
   bulkMarkEpisodes: async (tmdb_id, season, episode) => {
     let item = get().items[tmdb_id];
-    if (!item) return;
+    if (!item) {
+      await get().addToList(tmdb_id, 'tv');
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    }
 
     if (item.id.startsWith('temp-')) {
       let retries = 0;
@@ -728,6 +733,15 @@ export const useMyListStore = create<MyListStore>()(
     }
 
     const prevItem = get().items[tmdb_id];
+    const prevProgress = get().episodeProgress[tmdb_id] || [];
+    const existingSet = new Set(prevProgress.map(p => `${p.season_number}:${p.episode_number}`));
+    const optimisticProgress = [...prevProgress];
+    for (let e = 1; e <= episode; e++) {
+      if (!existingSet.has(`${season}:${e}`)) {
+        optimisticProgress.push({ season_number: season, episode_number: e });
+      }
+    }
+
     if (prevItem) {
       set((state) => ({
         items: {
@@ -744,6 +758,10 @@ export const useMyListStore = create<MyListStore>()(
               is_released: true
             }
           }
+        },
+        episodeProgress: {
+          ...state.episodeProgress,
+          [tmdb_id]: optimisticProgress
         }
       }));
       saveCorrectedEpisodesToCache({ [tmdb_id]: { season, episode: episode + 1 } });
@@ -755,21 +773,126 @@ export const useMyListStore = create<MyListStore>()(
         body: { season_number: season, episode_number: episode }
       });
       // Sync progress in background
-      get().fetchProgress(tmdb_id);
+      await get().fetchProgress(tmdb_id);
       get().fetchMyList();
     } catch (error) {
       console.error('Failed to bulk mark episodes', error);
-      if (prevItem) {
-        set((state) => ({
-          items: {
-            ...state.items,
-            [tmdb_id]: prevItem
-          }
-        }));
-      }
+      set((state) => ({
+        items: prevItem ? { ...state.items, [tmdb_id]: prevItem } : state.items,
+        episodeProgress: {
+          ...state.episodeProgress,
+          [tmdb_id]: prevProgress
+        }
+      }));
       toast.add({
         title: "Erro ao marcar episódios",
         description: "Não foi possível marcar em lote. Tente novamente.",
+        type: "error"
+      });
+    }
+  },
+
+  toggleSeason: async (tmdb_id, season, episodeCount, isWatched) => {
+    let item = get().items[tmdb_id];
+    if (!item) {
+      if (!isWatched) return;
+      await get().addToList(tmdb_id, 'tv');
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+
+      set((state) => ({
+        items: {
+          ...state.items,
+          [tmdb_id]: { ...state.items[tmdb_id], status: 'watching' }
+        }
+      }));
+    } else if (item.id.startsWith('temp-')) {
+      let retries = 0;
+      while (get().items[tmdb_id]?.id?.startsWith('temp-') && retries < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        retries++;
+      }
+      item = get().items[tmdb_id];
+      if (!item || item.id.startsWith('temp-')) return;
+    }
+
+    const prevItem = get().items[tmdb_id];
+    const prevProgress = get().episodeProgress[tmdb_id] || [];
+
+    // Optimistic progress update
+    let nextProgress: EpisodeProgress[];
+    if (isWatched) {
+      const existingMap = new Map(
+        prevProgress
+          .filter(p => p.season_number === season)
+          .map(p => [p.episode_number, p])
+      );
+      const otherSeasons = prevProgress.filter(p => p.season_number !== season);
+      const seasonEpisodes: EpisodeProgress[] = [];
+      for (let e = 1; e <= episodeCount; e++) {
+        seasonEpisodes.push(existingMap.get(e) || { season_number: season, episode_number: e });
+      }
+      nextProgress = [...otherSeasons, ...seasonEpisodes];
+    } else {
+      nextProgress = prevProgress.filter(p => p.season_number !== season);
+      removeUpToDateShowFromCache(tmdb_id);
+    }
+
+    const optimisticItem: SavedItem | undefined = prevItem ? {
+      ...prevItem,
+      status: isWatched
+        ? (prevItem.status === 'plan_to_watch' ? 'watching' : prevItem.status)
+        : (prevItem.status === 'completed' ? 'watching' : prevItem.status),
+      last_watched_at: isWatched ? new Date().toISOString() : prevItem.last_watched_at,
+      is_up_to_date: isWatched ? prevItem.is_up_to_date : false,
+      next_episode: isWatched
+        ? {
+            season_number: season + 1,
+            episode_number: 1,
+            name: 'Episódio 1',
+            is_released: true
+          }
+        : {
+            season_number: season,
+            episode_number: 1,
+            name: 'Episódio 1',
+            is_released: true
+          }
+    } : undefined;
+
+    set((state) => ({
+      items: optimisticItem ? { ...state.items, [tmdb_id]: optimisticItem } : state.items,
+      episodeProgress: {
+        ...state.episodeProgress,
+        [tmdb_id]: nextProgress
+      }
+    }));
+
+    try {
+      if (isWatched) {
+        await resilientFetch(`/api/my-list/${item.id}/progress/season/${season}`, {
+          method: 'POST'
+        });
+      } else {
+        await resilientFetch(`/api/my-list/${item.id}/progress/season/${season}`, {
+          method: 'DELETE'
+        });
+      }
+      await get().fetchProgress(tmdb_id);
+      get().fetchMyList();
+    } catch (error: any) {
+      console.error('Failed to toggle season', error);
+      set((state) => ({
+        items: prevItem ? { ...state.items, [tmdb_id]: prevItem } : state.items,
+        episodeProgress: {
+          ...state.episodeProgress,
+          [tmdb_id]: prevProgress
+        }
+      }));
+      const errorDetail = error?.response?.data?.detail;
+      toast.add({
+        title: "Erro ao atualizar temporada",
+        description: errorDetail || "Não foi possível salvar o progresso da temporada. Tente novamente.",
         type: "error"
       });
     }
