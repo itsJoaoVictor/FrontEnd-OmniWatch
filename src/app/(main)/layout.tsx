@@ -1,6 +1,7 @@
 import { Topbar } from "@/components/layout/Topbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { UsernameSetupModal } from "@/components/auth/UsernameSetupModal";
+import { WhatsNewModal } from "@/components/shared/WhatsNewModal";
 
 export default function MainLayout({
   children,
@@ -15,6 +16,8 @@ export default function MainLayout({
       </main>
       <BottomNav />
       <UsernameSetupModal />
+      <WhatsNewModal />
     </div>
   );
 }
+

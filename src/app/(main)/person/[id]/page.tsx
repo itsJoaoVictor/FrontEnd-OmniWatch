@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PersonDetailsResponse } from "@/types/person";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { PersonDiscoverSection } from "@/components/person/PersonDiscoverSection";
 
 async function getPersonData(id: string): Promise<PersonDetailsResponse | null> {
   try {
@@ -32,27 +33,6 @@ export default async function PersonDetailsPage({ params }: { params: Promise<{ 
   const posterUrl = "https://image.tmdb.org/t/p/w154";
 
   const knownForDepartment = person.known_for_department;
-  const filteredCredits = person.combined_credits.filter(item => {
-    if (item.department !== knownForDepartment) return false;
-    if (knownForDepartment === 'Acting') {
-      if (item.character && item.character.toLowerCase().includes("self")) return false;
-      if (item.order !== null && item.order !== undefined && item.order > 10) return false;
-    }
-    return true;
-  });
-
-  // Sort by vote_count descending
-  filteredCredits.sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
-
-  const seenIds = new Set();
-  const knownFor = [];
-  for (const item of filteredCredits) {
-    if (!seenIds.has(item.id) && item.poster_path) {
-      seenIds.add(item.id);
-      knownFor.push(item);
-    }
-    if (knownFor.length >= 8) break;
-  }
 
   // Group full credits by department
   const creditsByDepartment: Record<string, typeof person.combined_credits> = {};
@@ -151,38 +131,8 @@ export default async function PersonDetailsPage({ params }: { params: Promise<{ 
               </div>
             )}
 
-            {/* Known For */}
-            {knownFor.length > 0 && (
-              <div className="mb-10">
-                <h3 className="text-xl font-semibold mb-4">Conhecido(a) por</h3>
-                <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
-                  {knownFor.map(item => (
-                    <div
-                      key={item.id}
-                      className="snap-start flex-shrink-0 w-[130px] flex flex-col gap-2 relative group"
-                    >
-                      <Link href={`/${item.media_type}/${item.id}`}>
-                        <div className="aspect-[2/3] relative rounded-md overflow-hidden bg-muted shadow-sm hover:opacity-80 transition-opacity">
-                          <Image
-                            src={`${posterUrl}${item.poster_path}`}
-                            alt={item.title}
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      </Link>
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <AddToListButton tmdb_id={item.id} media_type={item.media_type as 'movie' | 'tv'} release_date={item.release_date} className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4" />
-                      </div>
-                      <Link href={`/${item.media_type}/${item.id}`}>
-                        <p className="text-xs font-semibold text-center truncate hover:underline">{item.title}</p>
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Para Você Descobrir (Score de Destaque Personalizado 40/35/25) */}
+            <PersonDiscoverSection person={person} />
 
             {/* Credits by Department */}
             {sortedDepartments.map(dept => {

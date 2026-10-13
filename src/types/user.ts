@@ -4,8 +4,10 @@ export interface UserProfile {
   email: string;
   username: string | null;
   role: string;
+  last_seen_release_id?: number;
   created_at?: string;
 }
+
 
 export interface PublicUserProfileStats {
   total_movies: number;

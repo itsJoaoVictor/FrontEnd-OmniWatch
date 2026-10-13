@@ -28,5 +28,11 @@ export const userService = {
     const res = await api.patch<UserProfile>('/api/users/me/username', { username });
     return res.data;
   },
+
+  async updateSeenRelease(releaseId: number): Promise<UserProfile> {
+    const res = await api.patch<UserProfile>('/api/users/me/seen-release', { release_id: releaseId });
+    return res.data;
+  },
 };
+
 

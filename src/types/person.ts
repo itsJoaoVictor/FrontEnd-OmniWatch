@@ -7,8 +7,15 @@ export interface PersonCastItem {
   poster_path: string | null;
   media_type: string;
   release_date: string | null;
+  popularity?: number;
   vote_count: number;
+  vote_average?: number;
   order: number | null;
+  genre_ids?: number[];
+  episode_count?: number | null;
+  suggestion_score?: number | null;
+  match_score?: number | null;
+  role_label?: string | null;
 }
 
 export interface PersonDetailsResponse {
@@ -21,3 +28,9 @@ export interface PersonDetailsResponse {
   known_for_department: string;
   combined_credits: PersonCastItem[];
 }
+
+export interface PersonDiscoverResponse {
+  items: PersonCastItem[];
+  is_personalized: boolean;
+}
+

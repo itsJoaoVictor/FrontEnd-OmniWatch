@@ -9,10 +9,11 @@ interface UserState {
   setUser: (user: UserProfile | null) => void;
   fetchUser: () => Promise<UserProfile | null>;
   updateUsername: (username: string) => Promise<UserProfile>;
+  markReleaseSeen: (releaseId: number) => Promise<void>;
   clearUser: () => void;
 }
 
-export const useUserStore = create<UserState>((set) => ({
+export const useUserStore = create<UserState>((set, get) => ({
   user: null,
   isLoading: false,
   isInitialized: false,
@@ -38,4 +39,23 @@ export const useUserStore = create<UserState>((set) => ({
     set({ user: updated });
     return updated;
   },
+
+  markReleaseSeen: async (releaseId: number) => {
+    const current = get().user;
+    if (current) {
+      set({
+        user: {
+          ...current,
+          last_seen_release_id: Math.max(current.last_seen_release_id ?? 0, releaseId),
+        },
+      });
+    }
+    try {
+      const updated = await userService.updateSeenRelease(releaseId);
+      set({ user: updated });
+    } catch {
+      // Mantém atualização otimista caso haja falha momentânea de rede
+    }
+  },
 }));
+
