@@ -103,6 +103,34 @@ export const APP_RELEASES: AppRelease[] = [
       },
     ],
   },
+  {
+    id: 4,
+    version: "v1.5.1",
+    date: "Outubro 2026",
+    title: "Recuperação de Senha Direta & Segurança de Sessão",
+    summary:
+      "Novo fluxo de recuperação de senha rápida na tela de acesso, com validação de identidade e revogação automática de sessões antigas.",
+    highlights: [
+      {
+        title: "Redefinição de Senha por E-mail + @Username",
+        description:
+          "Caso esqueça sua senha, agora é possível redefini-la diretamente em '/forgot-password' confirmando seu e-mail cadastrado e seu nome de usuário.",
+        tag: "Conta",
+      },
+      {
+        title: "Indicador de Força de Senha em Tempo Real",
+        description:
+          "Validação visual instantânea dos requisitos de segurança ao definir sua nova senha.",
+        tag: "Interface",
+      },
+      {
+        title: "Revogação Automática de Sessões Ativas",
+        description:
+          "Ao alterar sua senha, todos os tokens de sessão anteriores são invalidados e bloqueios temporários de tentativas de login são zerados.",
+        tag: "Segurança",
+      },
+    ],
+  },
 ];
 
 export const LATEST_RELEASE_ID = APP_RELEASES.reduce(

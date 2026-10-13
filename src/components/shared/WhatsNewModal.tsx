@@ -13,66 +13,37 @@ import { useUserStore } from "@/store/useUserStore";
 import { APP_RELEASES, LATEST_RELEASE_ID } from "@/lib/changelog";
 import { Sparkles, CheckCircle2, Layers, Calendar } from "lucide-react";
 
-function getLocalSeenReleaseId(userId: string): number {
-  if (typeof window === "undefined") return 0;
-  try {
-    const raw = window.localStorage.getItem(`omniwatch:last_seen_release:${userId}`);
-    const parsed = raw ? parseInt(raw, 10) : 0;
-    return Number.isNaN(parsed) ? 0 : parsed;
-  } catch {
-    return 0;
-  }
-}
-
-function setLocalSeenReleaseId(userId: string, releaseId: number): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(`omniwatch:last_seen_release:${userId}`, String(releaseId));
-  } catch {
-    // Ignore storage errors
-  }
-}
-
 export function WhatsNewModal() {
-  const { user, isInitialized, fetchUser, markReleaseSeen } = useUserStore();
+  const { user, isLoading, isInitialized, fetchUser, markReleaseSeen } = useUserStore();
   const [dismissedInSession, setDismissedInSession] = useState(false);
-  const [localSeenId, setLocalSeenId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isInitialized) {
+    if (!isLoading && (!isInitialized || (user && typeof user.last_seen_release_id !== "number"))) {
       fetchUser();
     }
-  }, [isInitialized, fetchUser]);
-
-  useEffect(() => {
-    if (user?.id) {
-      setLocalSeenId(getLocalSeenReleaseId(user.id));
-    } else {
-      setLocalSeenId(null);
-    }
-  }, [user?.id]);
+  }, [isInitialized, isLoading, user, fetchUser]);
 
   // Calcula todas as atualizações publicadas desde o último acesso do usuário (acumulativo)
+  // utilizando exclusivamente o registro persistido no banco de dados (backend)
   const unseenReleases = useMemo(() => {
-    if (!isInitialized || !user || localSeenId === null) return [];
+    if (!isInitialized || !user) return [];
+    // Aguarda o carregamento completo do last_seen_release_id do banco para evitar abrir o modal indevidamente após o login
+    if (typeof user.last_seen_release_id !== "number") return [];
     // Aguarda o usuário configurar o @username primeiro para não sobrepor modais
     if (!user.username) return [];
 
-    const dbSeen = user.last_seen_release_id ?? 0;
-    const effectiveLastSeen = Math.max(dbSeen, localSeenId);
+    const dbSeen = user.last_seen_release_id;
 
-    return APP_RELEASES.filter((release) => release.id > effectiveLastSeen).sort(
+    return APP_RELEASES.filter((release) => release.id > dbSeen).sort(
       (a, b) => b.id - a.id
     );
-  }, [isInitialized, user, localSeenId]);
+  }, [isInitialized, user]);
 
   const isOpen = unseenReleases.length > 0 && !dismissedInSession;
 
   const handleConfirm = async () => {
     setDismissedInSession(true);
     if (user?.id) {
-      setLocalSeenReleaseId(user.id, LATEST_RELEASE_ID);
-      setLocalSeenId(LATEST_RELEASE_ID);
       await markReleaseSeen(LATEST_RELEASE_ID);
     }
   };
