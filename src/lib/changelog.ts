@@ -171,6 +171,46 @@ export const APP_RELEASES: AppRelease[] = [
       },
     ],
   },
+  {
+    id: 6,
+    version: "v1.7.0",
+    date: "Outubro 2026",
+    title: "Estatísticas 2.0: Insights Wrapped, Central de Rankings de Talentos e Ultra Performance",
+    summary:
+      "A página de estatísticas foi totalmente reformulada: novo painel OmniWatch Highlights estilo Spotify-Wrapped, rankings paginados de elenco e diretores com links diretos para os artistas, e arquitetura de hiper-escala com respostas sub-milissegundo.",
+    highlights: [
+      {
+        title: "OmniWatch Highlights (Insights Pessoais de Consumo)",
+        description:
+          "Descubra sua 'Viagem no Tempo' (equivalência de horas em voltas ao mundo e dias completos de tela), seu 'DNA de Consumo' (Serial Binger vs Cinéfilo Devoto), o 'Rosto do Universo' com seu artista favorito e seu badge de consistência.",
+        tag: "Insights",
+      },
+      {
+        title: "Central de Rankings Paginada para Atores e Diretores",
+        description:
+          "Navegue por todo o elenco e diretores das obras assistidas com paginação nativa (10 por página), busca em tempo real e ordenações por Mais Obras, Mais Tempo, Melhores Notas e Ordem Alfabética.",
+        tag: "Rankings",
+      },
+      {
+        title: "Atores e Diretores Clicáveis com Acesso ao Perfil",
+        description:
+          "Toque em qualquer ator, atriz ou diretor na tabela ou nos cards para abrir diretamente a página completa do artista (/person/[id]) com fotos, biografia e filmografia.",
+        tag: "Navegação",
+      },
+      {
+        title: "Hero Card de Tempo Assistido & Layout Mobile-First",
+        description:
+          "Novo card principal com barra de proporção bicolor (Séries vs Filmes), rótulo central no Donut Chart com o Top Gênero e grid 2x2 otimizado para navegação rápida no celular.",
+        tag: "Design",
+      },
+      {
+        title: "Hiper-Escala e Performance Sub-Milissegundo (SWR)",
+        description:
+          "Cálculo analítico via Pushdown SQL no PostgreSQL, contadores desnormalizados e cache inteligente Stale-While-Revalidate que entrega respostas instantâneas.",
+        tag: "Performance",
+      },
+    ],
+  },
 ];
 
 export const LATEST_RELEASE_ID = APP_RELEASES.reduce(
