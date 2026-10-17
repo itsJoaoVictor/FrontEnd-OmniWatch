@@ -15,8 +15,9 @@ Todas as atualizações notáveis da interface estão documentadas neste arquivo
   * **Rosto do Universo**: Card interativo com o artista mais frequente na sua biblioteca com link direto para o perfil.
   * **Finalizador Implacável**: Badge com a taxa de conclusão de obras da lista pessoal.
 
-* **Central de Rankings de Atores e Diretores Paginada**:
+* **Central de Rankings de Atores e Diretores Paginada com Fotos Reais**:
   * Paginação nativa de 10 em 10 itens com suporte a ordenações múltiplas (Mais Obras, Mais Tempo, Melhor Avaliados e A-Z) e busca com debounce.
+  * Fotos oficiais dos atores e diretores em alta definição com fallback inteligente para iniciais e zero impacto de latência.
   * Linhas da tabela no Desktop e cards no Mobile 100% clicáveis (`cursor-pointer`) abrindo o perfil do artista (`/person/[id]`).
 
 * **Hero Card & Design Mobile-First**:

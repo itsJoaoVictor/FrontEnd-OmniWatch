@@ -192,10 +192,10 @@ export const APP_RELEASES: AppRelease[] = [
         tag: "Rankings",
       },
       {
-        title: "Atores e Diretores Clicáveis com Acesso ao Perfil",
+        title: "Fotos Reais do TMDB e Acesso Direto ao Perfil",
         description:
-          "Toque em qualquer ator, atriz ou diretor na tabela ou nos cards para abrir diretamente a página completa do artista (/person/[id]) com fotos, biografia e filmografia.",
-        tag: "Navegação",
+          "Exibição dos retratos oficiais dos atores e diretores integrados diretamente ao banco via TMDB com fallback elegante e navegação instantânea para a página completa do artista (/person/[id]).",
+        tag: "Visual",
       },
       {
         title: "Hero Card de Tempo Assistido & Layout Mobile-First",
