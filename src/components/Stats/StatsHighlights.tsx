@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Globe, Compass, Sparkles, Award, Clapperboard, Film, Tv, Flame } from 'lucide-react';
 import { StatisticsResponse, MediaTypeFilter, PeriodFilter } from './types';
@@ -145,7 +146,16 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
               {topCast ? (
                 <>
                   <h3 className="text-base font-extrabold text-white tracking-tight truncate" title={topCast.name}>
-                    {topCast.name}
+                    {topCast.person_id ? (
+                      <Link
+                        href={`/person/${topCast.person_id}`}
+                        className="hover:text-amber-400 hover:underline transition-colors"
+                      >
+                        {topCast.name}
+                      </Link>
+                    ) : (
+                      topCast.name
+                    )}
                   </h3>
                   <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
                     Presente em <strong className="text-zinc-200">{topCast.count} {topCast.count === 1 ? 'obra' : 'obras'}</strong> ({formatSimpleDuration(topCast.totalTime)} de tela) no seu perfil.
@@ -154,7 +164,16 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
               ) : topDirector ? (
                 <>
                   <h3 className="text-base font-extrabold text-white tracking-tight truncate" title={topDirector.name}>
-                    {topDirector.name}
+                    {topDirector.person_id ? (
+                      <Link
+                        href={`/person/${topDirector.person_id}`}
+                        className="hover:text-amber-400 hover:underline transition-colors"
+                      >
+                        {topDirector.name}
+                      </Link>
+                    ) : (
+                      topDirector.name
+                    )}
                   </h3>
                   <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
                     Diretor mais presente no seu catálogo com <strong className="text-zinc-200">{topDirector.count} produções</strong> ({formatSimpleDuration(topDirector.totalTime)}).

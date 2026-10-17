@@ -5,6 +5,8 @@ import { StatRankingItem } from './types';
 import { formatSimpleDuration } from './StatsKpiCards';
 import { Search, ArrowUpDown, Star, Users, Clapperboard } from 'lucide-react';
 
+import Link from 'next/link';
+
 interface StatsTalentRankingTableProps {
   items: StatRankingItem[];
   type: 'cast' | 'directors';
@@ -99,6 +101,7 @@ export function StatsTalentRankingTable({
           filteredAndSorted.map((item, index) => {
             const rank = index + 1;
             const initials = getInitials(item.name);
+            const personHref = item.person_id ? `/person/${item.person_id}` : null;
 
             return (
               <div
@@ -125,19 +128,38 @@ export function StatsTalentRankingTable({
                     )}
                   </div>
 
-                  {/* Avatar Circular com Iniciais */}
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0 shadow-inner">
-                    <span className="text-[11px] font-bold text-zinc-200">{initials}</span>
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <span className="font-semibold text-zinc-200 text-xs block truncate" title={item.name}>
-                      {item.name}
-                    </span>
-                    <span className="text-[11px] text-zinc-400">
-                      {item.count} {item.count === 1 ? 'obra' : 'obras'}
-                    </span>
-                  </div>
+                  {personHref ? (
+                    <Link
+                      href={personHref}
+                      className="flex items-center gap-2.5 min-w-0 flex-1 group/item"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0 shadow-inner group-hover/item:border-blue-500/50 transition-colors">
+                        <span className="text-[11px] font-bold text-zinc-200 group-hover/item:text-blue-400 transition-colors">{initials}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-semibold text-zinc-200 text-xs block truncate group-hover/item:text-blue-400 group-hover/item:underline transition-colors" title={item.name}>
+                          {item.name}
+                        </span>
+                        <span className="text-[11px] text-zinc-400">
+                          {item.count} {item.count === 1 ? 'obra' : 'obras'}
+                        </span>
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0 shadow-inner">
+                        <span className="text-[11px] font-bold text-zinc-200">{initials}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-semibold text-zinc-200 text-xs block truncate" title={item.name}>
+                          {item.name}
+                        </span>
+                        <span className="text-[11px] text-zinc-400">
+                          {item.count} {item.count === 1 ? 'obra' : 'obras'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Direita: Tempo Assistido e Nota */}
@@ -249,14 +271,28 @@ export function StatsTalentRankingTable({
                     </td>
 
                     <td className="py-3 px-3 sm:px-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0">
-                          <span className="text-[10px] font-bold text-zinc-300">{initials}</span>
+                      {item.person_id ? (
+                        <Link
+                          href={`/person/${item.person_id}`}
+                          className="flex items-center gap-2.5 group/link cursor-pointer w-fit"
+                        >
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0 group-hover/link:border-blue-500/50 transition-colors">
+                            <span className="text-[10px] font-bold text-zinc-300 group-hover/link:text-blue-400 transition-colors">{initials}</span>
+                          </div>
+                          <span className="font-semibold text-zinc-200 group-hover/link:text-blue-400 group-hover/link:underline transition-colors">
+                            {item.name}
+                          </span>
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-bold text-zinc-300">{initials}</span>
+                          </div>
+                          <span className="font-semibold text-zinc-200">
+                            {item.name}
+                          </span>
                         </div>
-                        <span className="font-semibold text-zinc-200 group-hover:text-blue-400 transition-colors">
-                          {item.name}
-                        </span>
-                      </div>
+                      )}
                     </td>
 
                     <td className="py-3 px-3 sm:px-4 text-right text-zinc-300 font-medium">

@@ -4,6 +4,7 @@ export interface StatRankingItem {
   totalTime: number;
   avgRating: number | null;
   percentage: number;
+  person_id?: number | null;
 }
 
 export interface StatTimelineItem {
