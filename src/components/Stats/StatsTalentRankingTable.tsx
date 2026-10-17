@@ -1,13 +1,13 @@
-'use client';
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
 import {
   PeopleRankingItem,
   PeopleRankingResponse,
   PeopleSortField,
   PeriodFilter,
+  StatRankingItem,
 } from './types';
 import { formatSimpleDuration } from './StatsKpiCards';
 import {
@@ -28,6 +28,7 @@ interface StatsTalentRankingTableProps {
   type: 'cast' | 'directors';
   period?: PeriodFilter;
   overallAverageRating?: number;
+  initialItems?: StatRankingItem[];
 }
 
 function getInitials(name: string): string {
@@ -41,7 +42,9 @@ export function StatsTalentRankingTable({
   type,
   period = 'all',
   overallAverageRating,
+  initialItems,
 }: StatsTalentRankingTableProps) {
+  const router = useRouter();
   const isCast = type === 'cast';
   const labelPlural = isCast ? 'Atores e Atrizes' : 'Diretores e Criadores';
   const labelSingular = isCast ? 'Artista' : 'Diretor';
@@ -110,7 +113,46 @@ export function StatsTalentRankingTable({
       if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
         return;
       }
-      console.error('Falha ao carregar ranking de pessoas:', err);
+      console.warn('Falha ao carregar ranking de pessoas do backend, ativando fallback:', err);
+      if (initialItems && initialItems.length > 0) {
+        let filtered = [...initialItems];
+        if (debouncedSearch.trim()) {
+          const t = debouncedSearch.toLowerCase();
+          filtered = filtered.filter(item => item.name.toLowerCase().includes(t));
+        }
+        if (sortBy === 'time') {
+          filtered.sort((a, b) => b.totalTime - a.totalTime);
+        } else if (sortBy === 'rating') {
+          filtered.sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0));
+        } else if (sortBy === 'name') {
+          filtered.sort((a, b) => a.name.localeCompare(b.name));
+        } else {
+          filtered.sort((a, b) => b.count - a.count);
+        }
+        const totalItemsCount = filtered.length;
+        const totalPagesCount = Math.max(1, Math.ceil(totalItemsCount / 10));
+        const sliced = filtered.slice((page - 1) * 10, page * 10);
+        setData({
+          items: sliced.map((item, idx) => ({
+            rank: (page - 1) * 10 + idx + 1,
+            name: item.name,
+            person_id: item.person_id ?? null,
+            role: type,
+            count: item.count,
+            totalTime: item.totalTime,
+            avgRating: item.avgRating,
+            sample_titles: [],
+          })),
+          total_items: totalItemsCount,
+          page,
+          page_size: 10,
+          total_pages: totalPagesCount,
+          role: type,
+          sort_by: sortBy,
+          period,
+          search: debouncedSearch,
+        });
+      }
     } finally {
       if (abortControllerRef.current === controller) {
         setLoading(false);
@@ -230,7 +272,14 @@ export function StatsTalentRankingTable({
             return (
               <div
                 key={item.name}
-                className="p-3 flex items-center justify-between gap-2.5 hover:bg-zinc-800/20 transition-colors"
+                onClick={() => {
+                  if (hasLink) router.push(detailHref);
+                }}
+                className={`p-3 flex items-center justify-between gap-2.5 transition-colors ${
+                  hasLink
+                    ? 'cursor-pointer hover:bg-zinc-800/40 active:bg-zinc-800/60'
+                    : 'hover:bg-zinc-800/20'
+                }`}
               >
                 {/* Ranking, Avatar e Nome */}
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -257,6 +306,7 @@ export function StatsTalentRankingTable({
                   {hasLink ? (
                     <Link
                       href={detailHref}
+                      onClick={(e) => e.stopPropagation()}
                       className={`w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm transition-transform hover:scale-105 ${
                         isCast
                           ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
@@ -282,9 +332,11 @@ export function StatsTalentRankingTable({
                     {hasLink ? (
                       <Link
                         href={detailHref}
-                        className="font-semibold text-xs text-zinc-100 hover:text-blue-400 transition-colors truncate block"
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold text-xs text-zinc-100 hover:text-blue-400 hover:underline transition-colors truncate block flex items-center gap-1"
                       >
-                        {item.name}
+                        <span>{item.name}</span>
+                        <span className="text-[10px] text-zinc-500">↗</span>
                       </Link>
                     ) : (
                       <span className="font-semibold text-xs text-zinc-100 truncate block">
@@ -375,7 +427,14 @@ export function StatsTalentRankingTable({
                 return (
                   <tr
                     key={item.name}
-                    className="hover:bg-zinc-800/30 transition-colors group"
+                    onClick={() => {
+                      if (hasLink) router.push(detailHref);
+                    }}
+                    className={`transition-colors group ${
+                      hasLink
+                        ? 'cursor-pointer hover:bg-zinc-800/40'
+                        : 'hover:bg-zinc-800/20'
+                    }`}
                   >
                     {/* Medalha ou Posição */}
                     <td className="py-3.5 px-3 sm:px-4 text-center font-bold">
@@ -402,6 +461,7 @@ export function StatsTalentRankingTable({
                         {hasLink ? (
                           <Link
                             href={detailHref}
+                            onClick={(e) => e.stopPropagation()}
                             className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm transition-transform group-hover:scale-105 ${
                               isCast
                                 ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
@@ -426,9 +486,11 @@ export function StatsTalentRankingTable({
                           {hasLink ? (
                             <Link
                               href={detailHref}
-                              className="font-semibold text-zinc-100 group-hover:text-blue-400 transition-colors truncate max-w-xs md:max-w-md block"
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-semibold text-zinc-100 group-hover:text-blue-400 group-hover:underline transition-colors truncate max-w-xs md:max-w-md block flex items-center gap-1.5"
                             >
-                              {item.name}
+                              <span>{item.name}</span>
+                              <span className="text-[10px] text-zinc-500 group-hover:text-blue-400 transition-colors">↗</span>
                             </Link>
                           ) : (
                             <span className="font-semibold text-zinc-100 truncate max-w-xs md:max-w-md block">

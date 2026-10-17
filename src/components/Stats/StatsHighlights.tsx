@@ -133,35 +133,54 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
         </Card>
 
         {/* Card 3: Assinatura do Universo (Ator / Diretor) */}
-        <Card className="bg-gradient-to-br from-amber-950/20 via-zinc-900/60 to-zinc-900/40 border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition-all" />
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                  Rosto do Universo
-                </span>
-                <Clapperboard className="w-4 h-4 text-amber-400" />
-              </div>
-              {topCast ? (
-                <>
-                  <h3 className="text-base font-extrabold text-white tracking-tight truncate" title={topCast.name}>
-                    {topCast.person_id ? (
-                      <Link
-                        href={`/person/${topCast.person_id}`}
-                        className="hover:text-amber-400 hover:underline transition-colors"
-                      >
-                        {topCast.name}
-                      </Link>
-                    ) : (
-                      topCast.name
-                    )}
-                  </h3>
-                  <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-                    Presente em <strong className="text-zinc-200">{topCast.count} {topCast.count === 1 ? 'obra' : 'obras'}</strong> ({formatSimpleDuration(topCast.totalTime)} de tela) no seu perfil.
-                  </p>
-                </>
-              ) : topDirector ? (
+        {(() => {
+          const targetPersonId = topCast?.person_id || topDirector?.person_id;
+          const targetHref = targetPersonId ? `/person/${targetPersonId}` : null;
+
+          return (
+            <Card
+              onClick={() => {
+                if (targetHref) window.location.href = targetHref;
+              }}
+              className={`bg-gradient-to-br from-amber-950/20 via-zinc-900/60 to-zinc-900/40 border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300 ${
+                targetHref ? 'cursor-pointer hover:shadow-lg hover:shadow-amber-500/10' : ''
+              }`}
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition-all" />
+              <CardContent className="p-4 flex flex-col justify-between h-full">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                      Rosto do Universo
+                    </span>
+                    <Clapperboard className="w-4 h-4 text-amber-400" />
+                  </div>
+                  {topCast ? (
+                    <>
+                      <h3 className="text-base font-extrabold text-white tracking-tight truncate group-hover:text-amber-400 transition-colors" title={topCast.name}>
+                        {topCast.person_id ? (
+                          <Link
+                            href={`/person/${topCast.person_id}`}
+                            className="hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {topCast.name}
+                          </Link>
+                        ) : (
+                          topCast.name
+                        )}
+                      </h3>
+                      <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                        Presente em <strong className="text-zinc-200">{topCast.count} {topCast.count === 1 ? 'obra' : 'obras'}</strong> ({formatSimpleDuration(topCast.totalTime)} de tela) no seu perfil.
+                      </p>
+                      {targetHref && (
+                        <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-amber-400/90 group-hover:text-amber-300 transition-colors">
+                          <span>Ver perfil completo</span>
+                          <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                        </div>
+                      )}
+                    </>
+                  ) : topDirector ? (
                 <>
                   <h3 className="text-base font-extrabold text-white tracking-tight truncate" title={topDirector.name}>
                     {topDirector.person_id ? (
@@ -192,6 +211,8 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
             </div>
           </CardContent>
         </Card>
+          );
+        })()}
 
         {/* Card 4: Foco & Conclusão */}
         <Card className="bg-gradient-to-br from-emerald-950/20 via-zinc-900/60 to-zinc-900/40 border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-all duration-300">

@@ -191,6 +191,7 @@ export function StatsRankingTable({
           <StatsTalentRankingTable
             type="cast"
             period={period}
+            initialItems={cast}
             overallAverageRating={overallAverageRating}
           />
         )}
@@ -199,6 +200,7 @@ export function StatsRankingTable({
           <StatsTalentRankingTable
             type="directors"
             period={period}
+            initialItems={directors}
             overallAverageRating={overallAverageRating}
           />
         )}
