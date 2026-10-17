@@ -117,6 +117,11 @@ export interface CollectionResponse {
   parts: CollectionPartItem[];
 }
 
+export interface UniverseRef {
+  universe_key: string;
+  name: string;
+}
+
 export interface MovieDetailsResponse {
   id: number;
   title: string;
@@ -133,6 +138,7 @@ export interface MovieDetailsResponse {
   genres: GenreItem[];
   production_companies: ProductionCompanyItem[];
   belongs_to_collection: CollectionItem | null;
+  universe?: UniverseRef | null;
   credits: CreditsResponse;
   videos: VideoItem[];
   watch_providers: WatchProviderItem[];
@@ -161,6 +167,7 @@ export interface TvSeriesDetailsResponse {
   networks: NetworkItem[];
   last_episode_to_air: EpisodeItem | null;
   next_episode_to_air: EpisodeItem | null;
+  universe?: UniverseRef | null;
   seasons: SeasonItem[];
   credits: CreditsResponse;
   videos: VideoItem[];

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Star, ListPlus } from "lucide-react";
-import { GenreItem, CrewItem, WatchProviderItem } from "@/types/details";
+import { GenreItem, CrewItem, WatchProviderItem, UniverseRef } from "@/types/details";
+import Link from "next/link";
 import { AddToListButton } from "@/components/shared/AddToListButton";
 import { FavoriteButton } from "@/components/shared/FavoriteButton";
 import { SaveToCustomListModal } from "@/components/custom_lists/SaveToCustomListModal";
@@ -11,6 +12,7 @@ import { MatchScoreBadge } from "./MatchScoreBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UserRatingBadge } from "@/components/shared/UserRatingBadge";
 import { PosterImage } from "@/components/shared/PosterImage";
+import { Globe } from "lucide-react";
 
 interface HeroSectionProps {
   tmdbId: number;
@@ -26,6 +28,7 @@ interface HeroSectionProps {
   metaInfo: string[]; // ex: ['2023', '120 min', '12 Seasons']
   watchProviders?: WatchProviderItem[];
   releaseDate?: string | null;
+  universe?: UniverseRef | null;
 }
 
 export function HeroSection({
@@ -41,7 +44,8 @@ export function HeroSection({
   crew,
   metaInfo,
   watchProviders,
-  releaseDate
+  releaseDate,
+  universe,
 }: HeroSectionProps) {
   const [customListModalOpen, setCustomListModalOpen] = useState(false);
   const imageUrl = "https://image.tmdb.org/t/p/w1280";
@@ -149,7 +153,17 @@ export function HeroSection({
               <MatchScoreBadge tmdbId={tmdbId} mediaType={mediaType} />
             </div>
 
-            <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-6">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-6">
+              {universe && (
+                <Link
+                  href={`/universe/${encodeURIComponent(universe.universe_key)}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-600/30 text-purple-300 border border-purple-500/40 hover:bg-purple-600/50 hover:text-white transition-all shadow-sm"
+                  title={`Ver todo o universo ${universe.name}`}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>Universo: {universe.name}</span>
+                </Link>
+              )}
               {genres.map((g) => (
                 <span key={g.id} className="px-3 py-1 bg-white/10 rounded-full text-sm font-medium">
                   {g.name}

@@ -78,6 +78,7 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
         metaInfo={metaInfo}
         watchProviders={movie.watch_providers}
         releaseDate={movie.release_date}
+        universe={movie.universe}
       />
 
       <div className="container mx-auto px-4 pb-12 mt-8">

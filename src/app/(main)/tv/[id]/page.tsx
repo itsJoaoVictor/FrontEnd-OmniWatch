@@ -54,6 +54,7 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
         crew={tv.credits.crew}
         metaInfo={metaInfo}
         watchProviders={tv.watch_providers}
+        universe={tv.universe}
       />
 
       <div className="container mx-auto px-4 pb-12 mt-8">

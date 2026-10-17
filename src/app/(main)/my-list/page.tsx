@@ -11,13 +11,22 @@ import { getFollowedCollections, getCollectionSuggestions } from '@/services/col
 import { UserFollowedCollection, CollectionSuggestion } from '@/types/collections';
 import { FollowedCollectionCard } from '@/components/collections/FollowedCollectionCard';
 import { CollectionSuggestionCard } from '@/components/collections/CollectionSuggestionCard';
-import { Layers, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
+import {
+  getFollowedUniverses,
+  getUniverseSuggestions,
+  getDismissedUniverseSuggestions,
+  restoreUniverseSuggestion,
+} from '@/services/universes';
+import { UserFollowedUniverse, UniverseSuggestion } from '@/types/universes';
+import { FollowedUniverseCard } from '@/components/universes/FollowedUniverseCard';
+import { UniverseSuggestionCard } from '@/components/universes/UniverseSuggestionCard';
+import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
 
 export default function MyListPage() {
   const { items, isLoading, fetchMyList } = useMyListStore();
-  const [mediaTab, setMediaTab] = useState<'all' | 'movie' | 'tv' | 'collections'>('all');
+  const [mediaTab, setMediaTab] = useState<'all' | 'movie' | 'tv' | 'collections' | 'universes'>('all');
   const [statusFilter, setStatusFilter] = useState<ListStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -33,12 +42,27 @@ export default function MyListPage() {
   const [, setIsLoadingSuggestions] = useState(false);
   const [isSuggestionsCollapsed, setIsSuggestionsCollapsed] = useState(false);
 
+  // Universes & Suggestions state
+  const [universes, setUniverses] = useState<UserFollowedUniverse[]>([]);
+  const [isLoadingUniverses, setIsLoadingUniverses] = useState(false);
+  const [universeSuggestions, setUniverseSuggestions] = useState<UniverseSuggestion[]>([]);
+  const [, setIsLoadingUniverseSuggestions] = useState(false);
+  const [isUniverseSuggestionsCollapsed, setIsUniverseSuggestionsCollapsed] = useState(false);
+  const [dismissedUniverses, setDismissedUniverses] = useState<UniverseSuggestion[]>([]);
+  const [isDismissedUniversesOpen, setIsDismissedUniversesOpen] = useState(false);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('omniwatch_suggestions_collapsed');
       if (saved !== null) {
         queueMicrotask(() => {
           setIsSuggestionsCollapsed(saved === 'true');
+        });
+      }
+      const savedUniv = localStorage.getItem('omniwatch_universe_suggestions_collapsed');
+      if (savedUniv !== null) {
+        queueMicrotask(() => {
+          setIsUniverseSuggestionsCollapsed(savedUniv === 'true');
         });
       }
     } catch (e) {
@@ -48,6 +72,9 @@ export default function MyListPage() {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'omniwatch_suggestions_collapsed' && e.newValue !== null) {
         setIsSuggestionsCollapsed(e.newValue === 'true');
+      }
+      if (e.key === 'omniwatch_universe_suggestions_collapsed' && e.newValue !== null) {
+        setIsUniverseSuggestionsCollapsed(e.newValue === 'true');
       }
     };
 
@@ -64,6 +91,18 @@ export default function MyListPage() {
         localStorage.setItem('omniwatch_suggestions_collapsed', String(next));
       } catch (e) {
         console.error('Failed to save suggestions collapsed state to localStorage', e);
+      }
+      return next;
+    });
+  };
+
+  const toggleUniverseSuggestionsCollapsed = () => {
+    setIsUniverseSuggestionsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('omniwatch_universe_suggestions_collapsed', String(next));
+      } catch (e) {
+        console.error('Failed to save universe suggestions collapsed state to localStorage', e);
       }
       return next;
     });
@@ -97,17 +136,55 @@ export default function MyListPage() {
     }
   }, []);
 
-  // Carrega sugestões para preencher o badge da aba
+  const loadUniverses = useCallback(async () => {
+    try {
+      setIsLoadingUniverses(true);
+      const data = await getFollowedUniverses();
+      setUniverses(data);
+    } catch (err) {
+      console.error('Failed to load universes:', err);
+    } finally {
+      setIsLoadingUniverses(false);
+    }
+  }, []);
+
+  const loadUniverseSuggestions = useCallback(async () => {
+    try {
+      setIsLoadingUniverseSuggestions(true);
+      const data = await getUniverseSuggestions();
+      setUniverseSuggestions(data);
+    } catch (err) {
+      console.error('Failed to load universe suggestions:', err);
+    } finally {
+      setIsLoadingUniverseSuggestions(false);
+    }
+  }, []);
+
+  const loadDismissedUniverses = useCallback(async () => {
+    try {
+      const data = await getDismissedUniverseSuggestions();
+      setDismissedUniverses(data);
+    } catch (err) {
+      console.error('Failed to load dismissed universe suggestions:', err);
+    }
+  }, []);
+
+  // Carrega sugestões para preencher os badges das abas
   useEffect(() => {
     loadSuggestions();
-  }, [loadSuggestions]);
+    loadUniverseSuggestions();
+  }, [loadSuggestions, loadUniverseSuggestions]);
 
   useEffect(() => {
     if (mediaTab === 'collections') {
       loadCollections();
       loadSuggestions();
+    } else if (mediaTab === 'universes') {
+      loadUniverses();
+      loadUniverseSuggestions();
+      loadDismissedUniverses();
     }
-  }, [mediaTab, loadCollections, loadSuggestions]);
+  }, [mediaTab, loadCollections, loadSuggestions, loadUniverses, loadUniverseSuggestions, loadDismissedUniverses]);
 
   function handleUnfollowCollection(tmdbId: number) {
     setCollections((prev) => prev.filter((c) => c.tmdb_id !== tmdbId));
@@ -123,6 +200,32 @@ export default function MyListPage() {
     setSuggestions((prev) => prev.filter((s) => s.tmdb_id !== tmdbId));
   }
 
+  function handleUnfollowUniverse(universeKey: string) {
+    setUniverses((prev) => prev.filter((u) => u.universe_key !== universeKey));
+    loadUniverseSuggestions();
+    loadDismissedUniverses();
+  }
+
+  function handleFollowUniverseSuggestion(universeKey: string) {
+    setUniverseSuggestions((prev) => prev.filter((s) => s.universe_key !== universeKey));
+    loadUniverses();
+    fetchMyList();
+  }
+
+  function handleDismissUniverseSuggestion(universeKey: string) {
+    setUniverseSuggestions((prev) => prev.filter((s) => s.universe_key !== universeKey));
+    loadDismissedUniverses();
+  }
+
+  async function handleRestoreUniverse(universeKey: string) {
+    try {
+      await restoreUniverseSuggestion(universeKey);
+      await Promise.all([loadUniverseSuggestions(), loadDismissedUniverses()]);
+    } catch (err) {
+      console.error('Failed to restore universe suggestion:', err);
+    }
+  }
+
   // Reset sub-filters when status or media tab changes
   const handleStatusChange = (newStatus: ListStatus | 'all') => {
     setStatusFilter(newStatus);
@@ -131,7 +234,7 @@ export default function MyListPage() {
   };
 
   const handleMediaTabChange = (val: string) => {
-    setMediaTab(val as 'all' | 'movie' | 'tv' | 'collections');
+    setMediaTab(val as 'all' | 'movie' | 'tv' | 'collections' | 'universes');
     setRatingFilter('all');
     setWatchProgressFilter('all');
   };
@@ -185,6 +288,17 @@ export default function MyListPage() {
     return s.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
   });
 
+  // Filter universes and universe suggestions by search query
+  const filteredUniverses = universes.filter((u) => {
+    if (!searchQuery.trim()) return true;
+    return u.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+  });
+
+  const filteredUniverseSuggestions = universeSuggestions.filter((s) => {
+    if (!searchQuery.trim()) return true;
+    return s.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+  });
+
   // Pré-carrega em segundo plano os pôsteres dos itens não visíveis (a partir do 13º card)
   const posterPathsToPreload = filteredItems.map((item) => item.poster_path);
   useImagePreloader(posterPathsToPreload, { initialSkip: 12, batchSize: 4 });
@@ -195,7 +309,7 @@ export default function MyListPage() {
         <div>
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Minha Lista</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Gerencie seus filmes, séries e coleções acompanhadas
+            Gerencie seus filmes, séries, coleções e universos acompanhados
           </p>
         </div>
 
@@ -207,6 +321,8 @@ export default function MyListPage() {
             placeholder={
               mediaTab === 'collections'
                 ? "Buscar coleções..."
+                : mediaTab === 'universes'
+                ? "Buscar universos..."
                 : mediaTab === 'movie'
                 ? "Buscar filmes na lista..."
                 : mediaTab === 'tv'
@@ -217,11 +333,15 @@ export default function MyListPage() {
             resultCount={
               mediaTab === 'collections'
                 ? filteredCollections.length
+                : mediaTab === 'universes'
+                ? filteredUniverses.length
                 : filteredItems.length
             }
             totalCount={
               mediaTab === 'collections'
                 ? collections.length
+                : mediaTab === 'universes'
+                ? universes.length
                 : baseItems.length
             }
           />
@@ -233,7 +353,7 @@ export default function MyListPage() {
         onValueChange={handleMediaTabChange}
         className="w-full mb-8"
       >
-        <TabsList className="mb-6 bg-secondary/50">
+        <TabsList className="mb-6 bg-secondary/50 flex-wrap h-auto">
           <TabsTrigger value="all" className="px-6">Todos</TabsTrigger>
           <TabsTrigger value="movie" className="px-6">Filmes</TabsTrigger>
           <TabsTrigger value="tv" className="px-6">Séries</TabsTrigger>
@@ -246,12 +366,21 @@ export default function MyListPage() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="universes" className="px-6 flex items-center gap-1.5">
+            <Globe className="w-4 h-4" />
+            <span>Universos</span>
+            {universeSuggestions.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 text-[11px] bg-purple-500/20 text-purple-500 dark:text-purple-400 font-semibold rounded-full border border-purple-500/30">
+                {universeSuggestions.length}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
       {/* Banner de Alerta de Franquias nas outras abas */}
-      {suggestions.length > 0 && mediaTab !== 'collections' && (
-        <div className="mb-8 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+      {suggestions.length > 0 && mediaTab !== 'collections' && mediaTab !== 'universes' && (
+        <div className="mb-4 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
               <Sparkles className="w-5 h-5" />
@@ -279,7 +408,234 @@ export default function MyListPage() {
         </div>
       )}
 
-      {mediaTab === 'collections' ? (
+      {/* Banner de Alerta de Universos nas outras abas */}
+      {universeSuggestions.length > 0 && mediaTab !== 'universes' && mediaTab !== 'collections' && (
+        <div className="mb-8 p-4 rounded-2xl border border-purple-500/30 bg-purple-500/10 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+              <Globe className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                {universeSuggestions.length === 1 ? '1 Universo Sugerido' : `${universeSuggestions.length} Universos Sugeridos`}
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                  {universeSuggestions.length}
+                </span>
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Identificamos universos compartilhados na sua lista ({universeSuggestions.map(s => s.name).slice(0, 3).join(', ')}). Acompanhe todos os filmes, séries e spin-offs!
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-purple-500/40 text-xs shrink-0 cursor-pointer self-start sm:self-auto font-medium px-3.5 py-1.5 transition-all shadow-sm"
+            onClick={() => handleMediaTabChange('universes')}
+          >
+            Ver Sugestões na aba Universos →
+          </Button>
+        </div>
+      )}
+
+      {mediaTab === 'universes' ? (
+        <div className="space-y-8">
+          {/* Seção de Sugestões de Universos */}
+          {(filteredUniverseSuggestions.length > 0 || dismissedUniverses.length > 0) && (
+            <div
+              className={cn(
+                "bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/25 rounded-2xl transition-all duration-300",
+                isUniverseSuggestionsCollapsed ? "p-4 sm:p-5 hover:border-purple-500/40" : "p-5 sm:p-6"
+              )}
+            >
+              <div
+                className={cn(
+                  "flex justify-between gap-3 sm:gap-4",
+                  isUniverseSuggestionsCollapsed ? "items-center cursor-pointer select-none" : "flex-col sm:flex-row items-start mb-5"
+                )}
+                onClick={isUniverseSuggestionsCollapsed ? toggleUniverseSuggestionsCollapsed : undefined}
+                role={isUniverseSuggestionsCollapsed ? "button" : undefined}
+                tabIndex={isUniverseSuggestionsCollapsed ? 0 : undefined}
+                onKeyDown={isUniverseSuggestionsCollapsed ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleUniverseSuggestionsCollapsed(); } } : undefined}
+              >
+                <div className={cn("flex gap-3", isUniverseSuggestionsCollapsed ? "items-center" : "items-start")}>
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                    <Globe className="w-5 h-5" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-foreground flex flex-wrap items-center gap-2">
+                      Sugestões de Universos
+                      {filteredUniverseSuggestions.length > 0 ? (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                          {filteredUniverseSuggestions.length} {filteredUniverseSuggestions.length === 1 ? 'identificado' : 'identificados'}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                          {dismissedUniverses.length} {dismissedUniverses.length === 1 ? 'dispensado' : 'dispensados'}
+                        </span>
+                      )}
+                    </h3>
+                    {!isUniverseSuggestionsCollapsed && (
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                        Baseado nos seus filmes e séries, encontramos universos compartilhados (múltiplas sagas, spin-offs e séries conectadas). Siga o universo para acompanhar tudo!
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleUniverseSuggestionsCollapsed();
+                  }}
+                  className="bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-zinc-700 hover:border-zinc-600 shadow-sm text-xs shrink-0 cursor-pointer font-medium gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-lg transition-all"
+                  aria-controls="universe-suggestions-content"
+                >
+                  <span className="font-semibold text-zinc-100">{isUniverseSuggestionsCollapsed ? 'Mostrar Sugestões' : 'Ocultar Sugestões'}</span>
+                  {isUniverseSuggestionsCollapsed ? (
+                    <ChevronDown className="w-4 h-4 text-zinc-300" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 text-zinc-300" />
+                  )}
+                </Button>
+              </div>
+
+              {!isUniverseSuggestionsCollapsed && (
+                <div id="universe-suggestions-content" className="space-y-4 animate-in fade-in duration-200">
+                  {filteredUniverseSuggestions.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {filteredUniverseSuggestions.map((suggestion) => (
+                        <UniverseSuggestionCard
+                          key={suggestion.id}
+                          suggestion={suggestion}
+                          onFollow={handleFollowUniverseSuggestion}
+                          onDismiss={handleDismissUniverseSuggestion}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {dismissedUniverses.length > 0 && (
+                    <div className={cn("pt-2", filteredUniverseSuggestions.length > 0 ? "border-t border-purple-900/30" : "")}>
+                      <button
+                        type="button"
+                        onClick={() => setIsDismissedUniversesOpen(!isDismissedUniversesOpen)}
+                        className="flex items-center gap-2 text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors cursor-pointer"
+                      >
+                        <EyeOff className="w-3.5 h-3.5 text-purple-400" />
+                        <span>
+                          {isDismissedUniversesOpen ? "Ocultar" : "Ver"} sugestões de universos dispensadas ({dismissedUniverses.length})
+                        </span>
+                        {isDismissedUniversesOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+
+                      {isDismissedUniversesOpen && (
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {dismissedUniverses.map((du) => (
+                            <div
+                              key={du.id}
+                              className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs gap-3"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <h5 className="font-semibold text-slate-200 truncate">{du.name}</h5>
+                                <p className="text-[11px] text-slate-400 truncate">
+                                  {du.items_in_list} de {du.total_items} obras na sua lista
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <Link href={`/universe/${encodeURIComponent(du.universe_key)}`}>
+                                  <Button variant="ghost" size="sm" className="h-7 text-xs px-2 cursor-pointer">
+                                    Ver
+                                  </Button>
+                                </Link>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleRestoreUniverse(du.universe_key)}
+                                  className="h-7 text-xs px-2.5 bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800/60 cursor-pointer"
+                                >
+                                  Restaurar
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Seção de Universos Seguidos */}
+          {isLoadingUniverses ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-72 bg-muted rounded-xl" />
+              ))}
+            </div>
+          ) : universes.length === 0 ? (
+            universeSuggestions.length > 0 ? (
+              <div className="text-center py-10 bg-card/40 border border-border/40 rounded-xl p-6">
+                <p className="text-sm text-muted-foreground">
+                  Você ainda não segue nenhum universo. Comece seguindo uma das sugestões acima para adicionar todos os filmes e séries conectados!
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
+                <div className="w-14 h-14 rounded-full bg-secondary/60 flex items-center justify-center mb-4 text-muted-foreground">
+                  <Globe className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Nenhum universo seguido</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Adicione filmes ou séries de grandes franquias (como Marvel, Invocação do Mal, Breaking Bad ou Harry Potter) à sua lista para receber sugestões automáticas de universos completos.
+                </p>
+                <Link href="/explore">
+                  <Button className="gap-2 cursor-pointer">
+                    <Compass className="w-4 h-4" />
+                    Explorar Títulos
+                  </Button>
+                </Link>
+              </div>
+            )
+          ) : filteredUniverses.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center max-w-md mx-auto">
+              <div className="w-12 h-12 rounded-full bg-secondary/60 flex items-center justify-center mb-3 text-muted-foreground">
+                <Search className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-semibold mb-1">Nenhum universo encontrado</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Nenhum universo corresponde à pesquisa &ldquo;{searchQuery}&rdquo;.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => setSearchQuery('')} className="cursor-pointer">
+                Limpar busca
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground">
+                  Universos Seguidos ({filteredUniverses.length}
+                  {searchQuery.trim() ? ` de ${universes.length}` : ''})
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredUniverses.map((univ) => (
+                  <FollowedUniverseCard
+                    key={univ.id}
+                    universe={univ}
+                    onUnfollow={handleUnfollowUniverse}
+                    onSyncComplete={loadUniverses}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : mediaTab === 'collections' ? (
         <div className="space-y-8">
           {/* Seção de Alertas e Sugestões de Coleções */}
           {filteredSuggestions.length > 0 && (

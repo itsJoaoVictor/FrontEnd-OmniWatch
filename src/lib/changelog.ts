@@ -131,6 +131,46 @@ export const APP_RELEASES: AppRelease[] = [
       },
     ],
   },
+  {
+    id: 5,
+    version: "v1.6.0",
+    date: "Outubro 2026",
+    title: "Universos Compartilhados: Sugestões Inteligentes e Controle de Franquias",
+    summary:
+      "Acompanhe universos multimídia completos (MCU, Invocação do Mal, Demon Slayer, etc.) com catálogo cronológico, controle granular de obras ignoradas e reativação inteligente de sugestões.",
+    highlights: [
+      {
+        title: "Catálogo Cronológico Unificado (Filmes + Séries)",
+        description:
+          "Agrupamento de filmes, séries, especiais e sagas conectadas via Wikidata e TMDB, com métricas de progresso duplo (progresso pessoal vs catálogo canônico).",
+        tag: "Universos",
+      },
+      {
+        title: "Seleção Granular & Ocultação de Obras Ignoradas",
+        description:
+          "Escolha quais obras incluir ao seguir com ações rápidas ('Desmarcar Filmes', 'Desmarcar Recaps'). Obras indesejadas podem ser ignoradas e ocultadas da grade com o botão de olho.",
+        tag: "Personalização",
+      },
+      {
+        title: "Reativação Inteligente por Afinidade Aumentada",
+        description:
+          "Ao dispensar um universo, o sistema não incomoda se você apenas mantiver a mesma coleção de filmes em dia. Mas caso você comece a assistir séries ou novas sagas conectadas, a sugestão é reativada de forma contextual.",
+        tag: "Inteligência",
+      },
+      {
+        title: "Painel de Sugestões Dispensadas",
+        description:
+          "Acesse a seção de franquias dispensadas na aba Universos a qualquer momento para revisitar o catálogo ou restaurar qualquer sugestão com 1 clique.",
+        tag: "Praticidade",
+      },
+      {
+        title: "Fallback Inteligente de Títulos Internacionais",
+        description:
+          "Obras sem tradução para o português agora priorizam automaticamente o título internacional em inglês, evitando caracteres originais em japonês nos cards.",
+        tag: "Qualidade",
+      },
+    ],
+  },
 ];
 
 export const LATEST_RELEASE_ID = APP_RELEASES.reduce(
