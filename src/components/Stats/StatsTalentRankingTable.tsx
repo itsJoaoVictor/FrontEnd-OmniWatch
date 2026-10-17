@@ -38,6 +38,51 @@ function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+function TalentAvatar({
+  name,
+  profilePath,
+  isCast,
+  size = 'md',
+}: {
+  name: string;
+  profilePath?: string | null;
+  isCast: boolean;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const [hasError, setHasError] = useState(false);
+
+  const dimensionClasses =
+    size === 'sm'
+      ? 'w-9 h-9 text-xs'
+      : size === 'lg'
+      ? 'w-12 h-12 text-sm'
+      : 'w-10 h-10 text-xs';
+
+  if (profilePath && !hasError) {
+    return (
+      <img
+        src={`https://image.tmdb.org/t/p/w185${profilePath}`}
+        alt={name}
+        onError={() => setHasError(true)}
+        className={`${dimensionClasses} rounded-full object-cover shrink-0 border border-zinc-700/60 shadow-sm transition-transform group-hover:scale-105`}
+        loading="lazy"
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`${dimensionClasses} rounded-full bg-gradient-to-br flex items-center justify-center font-bold shrink-0 border shadow-sm transition-transform group-hover:scale-105 ${
+        isCast
+          ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
+          : 'from-emerald-600/30 to-teal-600/30 border-emerald-500/30 text-emerald-200'
+      }`}
+    >
+      {getInitials(name)}
+    </div>
+  );
+}
+
 export function StatsTalentRankingTable({
   type,
   period = 'all',
@@ -302,30 +347,13 @@ export function StatsTalentRankingTable({
                     )}
                   </div>
 
-                  {/* Avatar com Iniciais */}
-                  {hasLink ? (
-                    <Link
-                      href={detailHref}
-                      onClick={(e) => e.stopPropagation()}
-                      className={`w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm transition-transform hover:scale-105 ${
-                        isCast
-                          ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
-                          : 'from-emerald-600/30 to-teal-600/30 border-emerald-500/30 text-emerald-200'
-                      }`}
-                    >
-                      {getInitials(item.name)}
-                    </Link>
-                  ) : (
-                    <div
-                      className={`w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm ${
-                        isCast
-                          ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
-                          : 'from-emerald-600/30 to-teal-600/30 border-emerald-500/30 text-emerald-200'
-                      }`}
-                    >
-                      {getInitials(item.name)}
-                    </div>
-                  )}
+                  {/* Avatar com Foto Real / Iniciais */}
+                  <TalentAvatar
+                    name={item.name}
+                    profilePath={item.profile_path}
+                    isCast={isCast}
+                    size="sm"
+                  />
 
                   {/* Nome e Amostras de Obras */}
                   <div className="flex flex-col min-w-0">
@@ -458,29 +486,13 @@ export function StatsTalentRankingTable({
                     {/* Artista e Avatar */}
                     <td className="py-3.5 px-3 sm:px-4">
                       <div className="flex items-center gap-3">
-                        {hasLink ? (
-                          <Link
-                            href={detailHref}
-                            onClick={(e) => e.stopPropagation()}
-                            className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm transition-transform group-hover:scale-105 ${
-                              isCast
-                                ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
-                                : 'from-emerald-600/30 to-teal-600/30 border-emerald-500/30 text-emerald-200'
-                            }`}
-                          >
-                            {getInitials(item.name)}
-                          </Link>
-                        ) : (
-                          <div
-                            className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm ${
-                              isCast
-                                ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
-                                : 'from-emerald-600/30 to-teal-600/30 border-emerald-500/30 text-emerald-200'
-                            }`}
-                          >
-                            {getInitials(item.name)}
-                          </div>
-                        )}
+                        {/* Avatar com Foto Real / Iniciais */}
+                        <TalentAvatar
+                          name={item.name}
+                          profilePath={item.profile_path}
+                          isCast={isCast}
+                          size="md"
+                        />
 
                         <div className="flex flex-col min-w-0">
                           {hasLink ? (

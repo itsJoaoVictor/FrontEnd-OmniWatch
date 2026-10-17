@@ -135,6 +135,7 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
         {/* Card 3: Assinatura do Universo (Ator / Diretor) */}
         {(() => {
           const targetPersonId = topCast?.person_id || topDirector?.person_id;
+          const targetProfilePath = topCast?.profile_path || topDirector?.profile_path;
           const targetHref = targetPersonId ? `/person/${targetPersonId}` : null;
 
           return (
@@ -157,19 +158,24 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
                   </div>
                   {topCast ? (
                     <>
-                      <h3 className="text-base font-extrabold text-white tracking-tight truncate group-hover:text-amber-400 transition-colors" title={topCast.name}>
-                        {topCast.person_id ? (
-                          <Link
-                            href={`/person/${topCast.person_id}`}
-                            className="hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {topCast.name}
-                          </Link>
-                        ) : (
-                          topCast.name
+                      <div className="flex items-center gap-3 my-1.5">
+                        {targetProfilePath && (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w185${targetProfilePath}`}
+                            alt={topCast.name}
+                            className="w-11 h-11 rounded-full object-cover border-2 border-amber-500/40 shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-105 transition-transform"
+                            loading="lazy"
+                          />
                         )}
-                      </h3>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base font-extrabold text-white tracking-tight truncate group-hover:text-amber-400 transition-colors" title={topCast.name}>
+                            {topCast.name}
+                          </h3>
+                          <span className="text-[11px] text-zinc-400 font-medium block truncate">
+                            {topCast.count} {topCast.count === 1 ? 'obra assistida' : 'obras assistidas'}
+                          </span>
+                        </div>
+                      </div>
                       <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
                         Presente em <strong className="text-zinc-200">{topCast.count} {topCast.count === 1 ? 'obra' : 'obras'}</strong> ({formatSimpleDuration(topCast.totalTime)} de tela) no seu perfil.
                       </p>
@@ -181,36 +187,48 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
                       )}
                     </>
                   ) : topDirector ? (
-                <>
-                  <h3 className="text-base font-extrabold text-white tracking-tight truncate" title={topDirector.name}>
-                    {topDirector.person_id ? (
-                      <Link
-                        href={`/person/${topDirector.person_id}`}
-                        className="hover:text-amber-400 hover:underline transition-colors"
-                      >
-                        {topDirector.name}
-                      </Link>
-                    ) : (
-                      topDirector.name
-                    )}
-                  </h3>
-                  <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-                    Diretor mais presente no seu catálogo com <strong className="text-zinc-200">{topDirector.count} produções</strong> ({formatSimpleDuration(topDirector.totalTime)}).
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-base font-extrabold text-white tracking-tight">
-                    Elenco Estelar
-                  </h3>
-                  <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-                    Continue assistindo para destacar os artistas e diretores favoritos do seu perfil.
-                  </p>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                    <>
+                      <div className="flex items-center gap-3 my-1.5">
+                        {targetProfilePath && (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w185${targetProfilePath}`}
+                            alt={topDirector.name}
+                            className="w-11 h-11 rounded-full object-cover border-2 border-amber-500/40 shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-105 transition-transform"
+                            loading="lazy"
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base font-extrabold text-white tracking-tight truncate group-hover:text-amber-400 transition-colors" title={topDirector.name}>
+                            {topDirector.name}
+                          </h3>
+                          <span className="text-[11px] text-zinc-400 font-medium block truncate">
+                            {topDirector.count} produções
+                          </span>
+                        </div>
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                        Diretor mais presente no seu catálogo com <strong className="text-zinc-200">{topDirector.count} produções</strong> ({formatSimpleDuration(topDirector.totalTime)}).
+                      </p>
+                      {targetHref && (
+                        <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-amber-400/90 group-hover:text-amber-300 transition-colors">
+                          <span>Ver perfil completo</span>
+                          <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-base font-extrabold text-white tracking-tight">
+                        Elenco Estelar
+                      </h3>
+                      <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                        Continue assistindo para destacar os artistas e diretores favoritos do seu perfil.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           );
         })()}
 

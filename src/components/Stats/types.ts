@@ -5,6 +5,7 @@ export interface StatRankingItem {
   avgRating: number | null;
   percentage: number;
   person_id?: number | null;
+  profile_path?: string | null;
 }
 
 export interface StatTimelineItem {
@@ -88,6 +89,7 @@ export interface PeopleRankingItem {
   rank: number;
   name: string;
   person_id?: number | null;
+  profile_path?: string | null;
   role: 'cast' | 'directors';
   count: number;
   totalTime: number;
