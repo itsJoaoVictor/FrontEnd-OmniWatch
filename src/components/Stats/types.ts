@@ -83,3 +83,29 @@ export interface MediaRankingResponse {
 }
 
 export type MediaSortField = 'time' | 'rating' | 'rewatch' | 'episodes' | 'recent' | 'title';
+
+export interface PeopleRankingItem {
+  rank: number;
+  name: string;
+  person_id?: number | null;
+  role: 'cast' | 'directors';
+  count: number;
+  totalTime: number;
+  avgRating: number | null;
+  sample_titles?: string[];
+}
+
+export interface PeopleRankingResponse {
+  items: PeopleRankingItem[];
+  total_items: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  role: string;
+  sort_by: string;
+  period: string;
+  search?: string | null;
+}
+
+export type PeopleSortField = 'count' | 'time' | 'rating' | 'name';
+

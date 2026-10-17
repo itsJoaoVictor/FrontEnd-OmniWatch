@@ -1,20 +1,34 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { StatRankingItem } from './types';
-import { formatSimpleDuration } from './StatsKpiCards';
-import { Search, ArrowUpDown, Star, Users, Clapperboard } from 'lucide-react';
-
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { api } from '@/lib/axios';
+import {
+  PeopleRankingItem,
+  PeopleRankingResponse,
+  PeopleSortField,
+  PeriodFilter,
+} from './types';
+import { formatSimpleDuration } from './StatsKpiCards';
+import {
+  Trophy,
+  Search,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Film,
+  Clapperboard,
+  Users,
+  Loader2,
+  Sparkles,
+} from 'lucide-react';
 
 interface StatsTalentRankingTableProps {
-  items: StatRankingItem[];
   type: 'cast' | 'directors';
+  period?: PeriodFilter;
   overallAverageRating?: number;
 }
-
-type SortField = 'name' | 'count' | 'totalTime' | 'avgRating' | 'percentage';
-type SortOrder = 'asc' | 'desc';
 
 function getInitials(name: string): string {
   if (!name) return '?';
@@ -24,61 +38,155 @@ function getInitials(name: string): string {
 }
 
 export function StatsTalentRankingTable({
-  items,
   type,
+  period = 'all',
   overallAverageRating,
 }: StatsTalentRankingTableProps) {
   const isCast = type === 'cast';
   const labelPlural = isCast ? 'Atores e Atrizes' : 'Diretores e Criadores';
   const labelSingular = isCast ? 'Artista' : 'Diretor';
 
+  const [data, setData] = useState<PeopleRankingResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<PeopleSortField>('count');
   const [search, setSearch] = useState('');
-  const [sortField, setSortField] = useState<SortField>('count');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
-    } else {
-      setSortField(field);
-      setSortOrder('desc');
+  // Cache local em memória por chave para trocas e paginação instantâneas
+  const localCacheRef = useRef<Map<string, PeopleRankingResponse>>(new Map());
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Debounce da barra de busca
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Reseta a página se a ordenação mudar
+  const handleSortChange = (newSort: PeopleSortField) => {
+    if (sortBy !== newSort) {
+      setSortBy(newSort);
+      setPage(1);
     }
   };
 
-  const filteredAndSorted = useMemo(() => {
-    let result = [...(items || [])];
+  const fetchRankings = useCallback(async () => {
+    const cacheKey = `${type}:${period}:${sortBy}:${page}:${debouncedSearch}`;
 
-    if (search.trim()) {
-      const term = search.toLowerCase();
-      result = result.filter((item) => item.name.toLowerCase().includes(term));
+    if (localCacheRef.current.has(cacheKey)) {
+      setData(localCacheRef.current.get(cacheKey)!);
+      setLoading(false);
+      return;
     }
 
-    result.sort((a, b) => {
-      let valA: any = a[sortField] ?? 0;
-      let valB: any = b[sortField] ?? 0;
+    setLoading(true);
 
-      if (sortField === 'name') {
-        return sortOrder === 'asc'
-          ? a.name.localeCompare(b.name)
-          : b.name.localeCompare(a.name);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      const response = await api.get('/api/statistics/rankings/people', {
+        params: {
+          role: type,
+          sort_by: sortBy,
+          period,
+          page,
+          page_size: 10,
+          search: debouncedSearch.trim() || undefined,
+        },
+        signal: controller.signal,
+      });
+
+      localCacheRef.current.set(cacheKey, response.data);
+      setData(response.data);
+    } catch (err: any) {
+      if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
+        return;
       }
+      console.error('Falha ao carregar ranking de pessoas:', err);
+    } finally {
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+      }
+    }
+  }, [type, period, sortBy, page, debouncedSearch]);
 
-      if (valA === null) valA = -1;
-      if (valB === null) valB = -1;
+  useEffect(() => {
+    fetchRankings();
+  }, [fetchRankings]);
 
-      return sortOrder === 'asc' ? valA - valB : valB - valA;
-    });
-
-    return result;
-  }, [items, search, sortField, sortOrder]);
+  const items = data?.items || [];
+  const totalItems = data?.total_items || 0;
+  const totalPages = data?.total_pages || 1;
 
   return (
     <div>
-      {/* Barra de Busca rápida */}
-      <div className="p-4 bg-zinc-950/40 border-b border-zinc-800/60 flex items-center justify-between gap-4">
-        <span className="text-xs text-zinc-400 font-medium">
-          {filteredAndSorted.length} {labelPlural.toLowerCase()} em destaque
-        </span>
+      {/* Barra de Filtros de Ordenação e Busca */}
+      <div className="p-3 sm:p-4 bg-zinc-950/40 border-b border-zinc-800/60 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+        {/* Botões de Ordenação */}
+        <div className="relative flex items-center">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 text-xs w-full sm:w-auto">
+            <button
+              onClick={() => handleSortChange('count')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                sortBy === 'count'
+                  ? isCast
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                    : 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              {isCast ? <Users className="w-3.5 h-3.5" /> : <Clapperboard className="w-3.5 h-3.5" />}
+              Mais Obras
+            </button>
+
+            <button
+              onClick={() => handleSortChange('time')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                sortBy === 'time'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Mais Tempo
+            </button>
+
+            <button
+              onClick={() => handleSortChange('rating')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                sortBy === 'rating'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                  : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              <Star className="w-3.5 h-3.5" />
+              Melhor Avaliados
+            </button>
+
+            <button
+              onClick={() => handleSortChange('name')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                sortBy === 'name'
+                  ? 'bg-zinc-700 text-white'
+                  : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              Nome (A-Z)
+            </button>
+          </div>
+          {/* Indicador de scroll horizontal sutil no mobile */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-950/90 to-transparent sm:hidden" />
+        </div>
+
+        {/* Input de Busca rápida */}
         <div className="relative w-full md:w-64">
           <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-400" />
           <input
@@ -91,90 +199,122 @@ export function StatsTalentRankingTable({
         </div>
       </div>
 
-      {/* Visualização Mobile: Cards Verticais Compactos */}
+      {/* Visualização Mobile: Cards Verticais Compactos com Links Diretos */}
       <div className="block sm:hidden divide-y divide-zinc-800/40">
-        {filteredAndSorted.length === 0 ? (
-          <div className="py-8 text-center text-zinc-500 text-xs">
+        {loading ? (
+          [...Array(6)].map((_, i) => (
+            <div key={i} className="p-3 flex items-center justify-between gap-3 animate-pulse">
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-6 h-6 bg-zinc-800 rounded-full shrink-0" />
+                <div className="w-10 h-10 bg-zinc-800 rounded-full shrink-0" />
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="h-3.5 bg-zinc-800 rounded w-3/4" />
+                  <div className="h-2.5 bg-zinc-800/60 rounded w-1/2" />
+                </div>
+              </div>
+              <div className="w-14 space-y-1 text-right shrink-0">
+                <div className="h-4 bg-zinc-800 rounded ml-auto w-10" />
+                <div className="h-3 bg-zinc-800 rounded ml-auto w-12" />
+              </div>
+            </div>
+          ))
+        ) : items.length === 0 ? (
+          <div className="py-12 text-center text-zinc-500 text-xs">
             Nenhum registro encontrado para este filtro.
           </div>
         ) : (
-          filteredAndSorted.map((item, index) => {
-            const rank = index + 1;
-            const initials = getInitials(item.name);
-            const personHref = item.person_id ? `/person/${item.person_id}` : null;
+          items.map((item) => {
+            const hasLink = Boolean(item.person_id);
+            const detailHref = hasLink ? `/person/${item.person_id}` : '#';
 
             return (
               <div
                 key={item.name}
-                className="p-3 flex items-center justify-between gap-3 hover:bg-zinc-800/30 transition-colors"
+                className="p-3 flex items-center justify-between gap-2.5 hover:bg-zinc-800/20 transition-colors"
               >
-                {/* Esquerda: Rank + Avatar com Iniciais + Nome */}
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className="w-5 text-center font-bold shrink-0">
-                    {rank === 1 ? (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-extrabold">
+                {/* Ranking, Avatar e Nome */}
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  {/* Badge de Posição */}
+                  <div className="w-6 text-center font-bold text-xs shrink-0">
+                    {item.rank === 1 ? (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px]">
                         1º
                       </span>
-                    ) : rank === 2 ? (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-400/20 text-slate-300 border border-slate-400/30 text-[10px] font-extrabold">
+                    ) : item.rank === 2 ? (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300/20 text-slate-200 border border-slate-300/40 text-[11px]">
                         2º
                       </span>
-                    ) : rank === 3 ? (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-700/20 text-amber-600 border border-amber-700/30 text-[10px] font-extrabold">
+                    ) : item.rank === 3 ? (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700/20 text-amber-500 border border-amber-700/40 text-[11px]">
                         3º
                       </span>
                     ) : (
-                      <span className="text-zinc-500 text-xs font-semibold">{rank}º</span>
+                      <span className="text-zinc-500 font-medium text-[11px]">{item.rank}º</span>
                     )}
                   </div>
 
-                  {personHref ? (
+                  {/* Avatar com Iniciais */}
+                  {hasLink ? (
                     <Link
-                      href={personHref}
-                      className="flex items-center gap-2.5 min-w-0 flex-1 group/item"
+                      href={detailHref}
+                      className={`w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm transition-transform hover:scale-105 ${
+                        isCast
+                          ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
+                          : 'from-emerald-600/30 to-teal-600/30 border-emerald-500/30 text-emerald-200'
+                      }`}
                     >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0 shadow-inner group-hover/item:border-blue-500/50 transition-colors">
-                        <span className="text-[11px] font-bold text-zinc-200 group-hover/item:text-blue-400 transition-colors">{initials}</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="font-semibold text-zinc-200 text-xs block truncate group-hover/item:text-blue-400 group-hover/item:underline transition-colors" title={item.name}>
-                          {item.name}
-                        </span>
-                        <span className="text-[11px] text-zinc-400">
-                          {item.count} {item.count === 1 ? 'obra' : 'obras'}
-                        </span>
-                      </div>
+                      {getInitials(item.name)}
                     </Link>
                   ) : (
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0 shadow-inner">
-                        <span className="text-[11px] font-bold text-zinc-200">{initials}</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="font-semibold text-zinc-200 text-xs block truncate" title={item.name}>
-                          {item.name}
-                        </span>
-                        <span className="text-[11px] text-zinc-400">
-                          {item.count} {item.count === 1 ? 'obra' : 'obras'}
-                        </span>
-                      </div>
+                    <div
+                      className={`w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm ${
+                        isCast
+                          ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
+                          : 'from-emerald-600/30 to-teal-600/30 border-emerald-500/30 text-emerald-200'
+                      }`}
+                    >
+                      {getInitials(item.name)}
                     </div>
                   )}
+
+                  {/* Nome e Amostras de Obras */}
+                  <div className="flex flex-col min-w-0">
+                    {hasLink ? (
+                      <Link
+                        href={detailHref}
+                        className="font-semibold text-xs text-zinc-100 hover:text-blue-400 transition-colors truncate block"
+                      >
+                        {item.name}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-xs text-zinc-100 truncate block">
+                        {item.name}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-zinc-400 truncate mt-0.5">
+                      {item.sample_titles && item.sample_titles.length > 0
+                        ? item.sample_titles.join(' • ')
+                        : `${item.count} ${item.count === 1 ? 'título' : 'títulos'}`}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Direita: Tempo Assistido e Nota */}
-                <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                  <span className="font-semibold text-zinc-200 text-xs">
+                {/* Métricas: Obras, Tempo e Nota */}
+                <div className="flex flex-col items-end gap-0.5 shrink-0 pl-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-zinc-300">
+                      {item.count} {item.count === 1 ? 'obra' : 'obras'}
+                    </span>
+                    {item.avgRating && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <Star className="w-2.5 h-2.5 fill-amber-400" />
+                        {item.avgRating.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-zinc-400 font-medium">
                     {formatSimpleDuration(item.totalTime)}
                   </span>
-                  {item.avgRating ? (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold text-[10px]">
-                      <Star className="w-2.5 h-2.5 fill-amber-400" />
-                      {item.avgRating.toFixed(1)}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-zinc-500">{item.percentage}%</span>
-                  )}
                 </div>
               </div>
             );
@@ -185,141 +325,140 @@ export function StatsTalentRankingTable({
       {/* Visualização Desktop: Tabela Completa */}
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left text-xs">
-          <thead className="bg-zinc-950/60 text-zinc-400 uppercase font-bold tracking-wider text-[11px] border-b border-zinc-800/60 select-none">
+          <thead className="bg-zinc-950/60 text-zinc-400 font-semibold border-b border-zinc-800">
             <tr>
-              <th className="py-3 px-3 sm:px-4 text-center w-12">#</th>
-              <th
-                onClick={() => handleSort('name')}
-                className="py-3 px-3 sm:px-4 cursor-pointer hover:text-zinc-200 transition-colors"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>{labelSingular}</span>
-                  <ArrowUpDown className="w-3 h-3 text-zinc-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('count')}
-                className="py-3 px-3 sm:px-4 text-right cursor-pointer hover:text-zinc-200 transition-colors"
-              >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Obras</span>
-                  <ArrowUpDown className="w-3 h-3 text-zinc-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('totalTime')}
-                className="py-3 px-3 sm:px-4 text-right cursor-pointer hover:text-zinc-200 transition-colors"
-              >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Tempo Dedicado</span>
-                  <ArrowUpDown className="w-3 h-3 text-zinc-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('percentage')}
-                className="py-3 px-4 cursor-pointer hover:text-zinc-200 transition-colors w-44"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>Fatia do Catálogo</span>
-                  <ArrowUpDown className="w-3 h-3 text-zinc-500" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('avgRating')}
-                className="py-3 px-3 sm:px-4 text-right cursor-pointer hover:text-zinc-200 transition-colors"
-              >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Nota Média</span>
-                  <ArrowUpDown className="w-3 h-3 text-zinc-500" />
-                </div>
-              </th>
+              <th className="py-3 px-3 sm:px-4 w-14 text-center">#</th>
+              <th className="py-3 px-3 sm:px-4">{labelSingular}</th>
+              <th className="py-3 px-3 sm:px-4 text-center w-28">Obras</th>
+              <th className="py-3 px-3 sm:px-4 text-right w-36">Tempo Total</th>
+              <th className="py-3 px-3 sm:px-4 text-right w-36">Média de Nota</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800/40">
-            {filteredAndSorted.length === 0 ? (
+          <tbody className="divide-y divide-zinc-800/60">
+            {loading ? (
+              [...Array(6)].map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="py-4 px-4 text-center">
+                    <div className="w-6 h-6 bg-zinc-800 rounded-full mx-auto" />
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-zinc-800 rounded-full" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-4 bg-zinc-800 rounded w-1/3" />
+                        <div className="h-3 bg-zinc-800/60 rounded w-1/4" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4 text-center">
+                    <div className="h-4 bg-zinc-800 rounded w-12 mx-auto" />
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    <div className="h-4 bg-zinc-800 rounded w-16 ml-auto" />
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    <div className="h-4 bg-zinc-800 rounded w-12 ml-auto" />
+                  </td>
+                </tr>
+              ))
+            ) : items.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-zinc-500">
+                <td colSpan={5} className="py-12 text-center text-zinc-500">
                   Nenhum registro encontrado para este filtro.
                 </td>
               </tr>
             ) : (
-              filteredAndSorted.map((item, index) => {
-                const rank = index + 1;
-                const initials = getInitials(item.name);
+              items.map((item) => {
+                const hasLink = Boolean(item.person_id);
+                const detailHref = hasLink ? `/person/${item.person_id}` : '#';
 
                 return (
                   <tr
                     key={item.name}
                     className="hover:bg-zinc-800/30 transition-colors group"
                   >
-                    <td className="py-3 px-3 sm:px-4 text-center font-bold">
-                      {rank === 1 ? (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-extrabold shadow-sm shadow-amber-500/10">
-                          1º
+                    {/* Medalha ou Posição */}
+                    <td className="py-3.5 px-3 sm:px-4 text-center font-bold">
+                      {item.rank === 1 ? (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs shadow-sm">
+                          <Trophy className="w-3.5 h-3.5 mr-0.5" /> 1
                         </span>
-                      ) : rank === 2 ? (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-400/20 text-slate-300 border border-slate-400/30 text-xs font-extrabold">
-                          2º
+                      ) : item.rank === 2 ? (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-300/20 text-slate-200 border border-slate-300/40 text-xs shadow-sm">
+                          2
                         </span>
-                      ) : rank === 3 ? (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700/20 text-amber-600 border border-amber-700/30 text-xs font-extrabold">
-                          3º
+                      ) : item.rank === 3 ? (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-700/20 text-amber-500 border border-amber-700/40 text-xs shadow-sm">
+                          3
                         </span>
                       ) : (
-                        <span className="text-zinc-500 font-semibold">{rank}º</span>
+                        <span className="text-zinc-500 font-medium">{item.rank}</span>
                       )}
                     </td>
 
-                    <td className="py-3 px-3 sm:px-4">
-                      {item.person_id ? (
-                        <Link
-                          href={`/person/${item.person_id}`}
-                          className="flex items-center gap-2.5 group/link cursor-pointer w-fit"
-                        >
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0 group-hover/link:border-blue-500/50 transition-colors">
-                            <span className="text-[10px] font-bold text-zinc-300 group-hover/link:text-blue-400 transition-colors">{initials}</span>
-                          </div>
-                          <span className="font-semibold text-zinc-200 group-hover/link:text-blue-400 group-hover/link:underline transition-colors">
-                            {item.name}
-                          </span>
-                        </Link>
-                      ) : (
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/60 flex items-center justify-center shrink-0">
-                            <span className="text-[10px] font-bold text-zinc-300">{initials}</span>
-                          </div>
-                          <span className="font-semibold text-zinc-200">
-                            {item.name}
-                          </span>
-                        </div>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-3 sm:px-4 text-right text-zinc-300 font-medium">
-                      {item.count} {item.count === 1 ? 'obra' : 'obras'}
-                    </td>
-
-                    <td className="py-3 px-3 sm:px-4 text-right text-zinc-200 font-semibold whitespace-nowrap">
-                      {formatSimpleDuration(item.totalTime)}
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-300 ${
-                              isCast ? 'bg-indigo-500' : 'bg-emerald-500'
+                    {/* Artista e Avatar */}
+                    <td className="py-3.5 px-3 sm:px-4">
+                      <div className="flex items-center gap-3">
+                        {hasLink ? (
+                          <Link
+                            href={detailHref}
+                            className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm transition-transform group-hover:scale-105 ${
+                              isCast
+                                ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
+                                : 'from-emerald-600/30 to-teal-600/30 border-emerald-500/30 text-emerald-200'
                             }`}
-                            style={{ width: `${Math.min(100, item.percentage)}%` }}
-                          />
+                          >
+                            {getInitials(item.name)}
+                          </Link>
+                        ) : (
+                          <div
+                            className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center font-bold text-xs shrink-0 border shadow-sm ${
+                              isCast
+                                ? 'from-indigo-600/30 to-purple-600/30 border-indigo-500/30 text-indigo-200'
+                                : 'from-emerald-600/30 to-teal-600/30 border-emerald-500/30 text-emerald-200'
+                            }`}
+                          >
+                            {getInitials(item.name)}
+                          </div>
+                        )}
+
+                        <div className="flex flex-col min-w-0">
+                          {hasLink ? (
+                            <Link
+                              href={detailHref}
+                              className="font-semibold text-zinc-100 group-hover:text-blue-400 transition-colors truncate max-w-xs md:max-w-md block"
+                            >
+                              {item.name}
+                            </Link>
+                          ) : (
+                            <span className="font-semibold text-zinc-100 truncate max-w-xs md:max-w-md block">
+                              {item.name}
+                            </span>
+                          )}
+
+                          {item.sample_titles && item.sample_titles.length > 0 && (
+                            <span className="text-[11px] text-zinc-400 truncate max-w-sm mt-0.5">
+                              {item.sample_titles.join(' • ')}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[11px] text-zinc-400 font-medium w-10 text-right">
-                          {item.percentage}%
-                        </span>
                       </div>
                     </td>
 
-                    <td className="py-3 px-3 sm:px-4 text-right">
+                    {/* Contagem de Obras */}
+                    <td className="py-3.5 px-3 sm:px-4 text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-zinc-800/80 text-zinc-200 font-bold text-xs border border-zinc-700/50">
+                        {item.count} {item.count === 1 ? 'obra' : 'obras'}
+                      </span>
+                    </td>
+
+                    {/* Tempo Assistido Total */}
+                    <td className="py-3.5 px-3 sm:px-4 text-right text-zinc-200 font-semibold whitespace-nowrap">
+                      {formatSimpleDuration(item.totalTime)}
+                    </td>
+
+                    {/* Média de Notas */}
+                    <td className="py-3.5 px-3 sm:px-4 text-right whitespace-nowrap">
                       {item.avgRating ? (
                         (() => {
                           const diff =
@@ -360,6 +499,48 @@ export function StatsTalentRankingTable({
           </tbody>
         </table>
       </div>
+
+      {/* Controles de Paginação no Rodapé */}
+      {totalPages > 1 && (
+        <div className="p-3.5 sm:p-4 border-t border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
+          <div className="text-center sm:text-left">
+            Mostrando{' '}
+            <span className="font-semibold text-zinc-200">
+              {items.length > 0 ? (page - 1) * 10 + 1 : 0}
+            </span>{' '}
+            a{' '}
+            <span className="font-semibold text-zinc-200">
+              {Math.min(page * 10, totalItems)}
+            </span>{' '}
+            de <span className="font-semibold text-zinc-200">{totalItems}</span>{' '}
+            {labelPlural.toLowerCase()}
+          </div>
+
+          <div className="flex items-center justify-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              className="px-3 py-1.5 rounded-lg bg-zinc-800/70 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1 font-medium"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              Anterior
+            </button>
+
+            <span className="px-2 font-medium text-zinc-300 whitespace-nowrap">
+              Página {page} de {totalPages}
+            </span>
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="px-3 py-1.5 rounded-lg bg-zinc-800/70 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1 font-medium"
+            >
+              Próxima
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

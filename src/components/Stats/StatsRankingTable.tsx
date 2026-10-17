@@ -189,16 +189,16 @@ export function StatsRankingTable({
 
         {activeTab === 'cast' && (
           <StatsTalentRankingTable
-            items={cast}
             type="cast"
+            period={period}
             overallAverageRating={overallAverageRating}
           />
         )}
 
         {activeTab === 'directors' && (
           <StatsTalentRankingTable
-            items={directors}
             type="directors"
+            period={period}
             overallAverageRating={overallAverageRating}
           />
         )}
