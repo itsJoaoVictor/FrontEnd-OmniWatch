@@ -119,70 +119,74 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
       {/* Barra de Filtros e Busca do Ranking */}
       <div className="p-4 bg-zinc-950/40 border-b border-zinc-800/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Seletor de Ordenação */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none text-xs">
-          <span className="text-zinc-500 font-medium whitespace-nowrap hidden sm:inline">Ordenar:</span>
-          
-          <button
-            onClick={() => handleSortChange('time')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              sortBy === 'time'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            Mais Tempo
-          </button>
-
-          <button
-            onClick={() => handleSortChange('rating')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              sortBy === 'rating'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
-                : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5" />
-            Melhor Avaliados
-          </button>
-
-          {!isMovie && (
+        <div className="relative group/sort overflow-hidden -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none text-xs">
+            <span className="text-zinc-500 font-medium whitespace-nowrap hidden sm:inline">Ordenar:</span>
+            
             <button
-              onClick={() => handleSortChange('episodes')}
+              onClick={() => handleSortChange('time')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                sortBy === 'episodes'
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                sortBy === 'time'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                   : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
               }`}
             >
-              <Tv className="w-3.5 h-3.5" />
-              Mais Episódios
+              <Clock className="w-3.5 h-3.5" />
+              Mais Tempo
             </button>
-          )}
 
-          <button
-            onClick={() => handleSortChange('rewatch')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              sortBy === 'rewatch'
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-            }`}
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Mais Reassistidos
-          </button>
+            <button
+              onClick={() => handleSortChange('rating')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                sortBy === 'rating'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                  : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              <Star className="w-3.5 h-3.5" />
+              Melhor Avaliados
+            </button>
 
-          <button
-            onClick={() => handleSortChange('recent')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              sortBy === 'recent'
-                ? 'bg-zinc-700 text-white'
-                : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            Recentes
-          </button>
+            {!isMovie && (
+              <button
+                onClick={() => handleSortChange('episodes')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  sortBy === 'episodes'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                    : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                }`}
+              >
+                <Tv className="w-3.5 h-3.5" />
+                Mais Episódios
+              </button>
+            )}
+
+            <button
+              onClick={() => handleSortChange('rewatch')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                sortBy === 'rewatch'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Mais Reassistidos
+            </button>
+
+            <button
+              onClick={() => handleSortChange('recent')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                sortBy === 'recent'
+                  ? 'bg-zinc-700 text-white'
+                  : 'bg-zinc-800/70 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Recentes
+            </button>
+          </div>
+          {/* Indicador de scroll horizontal sutil no mobile */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-950/90 to-transparent sm:hidden" />
         </div>
 
         {/* Input de Busca rápida */}

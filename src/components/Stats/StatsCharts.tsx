@@ -113,7 +113,17 @@ export function StatsCharts({ data }: StatsChartsProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-4 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="w-full md:w-1/2 h-[240px]">
+            <div className="w-full md:w-1/2 h-[240px] relative flex items-center justify-center">
+              {/* Rótulo Central no Miolo da Rosca */}
+              {topGenres.length > 0 && (
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">Top Gênero</span>
+                  <span className="text-sm font-extrabold text-white max-w-[110px] truncate" title={topGenres[0].name}>
+                    {topGenres[0].name}
+                  </span>
+                  <span className="text-xs font-semibold text-blue-400">{topGenres[0].percentage}%</span>
+                </div>
+              )}
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie

@@ -5,21 +5,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatRankingItem, MediaTypeFilter, PeriodFilter } from './types';
 import { formatSimpleDuration } from './StatsKpiCards';
 import { StatsMediaRankingTable } from './StatsMediaRankingTable';
-import { Trophy, ArrowUpDown, Search, Star, Film, Tv, Tags } from 'lucide-react';
+import { Trophy, ArrowUpDown, Search, Star, Film, Tv, Tags, Users, Clapperboard } from 'lucide-react';
+import { StatsTalentRankingTable } from './StatsTalentRankingTable';
 
 interface StatsRankingTableProps {
   genres: StatRankingItem[];
+  cast?: StatRankingItem[];
+  directors?: StatRankingItem[];
   overallAverageRating?: number;
   mediaType?: MediaTypeFilter;
   period?: PeriodFilter;
 }
 
-type TabType = 'movies' | 'tv' | 'genres';
+type TabType = 'movies' | 'tv' | 'genres' | 'cast' | 'directors';
 type SortField = 'name' | 'count' | 'totalTime' | 'avgRating' | 'percentage';
 type SortOrder = 'asc' | 'desc';
 
 export function StatsRankingTable({
   genres,
+  cast = [],
+  directors = [],
   overallAverageRating,
   mediaType = 'all',
   period = 'all',
@@ -98,47 +103,77 @@ export function StatsRankingTable({
               {activeTab === 'movies' && 'Seus filmes mais marcantes, assistidos e bem avaliados'}
               {activeTab === 'tv' && 'Suas séries com mais tempo dedicado, episódios e maiores notas'}
               {activeTab === 'genres' && 'Tempo assistido, quantidade de obras e nota média por gênero'}
+              {activeTab === 'cast' && 'Atores e atrizes com mais horas de tela e melhores avaliações'}
+              {activeTab === 'directors' && 'Diretores e criadores mais presentes no seu catálogo'}
             </p>
           </div>
         </div>
 
         {/* Abas de Navegação */}
-        <div className="w-full sm:w-auto grid grid-cols-3 sm:flex items-center bg-zinc-950/70 p-1 rounded-xl border border-zinc-800/80 shrink-0">
-          <button
-            onClick={() => setActiveTab('movies')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'movies'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Film className="w-3.5 h-3.5" />
-            Filmes
-          </button>
+        <div className="relative group/tabs w-full sm:w-auto">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none p-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl shrink-0">
+            <button
+              onClick={() => setActiveTab('movies')}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'movies'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              }`}
+            >
+              <Film className="w-3.5 h-3.5" />
+              Filmes
+            </button>
 
-          <button
-            onClick={() => setActiveTab('tv')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'tv'
-                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Tv className="w-3.5 h-3.5" />
-            Séries
-          </button>
+            <button
+              onClick={() => setActiveTab('tv')}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'tv'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              }`}
+            >
+              <Tv className="w-3.5 h-3.5" />
+              Séries
+            </button>
 
-          <button
-            onClick={() => setActiveTab('genres')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'genres'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Tags className="w-3.5 h-3.5" />
-            Gêneros
-          </button>
+            <button
+              onClick={() => setActiveTab('genres')}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'genres'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              }`}
+            >
+              <Tags className="w-3.5 h-3.5" />
+              Gêneros
+            </button>
+
+            <button
+              onClick={() => setActiveTab('cast')}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'cast'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Atores
+            </button>
+
+            <button
+              onClick={() => setActiveTab('directors')}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'directors'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              }`}
+            >
+              <Clapperboard className="w-3.5 h-3.5" />
+              Diretores
+            </button>
+          </div>
+          {/* Indicador de scroll horizontal sutil no mobile */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-zinc-900/90 to-transparent rounded-r-xl sm:hidden" />
         </div>
       </CardHeader>
 
@@ -150,6 +185,22 @@ export function StatsRankingTable({
 
         {activeTab === 'tv' && (
           <StatsMediaRankingTable mediaType="tv" period={period} />
+        )}
+
+        {activeTab === 'cast' && (
+          <StatsTalentRankingTable
+            items={cast}
+            type="cast"
+            overallAverageRating={overallAverageRating}
+          />
+        )}
+
+        {activeTab === 'directors' && (
+          <StatsTalentRankingTable
+            items={directors}
+            type="directors"
+            overallAverageRating={overallAverageRating}
+          />
         )}
 
         {activeTab === 'genres' && (

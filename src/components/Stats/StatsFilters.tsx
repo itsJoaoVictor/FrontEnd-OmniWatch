@@ -57,28 +57,32 @@ export function StatsFilters({
       </div>
 
       {/* Seletor de Período */}
-      <div className="flex items-center gap-1 overflow-x-auto scroll-smooth scrollbar-none p-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
-        <div className="items-center pl-2 pr-1 text-zinc-500 text-xs hidden lg:flex">
-          <Calendar className="w-3.5 h-3.5 mr-1" />
-          <span>Período:</span>
+      <div className="relative group/period">
+        <div className="flex items-center gap-1 overflow-x-auto scroll-smooth scrollbar-none p-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
+          <div className="items-center pl-2 pr-1 text-zinc-500 text-xs hidden lg:flex">
+            <Calendar className="w-3.5 h-3.5 mr-1" />
+            <span>Período:</span>
+          </div>
+          {PERIOD_OPTIONS.map((opt) => {
+            const active = period === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => onPeriodChange(opt.id)}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 select-none ${
+                  active
+                    ? 'bg-zinc-800 text-zinc-100 border border-zinc-700 shadow-sm font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 active:scale-95'
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
         </div>
-        {PERIOD_OPTIONS.map((opt) => {
-          const active = period === opt.id;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => onPeriodChange(opt.id)}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 select-none ${
-                active
-                  ? 'bg-zinc-800 text-zinc-100 border border-zinc-700 shadow-sm font-semibold'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 active:scale-95'
-              }`}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
+        {/* Indicador de scroll horizontal sutil no mobile */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-zinc-900/90 to-transparent rounded-r-xl sm:hidden" />
       </div>
     </div>
   );

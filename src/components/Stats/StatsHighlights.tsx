@@ -1,0 +1,200 @@
+'use client';
+
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Globe, Compass, Sparkles, Award, Clapperboard, Film, Tv, Flame } from 'lucide-react';
+import { StatisticsResponse, MediaTypeFilter, PeriodFilter } from './types';
+import { formatWatchTime, formatSimpleDuration } from './StatsKpiCards';
+
+interface StatsHighlightsProps {
+  data: StatisticsResponse;
+  mediaType?: MediaTypeFilter;
+  period?: PeriodFilter;
+}
+
+export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProps) {
+  const totalMinutes = data.totalTime || 0;
+  if (totalMinutes <= 0) return null;
+
+  // 1. Equivalência de Tempo no Mundo Real
+  // Circunavegação da Terra de avião comercial a jato (~45.000 km a ~900 km/h) = ~48h de voo (~2.880 min)
+  const worldTrips = (totalMinutes / 2880).toFixed(1);
+  const totalDays = Math.floor(totalMinutes / 1440);
+
+  // 2. DNA de Consumo: Ratio Séries vs Filmes
+  const tvMins = data.totalTimeTv || 0;
+  const movieMins = data.totalTimeMovies || 0;
+  const isSeriesDominant = tvMins > movieMins;
+  const dominantPercent = Math.round((Math.max(tvMins, movieMins) / totalMinutes) * 100);
+
+  let dnaTitle = 'Perfil Equilibrado';
+  let dnaIcon = <Sparkles className="w-4 h-4 text-amber-400" />;
+  let dnaBadge = 'Multiverso';
+  let dnaDesc = 'Equilíbrio notável entre produções cinematográficas e maratonas de séries.';
+
+  if (dominantPercent >= 65) {
+    if (isSeriesDominant) {
+      dnaTitle = 'Serial Binger';
+      dnaIcon = <Tv className="w-4 h-4 text-blue-400" />;
+      dnaBadge = 'Maratonista';
+      dnaDesc = `${dominantPercent}% do seu tempo foi imerso em temporadas e sagas televisivas.`;
+    } else {
+      dnaTitle = 'Cinéfilo Devoto';
+      dnaIcon = <Film className="w-4 h-4 text-purple-400" />;
+      dnaBadge = 'Cineasta';
+      dnaDesc = `${dominantPercent}% do seu tempo foi dedicado a filmes e narrativas em longa-metragem.`;
+    }
+  }
+
+  // 3. Assinatura do Universo: Top Talento (Ator / Diretor)
+  const topCast = data.rankings?.cast?.[0];
+  const topDirector = data.rankings?.directors?.[0];
+
+  // 4. Conquista de Conclusão / Foco
+  const completionRate = data.kpis?.completionRate ?? 0;
+  let focusTitle = 'Explorador Curioso';
+  let focusBadge = 'Descobridor';
+  let focusDesc = 'Gosta de experimentar novos títulos e explorar múltiplos universos.';
+
+  if (completionRate >= 80) {
+    focusTitle = 'Finalizador Implacável';
+    focusBadge = '100% Foco';
+    focusDesc = `Você conclui ${completionRate}% de tudo o que inicia. Quase nada fica pela metade!`;
+  } else if (completionRate >= 50) {
+    focusTitle = 'Espectador Fiel';
+    focusBadge = 'Consistente';
+    focusDesc = `${completionRate}% de taxa de conclusão da sua fila, mantendo ótimo ritmo de encerramento.`;
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">
+            OmniWatch Highlights
+          </h2>
+        </div>
+        <span className="text-[11px] text-zinc-500 hidden sm:inline">Insights baseados no seu consumo</span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Card 1: Equivalência no Mundo Real */}
+        <Card className="bg-gradient-to-br from-blue-950/20 via-zinc-900/60 to-zinc-900/40 border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-blue-500/40 transition-all duration-300">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all" />
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
+                  Viagem no Tempo
+                </span>
+                <Globe className="w-4 h-4 text-blue-400" />
+              </div>
+              <h3 className="text-base font-extrabold text-white tracking-tight">
+                {totalDays > 0 ? `${totalDays} dias` : `${Math.floor(totalMinutes / 60)}h`} de tela
+              </h3>
+              <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                {Number(worldTrips) >= 1 ? (
+                  <>
+                    Tempo equivalente a <strong className="text-zinc-200">{worldTrips} voltas ao mundo</strong> em voo comercial contínuo.
+                  </>
+                ) : (
+                  <>
+                    Mais de <strong className="text-zinc-200">{Math.floor(totalMinutes / 60)} horas</strong> de histórias e vivências registradas.
+                  </>
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: DNA de Consumo */}
+        <Card className="bg-gradient-to-br from-purple-950/20 via-zinc-900/60 to-zinc-900/40 border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-purple-500/40 transition-all duration-300">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/20 transition-all" />
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20">
+                  {dnaBadge}
+                </span>
+                {dnaIcon}
+              </div>
+              <h3 className="text-base font-extrabold text-white tracking-tight">
+                {dnaTitle}
+              </h3>
+              <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                {dnaDesc}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Assinatura do Universo (Ator / Diretor) */}
+        <Card className="bg-gradient-to-br from-amber-950/20 via-zinc-900/60 to-zinc-900/40 border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition-all" />
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                  Rosto do Universo
+                </span>
+                <Clapperboard className="w-4 h-4 text-amber-400" />
+              </div>
+              {topCast ? (
+                <>
+                  <h3 className="text-base font-extrabold text-white tracking-tight truncate" title={topCast.name}>
+                    {topCast.name}
+                  </h3>
+                  <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                    Presente em <strong className="text-zinc-200">{topCast.count} {topCast.count === 1 ? 'obra' : 'obras'}</strong> ({formatSimpleDuration(topCast.totalTime)} de tela) no seu perfil.
+                  </p>
+                </>
+              ) : topDirector ? (
+                <>
+                  <h3 className="text-base font-extrabold text-white tracking-tight truncate" title={topDirector.name}>
+                    {topDirector.name}
+                  </h3>
+                  <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                    Diretor mais presente no seu catálogo com <strong className="text-zinc-200">{topDirector.count} produções</strong> ({formatSimpleDuration(topDirector.totalTime)}).
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-base font-extrabold text-white tracking-tight">
+                    Elenco Estelar
+                  </h3>
+                  <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                    Continue assistindo para destacar os artistas e diretores favoritos do seu perfil.
+                  </p>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Foco & Conclusão */}
+        <Card className="bg-gradient-to-br from-emerald-950/20 via-zinc-900/60 to-zinc-900/40 border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-all duration-300">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all" />
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                  {focusBadge}
+                </span>
+                <Award className="w-4 h-4 text-emerald-400" />
+              </div>
+              <h3 className="text-base font-extrabold text-white tracking-tight">
+                {focusTitle}
+              </h3>
+              <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                {focusDesc}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

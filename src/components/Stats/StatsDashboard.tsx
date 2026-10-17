@@ -5,6 +5,7 @@ import { api } from '@/lib/axios';
 import { StatisticsResponse, PeriodFilter, MediaTypeFilter } from './types';
 import { StatsFilters } from './StatsFilters';
 import { StatsKpiCards } from './StatsKpiCards';
+import { StatsHighlights } from './StatsHighlights';
 import { StatsCharts } from './StatsCharts';
 import { StatsRankingTable } from './StatsRankingTable';
 import { RefreshCw, AlertCircle } from 'lucide-react';
@@ -127,7 +128,7 @@ export function StatsDashboard() {
   if (!data) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-16">
       {/* Barra de Filtros no Topo */}
       <StatsFilters
         period={period}
@@ -140,12 +141,17 @@ export function StatsDashboard() {
       {/* Cards de KPIs Principais */}
       <StatsKpiCards data={data} mediaType={mediaType} />
 
+      {/* Destaques e Insights Visuais (OmniWatch Highlights) */}
+      <StatsHighlights data={data} mediaType={mediaType} period={period} />
+
       {/* Gráficos Interativos */}
       <StatsCharts data={data} />
 
-      {/* Central de Rankings: Filmes, Séries e Gêneros */}
+      {/* Central de Rankings: Filmes, Séries, Gêneros, Atores e Diretores */}
       <StatsRankingTable
         genres={data.rankings?.genres || data.topGenres || []}
+        cast={data.rankings?.cast || []}
+        directors={data.rankings?.directors || []}
         overallAverageRating={data.kpis?.averageRating}
         mediaType={mediaType}
         period={period}
