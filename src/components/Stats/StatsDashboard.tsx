@@ -9,15 +9,75 @@ import { StatsHighlights } from './StatsHighlights';
 import { StatsCharts } from './StatsCharts';
 import { StatsRankingTable } from './StatsRankingTable';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 export function StatsDashboard() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlPeriod = searchParams.get('period') as PeriodFilter | null;
+  const urlMediaType = searchParams.get('type') as MediaTypeFilter | null;
+
+  const getPeriodFromUrl = () => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('period') as PeriodFilter | null;
+      if (p && ['all', 'year', '6months', '30days'].includes(p)) return p;
+    }
+    if (urlPeriod && ['all', 'year', '6months', '30days'].includes(urlPeriod)) return urlPeriod;
+    return 'all';
+  };
+
+  const getTypeFromUrl = () => {
+    if (typeof window !== 'undefined') {
+      const t = new URLSearchParams(window.location.search).get('type') as MediaTypeFilter | null;
+      if (t && ['all', 'movie', 'tv'].includes(t)) return t;
+    }
+    if (urlMediaType && ['all', 'movie', 'tv'].includes(urlMediaType)) return urlMediaType;
+    return 'all';
+  };
+
+  const [period, setPeriodState] = useState<PeriodFilter>(getPeriodFromUrl);
+  const [mediaType, setMediaTypeState] = useState<MediaTypeFilter>(getTypeFromUrl);
+
+  // Mantém sincronizado se a URL mudar (ex: botão Voltar/Avançar do navegador)
+  useEffect(() => {
+    const current = getPeriodFromUrl();
+    if (current !== period) setPeriodState(current);
+  }, [urlPeriod]);
+
+  useEffect(() => {
+    const current = getTypeFromUrl();
+    if (current !== mediaType) setMediaTypeState(current);
+  }, [urlMediaType]);
+
+  const setPeriod = useCallback((newPeriod: PeriodFilter) => {
+    setPeriodState(newPeriod);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (newPeriod === 'all') params.delete('period');
+      else params.set('period', newPeriod);
+      const query = params.toString();
+      const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+      window.history.replaceState(null, '', newUrl);
+    }
+  }, []);
+
+  const setMediaType = useCallback((newType: MediaTypeFilter) => {
+    setMediaTypeState(newType);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (newType === 'all') params.delete('type');
+      else params.set('type', newType);
+      const query = params.toString();
+      const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+      window.history.replaceState(null, '', newUrl);
+    }
+  }, []);
+
   const [data, setData] = useState<StatisticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [period, setPeriod] = useState<PeriodFilter>('all');
-  const [mediaType, setMediaType] = useState<MediaTypeFilter>('all');
 
   // Client-side cache: instantanea para filtros já consultados (0ms)
   const clientCacheRef = useRef<Map<string, StatisticsResponse>>(new Map());

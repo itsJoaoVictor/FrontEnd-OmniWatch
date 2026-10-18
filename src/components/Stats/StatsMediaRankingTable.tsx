@@ -26,10 +26,47 @@ interface StatsMediaRankingTableProps {
   period: PeriodFilter;
 }
 
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+
 export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<MediaRankingResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+
+  const getPageFromUrl = () => {
+    if (typeof window !== 'undefined') {
+      const p = Number(new URLSearchParams(window.location.search).get('page'));
+      if (p > 0) return p;
+    }
+    const p = Number(searchParams.get('page'));
+    return p > 0 ? p : 1;
+  };
+
+  const [page, setPageState] = useState<number>(getPageFromUrl);
+
+  useEffect(() => {
+    const current = getPageFromUrl();
+    if (current !== page) {
+      setPageState(current);
+    }
+  }, [searchParams]);
+
+  const setPage = (newPage: number | ((prev: number) => number)) => {
+    const next = typeof newPage === 'function' ? newPage(page) : newPage;
+    setPageState(next);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', mediaType === 'movie' ? 'movies' : 'tv');
+      if (next === 1) params.delete('page');
+      else params.set('page', String(next));
+      const query = params.toString();
+      const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+      window.history.replaceState(null, '', newUrl);
+    }
+  };
+
   const [sortBy, setSortBy] = useState<MediaSortField>('time');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -38,14 +75,15 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
   const localCacheRef = useRef<Map<string, MediaRankingResponse>>(new Map());
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Debounce da barra de pesquisa
+  // Debounce da barra de pesquisa: só reseta para página 1 se o termo realmente mudou
   useEffect(() => {
+    if (search === debouncedSearch) return;
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1); // Volta para a primeira página ao pesquisar
     }, 350);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, debouncedSearch]);
 
   // Reseta página ao trocar ordenação ou período
   const handleSortChange = (newSort: MediaSortField) => {

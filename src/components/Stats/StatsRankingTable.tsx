@@ -21,6 +21,8 @@ type TabType = 'movies' | 'tv' | 'genres' | 'cast' | 'directors';
 type SortField = 'name' | 'count' | 'totalTime' | 'avgRating' | 'percentage';
 type SortOrder = 'asc' | 'desc';
 
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+
 export function StatsRankingTable({
   genres,
   cast = [],
@@ -29,17 +31,44 @@ export function StatsRankingTable({
   mediaType = 'all',
   period = 'all',
 }: StatsRankingTableProps) {
-  // Sincroniza a aba ativa inicial ou quando o filtro geral de mídia do dashboard mudar
-  const [activeTab, setActiveTab] = useState<TabType>(() => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlTab = searchParams.get('tab') as TabType | null;
+
+  const getTabFromUrl = () => {
+    if (typeof window !== 'undefined') {
+      const t = new URLSearchParams(window.location.search).get('tab') as TabType | null;
+      if (t && ['movies', 'tv', 'genres', 'cast', 'directors'].includes(t)) return t;
+    }
+    if (urlTab && ['movies', 'tv', 'genres', 'cast', 'directors'].includes(urlTab)) return urlTab;
     if (mediaType === 'movie') return 'movies';
     if (mediaType === 'tv') return 'tv';
     return 'movies';
-  });
+  };
 
+  // Sincroniza a aba ativa inicial via URL ou pelo filtro geral de mídia
+  const [activeTab, setActiveTabState] = useState<TabType>(getTabFromUrl);
+
+  // Atualiza se a URL mudar (ex: botão Voltar/Avançar do navegador)
   useEffect(() => {
-    if (mediaType === 'movie') setActiveTab('movies');
-    else if (mediaType === 'tv') setActiveTab('tv');
-  }, [mediaType]);
+    const current = getTabFromUrl();
+    if (current !== activeTab) {
+      setActiveTabState(current);
+    }
+  }, [urlTab, mediaType]);
+
+  const setActiveTab = (tab: TabType) => {
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', tab);
+      params.delete('page'); // Reseta a página ao alternar abas
+      const query = params.toString();
+      const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+      window.history.replaceState(null, '', newUrl);
+    }
+  };
 
   // Estados locais para a aba de Gêneros
   const [genreSearch, setGenreSearch] = useState('');

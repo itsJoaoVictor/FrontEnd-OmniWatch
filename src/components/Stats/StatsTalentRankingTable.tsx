@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { api } from '@/lib/axios';
 import {
   PeopleRankingItem,
@@ -90,13 +90,47 @@ export function StatsTalentRankingTable({
   initialItems,
 }: StatsTalentRankingTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isCast = type === 'cast';
   const labelPlural = isCast ? 'Atores e Atrizes' : 'Diretores e Criadores';
   const labelSingular = isCast ? 'Artista' : 'Diretor';
 
   const [data, setData] = useState<PeopleRankingResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+
+  const getPageFromUrl = () => {
+    if (typeof window !== 'undefined') {
+      const p = Number(new URLSearchParams(window.location.search).get('page'));
+      if (p > 0) return p;
+    }
+    const p = Number(searchParams.get('page'));
+    return p > 0 ? p : 1;
+  };
+
+  const [page, setPageState] = useState<number>(getPageFromUrl);
+
+  useEffect(() => {
+    const current = getPageFromUrl();
+    if (current !== page) {
+      setPageState(current);
+    }
+  }, [searchParams]);
+
+  const setPage = (newPage: number | ((prev: number) => number)) => {
+    const next = typeof newPage === 'function' ? newPage(page) : newPage;
+    setPageState(next);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', type);
+      if (next === 1) params.delete('page');
+      else params.set('page', String(next));
+      const query = params.toString();
+      const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+      window.history.replaceState(null, '', newUrl);
+    }
+  };
+
   const [sortBy, setSortBy] = useState<PeopleSortField>('count');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -105,14 +139,15 @@ export function StatsTalentRankingTable({
   const localCacheRef = useRef<Map<string, PeopleRankingResponse>>(new Map());
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Debounce da barra de busca
+  // Debounce da barra de busca: só reseta para página 1 se o termo realmente mudou
   useEffect(() => {
+    if (search === debouncedSearch) return;
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
     }, 350);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, debouncedSearch]);
 
   // Reseta a página se a ordenação mudar
   const handleSortChange = (newSort: PeopleSortField) => {
