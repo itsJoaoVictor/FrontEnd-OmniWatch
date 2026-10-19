@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ReleaseEvent } from '@/types/calendar';
 import { ReleaseDetailsSheet } from './ReleaseDetailsSheet';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,10 +15,23 @@ interface CalendarGridViewProps {
   releases: ReleaseEvent[];
   loading: boolean;
   currentMonth: string;
+  selectedDay?: number | null;
+  onSelectDay?: (day: number | null) => void;
+  selectedEventId?: string | null;
+  onSelectEventId?: (id: string | null) => void;
 }
 
-export function CalendarGridView({ releases, loading, currentMonth }: CalendarGridViewProps) {
-  const [selectedEvent, setSelectedEvent] = useState<ReleaseEvent | null>(null);
+export function CalendarGridView({
+  releases,
+  loading,
+  currentMonth,
+  selectedDay: propSelectedDay,
+  onSelectDay,
+  selectedEventId,
+  onSelectEventId,
+}: CalendarGridViewProps) {
+  const [internalSelectedEvent, setInternalSelectedEvent] = useState<ReleaseEvent | null>(null);
+  const mobileDrawerRef = useRef<HTMLDivElement>(null);
 
   const [yearStr, monthStr] = currentMonth.split('-');
   const year = parseInt(yearStr, 10);
@@ -34,13 +47,49 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
   const isCurrentMonth = now.getFullYear() === year && now.getMonth() === month;
   const todayDay = isCurrentMonth ? now.getDate() : null;
 
-  const [selectedDay, setSelectedDay] = useState<number | null>(() => {
-    const current = new Date();
-    if (current.getFullYear() === year && current.getMonth() === month) {
-      return current.getDate();
+  const [internalSelectedDay, setInternalSelectedDay] = useState<number | null>(() => {
+    if (propSelectedDay !== undefined) return propSelectedDay;
+    if (now.getFullYear() === year && now.getMonth() === month) {
+      return now.getDate();
     }
     return null;
   });
+
+  const selectedDay = propSelectedDay !== undefined ? propSelectedDay : internalSelectedDay;
+
+  const handleSelectDay = (d: number | null) => {
+    if (onSelectDay) {
+      onSelectDay(d);
+    } else {
+      setInternalSelectedDay(d);
+    }
+  };
+
+  // Sync selected event from prop or internal
+  useEffect(() => {
+    if (selectedEventId) {
+      const found = releases.find(r => r.id === selectedEventId);
+      if (found) {
+        setInternalSelectedEvent(found);
+      }
+    } else if (selectedEventId === null) {
+      setInternalSelectedEvent(null);
+    }
+  }, [selectedEventId, releases]);
+
+  const handleOpenEvent = (event: ReleaseEvent) => {
+    setInternalSelectedEvent(event);
+    if (onSelectEventId) {
+      onSelectEventId(event.id);
+    }
+  };
+
+  const handleCloseEvent = () => {
+    setInternalSelectedEvent(null);
+    if (onSelectEventId) {
+      onSelectEventId(null);
+    }
+  };
 
   const releasesByDay = React.useMemo(() => {
     const map = new Map<number, ReleaseEvent[]>();
@@ -61,20 +110,32 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
   };
 
   useEffect(() => {
+    if (propSelectedDay !== undefined && propSelectedDay !== null) {
+      return;
+    }
     if (isCurrentMonth) {
-      setSelectedDay(now.getDate());
+      handleSelectDay(now.getDate());
     } else {
       const firstWithRelease = releases.find(r => {
         const d = parseReleaseDate(r.release_date);
         return d.getMonth() === month && d.getFullYear() === year;
       });
       if (firstWithRelease) {
-        setSelectedDay(parseReleaseDate(firstWithRelease.release_date).getDate());
+        handleSelectDay(parseReleaseDate(firstWithRelease.release_date).getDate());
       } else {
-        setSelectedDay(1);
+        handleSelectDay(1);
       }
     }
-  }, [currentMonth, releases]);
+  }, [currentMonth, releases, isCurrentMonth, propSelectedDay]);
+
+  const handleDayClick = (d: number, hasReleases: boolean) => {
+    handleSelectDay(d);
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && hasReleases) {
+      setTimeout(() => {
+        mobileDrawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 60);
+    }
+  };
 
   if (loading) {
     return (
@@ -105,21 +166,35 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
       </div>
 
       {/* Grid of days */}
-      <div className="grid grid-cols-7 gap-1 md:gap-2">
+      <div className="grid grid-cols-7 gap-1 md:gap-2" role="grid" aria-label={`Calendário de ${format(date, 'MMMM yyyy', { locale: ptBR })}`}>
         {blanks.map(b => (
-          <div key={`blank-${b}`} className="min-h-[52px] md:h-28 bg-zinc-800/10 rounded-xl border border-zinc-800/20" />
+          <div key={`blank-${b}`} className="min-h-[52px] md:h-28 bg-zinc-800/10 rounded-xl border border-zinc-800/20" aria-hidden="true" />
         ))}
         {days.map(d => {
           const dayReleases = getReleasesForDay(d);
           const isToday = d === todayDay;
           const isSelected = d === selectedDay;
           const hasReleases = dayReleases.length > 0;
+          const dayDate = new Date(year, month, d);
+          const formattedDayLabel = `${d} de ${format(dayDate, 'MMMM', { locale: ptBR })}${
+            hasReleases ? `, ${dayReleases.length} ${dayReleases.length === 1 ? 'lançamento' : 'lançamentos'}` : ', nenhum lançamento'
+          }`;
 
           return (
-            <div
+            <button
+              type="button"
+              role="gridcell"
               key={d}
-              onClick={() => setSelectedDay(d)}
-              className={`min-h-[52px] md:h-28 rounded-xl p-1 md:p-1.5 border transition-all cursor-pointer flex flex-col justify-between md:justify-start relative ${
+              onClick={() => handleDayClick(d, hasReleases)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleDayClick(d, hasReleases);
+                }
+              }}
+              aria-label={formattedDayLabel}
+              aria-selected={isSelected}
+              className={`min-h-[52px] md:h-28 rounded-xl p-1 md:p-1.5 border text-left transition-all cursor-pointer flex flex-col justify-between md:justify-start relative outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:z-10 ${
                 isSelected
                   ? 'bg-zinc-800 border-red-500 ring-2 ring-red-500/40 shadow-lg'
                   : isToday
@@ -180,31 +255,51 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
                 )}
               </div>
 
-              {/* DESKTOP ONLY: Full Event Cards */}
-              <div className="hidden md:flex flex-col gap-1 mt-1 overflow-y-auto max-h-[82px] pr-0.5">
+              {/* DESKTOP ONLY: Full Event Cards with Series Title + Episode Code */}
+              <div className="hidden md:flex flex-col gap-1 mt-1 overflow-y-auto max-h-[82px] pr-0.5 w-full">
                 {dayReleases.map(release => {
-                  const isMovie = release.media.media_type === 'movie';
+                  const isTv = release.media.media_type === 'tv';
                   return (
-                    <button
+                    <div
                       key={release.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedEvent(release);
+                        handleOpenEvent(release);
                       }}
-                      className={`text-left text-xs rounded p-1 truncate transition-colors flex items-center gap-1.5 border ${
-                        isMovie
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleOpenEvent(release);
+                        }
+                      }}
+                      className={`text-left text-xs rounded p-1 truncate transition-colors flex items-center gap-1.5 border cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-white ${
+                        !isTv
                           ? 'bg-sky-500/15 hover:bg-sky-500/25 text-sky-200 border-sky-500/25'
                           : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border-amber-500/25'
                       }`}
-                      title={`${isMovie ? 'Filme' : 'Série'}: ${release.media.title} - ${release.title}`}
+                      title={`${isTv ? 'Série' : 'Filme'}: ${release.media.title}${release.title ? ` • ${release.title}` : ''}`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isMovie ? 'bg-sky-400' : 'bg-amber-400'}`} />
-                      <span className="truncate">{release.title || release.media.title}</span>
-                    </button>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${!isTv ? 'bg-sky-400' : 'bg-amber-400'}`} />
+                      <span className="truncate font-medium text-zinc-100 flex-1 text-[11px]">
+                        {release.media.title}
+                      </span>
+                      {isTv && release.season_number != null && release.episode_number != null ? (
+                        <span className="text-[10px] text-amber-400/90 font-mono font-semibold shrink-0">
+                          T{release.season_number}E{release.episode_number}
+                        </span>
+                      ) : !isTv ? (
+                        <span className="text-[9px] text-sky-400/80 uppercase font-semibold shrink-0">
+                          Filme
+                        </span>
+                      ) : null}
+                    </div>
                   );
                 })}
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -244,8 +339,9 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
         </div>
       </div>
 
-      {/* MOBILE ONLY: Selected Day Events Drawer / Panel */}
-      <div className="block md:hidden mt-4 pt-4 border-t border-zinc-800">
+      {/* MOBILE ONLY: Selected Day Events Drawer / Panel (omitted if entire month is empty) */}
+      {releases.length > 0 && (
+        <div ref={mobileDrawerRef} className="block md:hidden mt-4 pt-4 border-t border-zinc-800">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-zinc-300">
             {selectedDay ? (
@@ -274,8 +370,8 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
                 return (
                   <div
                     key={release.id}
-                    onClick={() => setSelectedEvent(release)}
-                    className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 active:scale-[0.99] transition-all cursor-pointer"
+                    onClick={() => handleOpenEvent(release)}
+                    className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 active:scale-[0.99] transition-all cursor-pointer min-h-[56px]"
                   >
                     {release.media.poster_path ? (
                       <img
@@ -319,14 +415,19 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
               })}
             </div>
           ) : (
-            <div className="py-6 px-4 text-center bg-zinc-800/30 rounded-xl border border-zinc-800/50 flex flex-col items-center justify-center">
-              <CalendarX2 className="w-6 h-6 text-zinc-500 mb-1.5" />
-              <p className="text-xs text-zinc-400">Nenhum lançamento previsto para este dia.</p>
-              <Link href="/explore" className="text-xs text-red-400 hover:text-red-300 font-semibold mt-2 inline-flex items-center gap-1">
-                <Compass className="w-3.5 h-3.5" />
-                Explorar novos títulos &rarr;
-              </Link>
-            </div>
+            // If the whole month is empty, the empty banner already appeared above. Show a simplified line to avoid duplication.
+            releases.length === 0 ? (
+              <p className="text-xs text-zinc-500 text-center py-2">Nenhum evento neste dia.</p>
+            ) : (
+              <div className="py-6 px-4 text-center bg-zinc-800/30 rounded-xl border border-zinc-800/50 flex flex-col items-center justify-center">
+                <CalendarX2 className="w-6 h-6 text-zinc-500 mb-1.5" />
+                <p className="text-xs text-zinc-400">Nenhum lançamento previsto para este dia.</p>
+                <Link href="/explore" className="text-xs text-red-400 hover:text-red-300 font-semibold mt-2 inline-flex items-center gap-1">
+                  <Compass className="w-3.5 h-3.5" />
+                  Explorar novos títulos &rarr;
+                </Link>
+              </div>
+            )
           )
         ) : (
           <div className="py-6 text-center text-xs text-zinc-500 bg-zinc-800/30 rounded-lg border border-zinc-800/50">
@@ -334,11 +435,12 @@ export function CalendarGridView({ releases, loading, currentMonth }: CalendarGr
           </div>
         )}
       </div>
+      )}
 
       <ReleaseDetailsSheet 
-        isOpen={!!selectedEvent} 
-        onClose={() => setSelectedEvent(null)} 
-        release={selectedEvent} 
+        isOpen={!!internalSelectedEvent} 
+        onClose={handleCloseEvent} 
+        release={internalSelectedEvent} 
       />
     </div>
   );

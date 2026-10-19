@@ -81,8 +81,9 @@ export function ReleaseDetailsSheet({ isOpen, onClose, release }: ReleaseDetails
                 ? `/tv/${release.media.tmdb_id}/season/${release.season_number}/episode/${release.episode_number}`
                 : `/${release.media.media_type}/${release.media.tmdb_id}`
             }
+            className="inline-flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-3.5 py-1.5 shadow-sm transition-colors"
           >
-            <Button className="bg-red-600 hover:bg-red-700 text-white shadow-sm">Ver Detalhes</Button>
+            Ver Detalhes
           </Link>
         </div>
       </DialogContent>

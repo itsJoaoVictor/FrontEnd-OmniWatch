@@ -14,10 +14,40 @@ import { CalendarX2, Compass } from 'lucide-react';
 interface CalendarListViewProps {
   releases: ReleaseEvent[];
   loading: boolean;
+  selectedEventId?: string | null;
+  onSelectEventId?: (id: string | null) => void;
 }
 
-export function CalendarListView({ releases, loading }: CalendarListViewProps) {
-  const [selectedEvent, setSelectedEvent] = useState<ReleaseEvent | null>(null);
+export function CalendarListView({
+  releases,
+  loading,
+  selectedEventId,
+  onSelectEventId,
+}: CalendarListViewProps) {
+  const [internalSelectedEvent, setInternalSelectedEvent] = useState<ReleaseEvent | null>(null);
+
+  React.useEffect(() => {
+    if (selectedEventId) {
+      const found = releases.find(r => r.id === selectedEventId);
+      if (found) setInternalSelectedEvent(found);
+    } else if (selectedEventId === null) {
+      setInternalSelectedEvent(null);
+    }
+  }, [selectedEventId, releases]);
+
+  const handleOpenEvent = (event: ReleaseEvent) => {
+    setInternalSelectedEvent(event);
+    if (onSelectEventId) {
+      onSelectEventId(event.id);
+    }
+  };
+
+  const handleCloseEvent = () => {
+    setInternalSelectedEvent(null);
+    if (onSelectEventId) {
+      onSelectEventId(null);
+    }
+  };
 
   const groupedReleases = React.useMemo(() => {
     const groups: { monthKey: string; monthLabel: string; items: ReleaseEvent[] }[] = [];
@@ -88,8 +118,8 @@ export function CalendarListView({ releases, loading }: CalendarListViewProps) {
             </span>
           </div>
 
-          {/* Releases List in Month */}
-          <div className="space-y-3">
+          {/* Releases List in Month - 2 columns on large displays to optimize space */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {group.items.map(release => {
               const isMovie = release.media.media_type === 'movie';
               const isDuplicateTitle = isMovie && release.title.trim().toLowerCase() === release.media.title.trim().toLowerCase();
@@ -103,7 +133,7 @@ export function CalendarListView({ releases, loading }: CalendarListViewProps) {
                 <div 
                   key={release.id} 
                   className="flex items-center gap-3 md:gap-4 bg-zinc-800/80 hover:bg-zinc-800 p-3 rounded-xl border border-zinc-700/60 transition-all cursor-pointer group"
-                  onClick={() => setSelectedEvent(release)}
+                  onClick={() => handleOpenEvent(release)}
                 >
                   {/* Date Block */}
                   <div className="flex-shrink-0 w-16 md:w-20 text-center py-1 px-1 rounded-lg bg-zinc-900/60 border border-zinc-700/40">
@@ -156,7 +186,7 @@ export function CalendarListView({ releases, loading }: CalendarListViewProps) {
                     </p>
                   </div>
 
-                  <div className="hidden sm:block text-xs text-zinc-400 group-hover:text-white transition-colors pr-2">
+                  <div className="hidden sm:block text-xs text-zinc-400 group-hover:text-white transition-colors pr-2 shrink-0">
                     Ver detalhes &rarr;
                   </div>
                 </div>
@@ -167,9 +197,9 @@ export function CalendarListView({ releases, loading }: CalendarListViewProps) {
       ))}
 
       <ReleaseDetailsSheet 
-        isOpen={!!selectedEvent} 
-        onClose={() => setSelectedEvent(null)} 
-        release={selectedEvent} 
+        isOpen={!!internalSelectedEvent} 
+        onClose={handleCloseEvent} 
+        release={internalSelectedEvent} 
       />
     </div>
   );
