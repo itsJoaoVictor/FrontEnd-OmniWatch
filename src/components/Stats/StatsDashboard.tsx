@@ -6,6 +6,7 @@ import { StatisticsResponse, PeriodFilter, MediaTypeFilter } from './types';
 import { StatsFilters } from './StatsFilters';
 import { StatsKpiCards } from './StatsKpiCards';
 import { StatsHighlights } from './StatsHighlights';
+import { StatsBacklogEstimator } from './StatsBacklogEstimator';
 import { StatsCharts } from './StatsCharts';
 import { StatsRankingTable } from './StatsRankingTable';
 import { RefreshCw, AlertCircle } from 'lucide-react';
@@ -203,6 +204,11 @@ export function StatsDashboard() {
 
       {/* Destaques e Insights Visuais (OmniWatch Highlights) */}
       <StatsHighlights data={data} mediaType={mediaType} period={period} />
+
+      {/* Simulador Interativo de Backlog (Missão Zerar a Lista) */}
+      {data.backlog && (
+        <StatsBacklogEstimator backlog={data.backlog} mediaType={mediaType} />
+      )}
 
       {/* Gráficos Interativos */}
       <StatsCharts data={data} />

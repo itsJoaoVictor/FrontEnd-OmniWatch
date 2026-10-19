@@ -33,6 +33,19 @@ export interface StatKpis {
   weeklyAverageMinutes: number;
 }
 
+export interface StatBacklog {
+  totalMinutes: number;
+  totalItems: number;
+  moviesPlanCount: number;
+  moviesPlanMinutes: number;
+  tvPlanCount: number;
+  tvPlanEpisodes: number;
+  tvPlanMinutes: number;
+  tvWatchingCount: number;
+  tvWatchingRemainingEpisodes: number;
+  tvWatchingRemainingMinutes: number;
+}
+
 export interface StatisticsResponse {
   totalTime: number;
   totalTimeMovies: number;
@@ -48,6 +61,7 @@ export interface StatisticsResponse {
     directors: StatRankingItem[];
   };
   timeline: StatTimelineItem[];
+  backlog?: StatBacklog;
 }
 
 export type PeriodFilter = 'all' | 'year' | '6months' | '30days';
