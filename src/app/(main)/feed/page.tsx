@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { friendsService } from '@/services/friendsService';
-import { FriendFeedItem } from '@/types/friends';
+import { useFeedStore } from '@/store/useFeedStore';
 import { FeedCard } from '@/components/feed/FeedCard';
 import { Button } from '@/components/ui/button';
 import { 
@@ -18,60 +17,22 @@ import {
 } from 'lucide-react';
 
 export default function FeedPage() {
-  const [items, setItems] = useState<FriendFeedItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'movie' | 'tv'>('all');
-
-  const fetchFeed = useCallback(async (pageNum = 1, append = false) => {
-    try {
-      if (pageNum === 1 && !append) {
-        setIsLoading(true);
-      } else {
-        setIsLoadingMore(true);
-      }
-
-      const res = await friendsService.getFeed(pageNum, 15);
-      
-      if (append) {
-        setItems(prev => [...prev, ...res.items]);
-      } else {
-        setItems(res.items);
-      }
-      setHasMore(res.has_more);
-      setPage(pageNum);
-    } catch (error) {
-      console.error('Error fetching friend feed:', error);
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-      setIsRefreshing(false);
-    }
-  }, []);
+  const {
+    items,
+    isLoading,
+    isRefreshing,
+    hasMore,
+    isLoadingMore,
+    filter,
+    fetchFeed,
+    setFilter,
+    refresh,
+    loadMore,
+  } = useFeedStore();
 
   useEffect(() => {
-    fetchFeed(1);
+    fetchFeed();
   }, [fetchFeed]);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchFeed(1);
-  };
-
-  const handleLoadMore = () => {
-    if (hasMore && !isLoadingMore) {
-      fetchFeed(page + 1, true);
-    }
-  };
-
-  const filteredItems = items.filter(item => {
-    if (filter === 'movie') return item.media_type === 'movie';
-    if (filter === 'tv') return item.media_type === 'tv';
-    return true;
-  });
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8 max-w-5xl min-h-screen">
@@ -95,7 +56,7 @@ export default function FeedPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleRefresh}
+            onClick={refresh}
             disabled={isRefreshing || isLoading}
             className="gap-1.5 text-xs h-9"
           >
@@ -149,7 +110,7 @@ export default function FeedPage() {
             <div key={i} className="h-44 bg-card/60 animate-pulse rounded-2xl border border-border/40 p-4" />
           ))}
         </div>
-      ) : filteredItems.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="bg-card/40 border border-border/60 rounded-3xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-4 my-8 shadow-sm">
           <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center">
             <Sparkles className="w-8 h-8" />
@@ -175,7 +136,7 @@ export default function FeedPage() {
       ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredItems.map(item => (
+            {items.map((item) => (
               <FeedCard key={item.id} item={item} />
             ))}
           </div>
@@ -184,7 +145,7 @@ export default function FeedPage() {
             <div className="flex justify-center pt-4">
               <Button
                 variant="outline"
-                onClick={handleLoadMore}
+                onClick={loadMore}
                 disabled={isLoadingMore}
                 className="gap-2 px-6"
               >

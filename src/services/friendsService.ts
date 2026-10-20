@@ -54,10 +54,16 @@ export const friendsService = {
     return res.data;
   },
 
-  async getFeed(page: number = 1, limit: number = 20): Promise<FriendFeedResponse> {
-    const res = await api.get<FriendFeedResponse>('/api/friends/feed', {
-      params: { page, limit },
-    });
+  async getFeed(
+    page: number = 1,
+    limit: number = 20,
+    mediaType?: 'all' | 'movie' | 'tv'
+  ): Promise<FriendFeedResponse> {
+    const params: Record<string, any> = { page, limit };
+    if (mediaType && mediaType !== 'all') {
+      params.media_type = mediaType;
+    }
+    const res = await api.get<FriendFeedResponse>('/api/friends/feed', { params });
     return res.data;
   },
 };

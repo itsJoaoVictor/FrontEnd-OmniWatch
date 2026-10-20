@@ -94,7 +94,7 @@ export function FeedCard({ item }: FeedCardProps) {
 
   const mediaHref = item.media_type === 'movie' ? `/movie/${item.tmdb_id}` : `/tv/${item.tmdb_id}`;
   const posterUrl = item.poster_path
-    ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+    ? `https://image.tmdb.org/t/p/w342${item.poster_path}`
     : '/placeholder-poster.png';
 
   return (
