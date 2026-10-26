@@ -13,6 +13,8 @@ interface UserState {
   clearUser: () => void;
 }
 
+let ongoingFetchUser: Promise<UserProfile | null> | null = null;
+
 export const useUserStore = create<UserState>((set, get) => ({
   user: null,
   isLoading: false,
@@ -20,18 +22,31 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   setUser: (user) => set({ user, isInitialized: true }),
 
-  clearUser: () => set({ user: null, isInitialized: false, isLoading: false }),
+  clearUser: () => {
+    ongoingFetchUser = null;
+    set({ user: null, isInitialized: false, isLoading: false });
+  },
 
   fetchUser: async () => {
-    set({ isLoading: true });
-    try {
-      const user = await userService.getMe();
-      set({ user, isLoading: false, isInitialized: true });
-      return user;
-    } catch {
-      set({ user: null, isLoading: false, isInitialized: true });
-      return null;
+    if (ongoingFetchUser) {
+      return ongoingFetchUser;
     }
+
+    set({ isLoading: true });
+    ongoingFetchUser = (async () => {
+      try {
+        const user = await userService.getMe();
+        set({ user, isLoading: false, isInitialized: true });
+        return user;
+      } catch {
+        set({ user: null, isLoading: false, isInitialized: true });
+        return null;
+      } finally {
+        ongoingFetchUser = null;
+      }
+    })();
+
+    return ongoingFetchUser;
   },
 
   updateUsername: async (username: string) => {
