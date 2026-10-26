@@ -252,7 +252,7 @@ export function StatsBacklogEstimator({ backlog, mediaType = 'all' }: StatsBackl
                   key={p.minutes}
                   type="button"
                   onClick={() => handlePaceChange(p.minutes)}
-                  className={`p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer ${
+                  className={`p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer min-h-[44px] last:col-span-2 sm:last:col-span-1 ${
                     isSelected
                       ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/30 scale-[1.02]'
                       : 'bg-zinc-900/60 text-zinc-300 border-zinc-800/80 hover:bg-zinc-800/80 hover:border-zinc-700'
@@ -278,12 +278,15 @@ export function StatsBacklogEstimator({ backlog, mediaType = 'all' }: StatsBackl
             </div>
             <input
               type="range"
+              id="backlog-pace-slider"
+              aria-label="Meta diária de tempo assistido"
+              aria-valuetext={`${paceLabel} por dia`}
               min={15}
               max={240}
               step={15}
               value={paceMinutes}
               onChange={(e) => handlePaceChange(parseInt(e.target.value, 10))}
-              className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
+              className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
             />
           </div>
         </div>

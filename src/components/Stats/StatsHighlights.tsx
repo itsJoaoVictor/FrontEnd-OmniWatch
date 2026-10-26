@@ -137,13 +137,11 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
           const targetPersonId = topCast?.person_id || topDirector?.person_id;
           const targetProfilePath = topCast?.profile_path || topDirector?.profile_path;
           const targetHref = targetPersonId ? `/person/${targetPersonId}` : null;
+          const targetName = topCast?.name || topDirector?.name || 'Talento';
 
-          return (
+          const cardElement = (
             <Card
-              onClick={() => {
-                if (targetHref) window.location.href = targetHref;
-              }}
-              className={`bg-gradient-to-br from-amber-950/20 via-zinc-900/60 to-zinc-900/40 border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300 ${
+              className={`bg-gradient-to-br from-amber-950/20 via-zinc-900/60 to-zinc-900/40 border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300 h-full ${
                 targetHref ? 'cursor-pointer hover:shadow-lg hover:shadow-amber-500/10' : ''
               }`}
             >
@@ -230,6 +228,20 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
               </CardContent>
             </Card>
           );
+
+          if (targetHref) {
+            return (
+              <Link
+                href={targetHref}
+                className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-transform active:scale-[0.99]"
+                aria-label={`Ver perfil de ${targetName}`}
+              >
+                {cardElement}
+              </Link>
+            );
+          }
+
+          return cardElement;
         })()}
 
         {/* Card 4: Foco & Conclusão */}

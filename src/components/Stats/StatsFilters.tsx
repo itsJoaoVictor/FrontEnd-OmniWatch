@@ -33,9 +33,9 @@ export function StatsFilters({
   isLoading,
 }: StatsFiltersProps) {
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 backdrop-blur-md shadow-lg shadow-black/20">
+    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 backdrop-blur-md shadow-lg shadow-black/20">
       {/* Seletor de Tipo */}
-      <div className="grid grid-cols-3 sm:flex items-center gap-1 p-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
+      <div className="grid grid-cols-3 sm:flex items-center gap-1 p-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl shrink-0">
         {MEDIA_OPTIONS.map((opt) => {
           const active = mediaType === opt.id;
           return (
@@ -43,7 +43,7 @@ export function StatsFilters({
               key={opt.id}
               type="button"
               onClick={() => onMediaTypeChange(opt.id)}
-              className={`flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 select-none ${
+              className={`flex items-center justify-center px-3 py-2 min-h-[38px] rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 select-none ${
                 active
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 active:scale-95'
@@ -57,9 +57,9 @@ export function StatsFilters({
       </div>
 
       {/* Seletor de Período */}
-      <div className="relative group/period">
-        <div className="flex items-center gap-1 overflow-x-auto scroll-smooth scrollbar-none p-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
-          <div className="items-center pl-2 pr-1 text-zinc-500 text-xs hidden lg:flex">
+      <div className="relative group/period min-w-0 max-w-full">
+        <div className="flex items-center gap-1 overflow-x-auto scroll-smooth scrollbar-none p-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl max-w-full">
+          <div className="items-center pl-2 pr-1 text-zinc-500 text-xs hidden lg:flex shrink-0">
             <Calendar className="w-3.5 h-3.5 mr-1" />
             <span>Período:</span>
           </div>
@@ -70,7 +70,7 @@ export function StatsFilters({
                 key={opt.id}
                 type="button"
                 onClick={() => onPeriodChange(opt.id)}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 select-none ${
+                className={`px-3 py-2 min-h-[38px] rounded-lg text-[11px] sm:text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 select-none flex items-center justify-center ${
                   active
                     ? 'bg-zinc-800 text-zinc-100 border border-zinc-700 shadow-sm font-semibold'
                     : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 active:scale-95'
@@ -81,8 +81,8 @@ export function StatsFilters({
             );
           })}
         </div>
-        {/* Indicador de scroll horizontal sutil no mobile */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-zinc-900/90 to-transparent rounded-r-xl sm:hidden" />
+        {/* Indicador de scroll horizontal sutil no mobile / tablet */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-zinc-900/90 to-transparent rounded-r-xl md:hidden" />
       </div>
     </div>
   );

@@ -629,7 +629,7 @@ export function StatsTalentRankingTable({
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1 || loading}
-              className="px-3 py-1.5 rounded-lg bg-zinc-800/70 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1 font-medium"
+              className="px-3.5 py-2 min-h-[38px] rounded-lg bg-zinc-800/70 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1 font-medium select-none cursor-pointer"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
               Anterior
@@ -642,7 +642,7 @@ export function StatsTalentRankingTable({
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages || loading}
-              className="px-3 py-1.5 rounded-lg bg-zinc-800/70 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1 font-medium"
+              className="px-3.5 py-2 min-h-[38px] rounded-lg bg-zinc-800/70 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1 font-medium select-none cursor-pointer"
             >
               Próxima
               <ChevronRight className="w-3.5 h-3.5" />

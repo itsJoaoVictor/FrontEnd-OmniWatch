@@ -143,7 +143,7 @@ export function StatsRankingTable({
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none p-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl shrink-0">
             <button
               onClick={() => setActiveTab('movies')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+              className={`px-3 py-2 min-h-[38px] rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                 activeTab === 'movies'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
@@ -155,7 +155,7 @@ export function StatsRankingTable({
 
             <button
               onClick={() => setActiveTab('tv')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+              className={`px-3 py-2 min-h-[38px] rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                 activeTab === 'tv'
                   ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
@@ -167,7 +167,7 @@ export function StatsRankingTable({
 
             <button
               onClick={() => setActiveTab('genres')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+              className={`px-3 py-2 min-h-[38px] rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                 activeTab === 'genres'
                   ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
@@ -179,7 +179,7 @@ export function StatsRankingTable({
 
             <button
               onClick={() => setActiveTab('cast')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+              className={`px-3 py-2 min-h-[38px] rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                 activeTab === 'cast'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
@@ -191,7 +191,7 @@ export function StatsRankingTable({
 
             <button
               onClick={() => setActiveTab('directors')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+              className={`px-3 py-2 min-h-[38px] rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                 activeTab === 'directors'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
