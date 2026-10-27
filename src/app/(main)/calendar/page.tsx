@@ -167,7 +167,8 @@ function CalendarContent() {
     agendaFetchedRef.current = true;
     setAgendaLoading(true);
     try {
-      const res = await api.get('/api/calendar/my-releases');
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const res = await api.get('/api/calendar/my-releases', { params: { from_date: todayStr } });
       setAgendaReleases(res.data);
     } catch (error) {
       agendaFetchedRef.current = false;
