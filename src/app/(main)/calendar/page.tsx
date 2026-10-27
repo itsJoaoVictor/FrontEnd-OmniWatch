@@ -44,7 +44,7 @@ function CalendarContent() {
   }, [paramMonth, todayMonthStr]);
 
   const paramView = searchParams.get('view');
-  const activeTab = paramView === 'list' ? 'list' : 'grid';
+  const activeTab = paramView === 'grid' ? 'grid' : 'list';
 
   const paramType = searchParams.get('type');
   const mediaFilter = (paramType === 'movie' || paramType === 'tv') ? paramType : 'all';
@@ -105,7 +105,7 @@ function CalendarContent() {
 
   const handleTabChange = useCallback(
     (value: string) => {
-      updateParam({ view: value === 'grid' ? null : 'list' }, false);
+      updateParam({ view: value === 'list' ? null : 'grid' }, false);
     },
     [updateParam]
   );
@@ -248,6 +248,8 @@ function CalendarContent() {
                 onClick={() => setIsPickerOpen(true)}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-bold text-white hover:bg-zinc-800 transition-colors group cursor-pointer"
                 title="Escolher mês e ano diretamente"
+                aria-haspopup="dialog"
+                aria-expanded={isPickerOpen}
               >
                 <span>{displayMonth}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-zinc-400 group-hover:text-white transition-transform" />
@@ -283,21 +285,21 @@ function CalendarContent() {
           {/* Seletor de Abas com Área de Toque Ergonômica (min-h-[44px]) */}
           <TabsList className="bg-secondary/50 w-full sm:w-auto p-1 h-auto">
             <TabsTrigger 
-              value="grid" 
-              className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold rounded-lg"
-            >
-              <span>Grade (Mensal)</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {gridReleases.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger 
               value="list" 
               className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold rounded-lg"
             >
               <span>Lista (Agenda)</span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
                 {agendaReleases.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="grid" 
+              className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold rounded-lg"
+            >
+              <span>Grade (Mensal)</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
+                {gridReleases.length}
               </span>
             </TabsTrigger>
           </TabsList>
@@ -357,6 +359,14 @@ function CalendarContent() {
           </div>
         </div>
 
+        <TabsContent value="list">
+          <CalendarListView 
+            releases={filteredReleases} 
+            loading={agendaLoading}
+            selectedEventId={episodeModalId}
+            onSelectEventId={handleSelectEventId}
+          />
+        </TabsContent>
         <TabsContent value="grid">
           <CalendarGridView 
             releases={filteredReleases} 
@@ -364,14 +374,6 @@ function CalendarContent() {
             currentMonth={currentMonth}
             selectedDay={selectedDay}
             onSelectDay={handleSelectDay}
-            selectedEventId={episodeModalId}
-            onSelectEventId={handleSelectEventId}
-          />
-        </TabsContent>
-        <TabsContent value="list">
-          <CalendarListView 
-            releases={filteredReleases} 
-            loading={agendaLoading}
             selectedEventId={episodeModalId}
             onSelectEventId={handleSelectEventId}
           />

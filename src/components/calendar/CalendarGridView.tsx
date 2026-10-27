@@ -56,6 +56,19 @@ export function CalendarGridView({
   });
 
   const selectedDay = propSelectedDay !== undefined ? propSelectedDay : internalSelectedDay;
+  const [focusedDay, setFocusedDay] = useState<number | null>(null);
+  const dayButtonsRef = useRef<Map<number, HTMLButtonElement>>(new Map());
+
+  const activeFocusDay = focusedDay ?? selectedDay ?? todayDay ?? 1;
+
+  const navigateFocusDay = (targetDay: number) => {
+    const clamped = Math.max(1, Math.min(daysInMonth, targetDay));
+    setFocusedDay(clamped);
+    const btn = dayButtonsRef.current.get(clamped);
+    if (btn) {
+      btn.focus();
+    }
+  };
 
   const handleSelectDay = (d: number | null) => {
     if (onSelectDay) {
@@ -185,9 +198,36 @@ export function CalendarGridView({
               type="button"
               role="gridcell"
               key={d}
+              ref={(el) => {
+                if (el) {
+                  dayButtonsRef.current.set(d, el);
+                } else {
+                  dayButtonsRef.current.delete(d);
+                }
+              }}
+              tabIndex={d === activeFocusDay ? 0 : -1}
               onClick={() => handleDayClick(d, hasReleases)}
+              onFocus={() => setFocusedDay(d)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'ArrowRight') {
+                  e.preventDefault();
+                  navigateFocusDay(d + 1);
+                } else if (e.key === 'ArrowLeft') {
+                  e.preventDefault();
+                  navigateFocusDay(d - 1);
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  navigateFocusDay(d + 7);
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  navigateFocusDay(d - 7);
+                } else if (e.key === 'Home') {
+                  e.preventDefault();
+                  navigateFocusDay(1);
+                } else if (e.key === 'End') {
+                  e.preventDefault();
+                  navigateFocusDay(daysInMonth);
+                } else if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   handleDayClick(d, hasReleases);
                 }
@@ -312,7 +352,7 @@ export function CalendarGridView({
               <CalendarX2 className="w-5 h-5 text-red-500" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Nenhum lançamento previsto para este mês</h4>
+              <h2 className="text-sm font-bold text-white">Nenhum lançamento previsto para este mês</h2>
               <p className="text-xs text-zinc-400">Adicione filmes e séries à sua lista para preencher este mês no calendário.</p>
             </div>
           </div>
@@ -330,12 +370,12 @@ export function CalendarGridView({
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-sky-400 shadow-sm" />
           <span className="text-zinc-300 font-medium">Filme</span>
-          <span className="text-zinc-500 text-[11px]">(Cinema / Streaming)</span>
+          <span className="text-zinc-400 text-[11px]">(Cinema / Streaming)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm" />
           <span className="text-zinc-300 font-medium">Série</span>
-          <span className="text-zinc-500 text-[11px]">(Novo Episódio)</span>
+          <span className="text-zinc-400 text-[11px]">(Novo Episódio)</span>
         </div>
       </div>
 
@@ -343,7 +383,7 @@ export function CalendarGridView({
       {releases.length > 0 && (
         <div ref={mobileDrawerRef} className="block md:hidden mt-4 pt-4 border-t border-zinc-800">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-zinc-300">
+          <h2 className="text-sm font-semibold text-zinc-300">
             {selectedDay ? (
               <>
                 Lançamentos em{' '}
@@ -354,7 +394,7 @@ export function CalendarGridView({
             ) : (
               "Selecione um dia no calendário"
             )}
-          </h3>
+          </h2>
           {selectedDayReleases.length > 0 && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-medium">
               {selectedDayReleases.length} {selectedDayReleases.length === 1 ? 'evento' : 'eventos'}
@@ -386,7 +426,7 @@ export function CalendarGridView({
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-bold text-white truncate">{release.media.title}</h4>
+                      <h3 className="text-sm font-bold text-white truncate">{release.media.title}</h3>
                       <p className="text-xs text-zinc-400 truncate mt-0.5">
                         {release.title}
                       </p>
