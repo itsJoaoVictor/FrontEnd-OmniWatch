@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, User, LogOut, Menu } from "lucide-react";
+import { Bell, User, LogOut, Menu, Activity } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SearchInput } from "./SearchInput";
 import { useEffect, useState } from "react";
@@ -67,6 +67,13 @@ export function Topbar() {
           <SearchInput />
           <NotificationBell />
           <div className="hidden lg:flex items-center gap-2">
+            <Link
+              href="/status"
+              className="p-2 hover:bg-foreground/10 rounded-full transition-colors text-emerald-500 flex items-center justify-center"
+              title="Status do Sistema (Health Check)"
+            >
+              <Activity className="w-4 h-4" />
+            </Link>
             <Link 
               href="/profile" 
               className="flex items-center gap-2 py-1.5 px-2.5 hover:bg-foreground/10 rounded-full transition-colors text-xs font-medium"

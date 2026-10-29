@@ -2,11 +2,21 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Activity } from "lucide-react";
 
 export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 relative">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <Link
+          href="/status"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-card/80 hover:bg-card border border-border/60 text-muted-foreground hover:text-foreground transition-colors shadow-sm"
+          title="Verificar status operacional dos servidores"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <Activity className="w-3.5 h-3.5 text-emerald-500" />
+          <span>Status do Sistema</span>
+        </Link>
         <ThemeToggle />
       </div>
 

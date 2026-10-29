@@ -13,7 +13,8 @@ import {
   LogOut, 
   X, 
   Menu,
-  ChevronRight
+  ChevronRight,
+  Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUserStore } from '@/store/useUserStore';
@@ -211,6 +212,32 @@ export function MobileDrawerMenu({ onLogout, trigger }: MobileDrawerMenuProps) {
                 </span>
                 <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block truncate">
                   Gerenciar username, senha e conta
+                </span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" />
+          </Link>
+
+          {/* 6º Item: Status do Sistema (largura completa) */}
+          <Link
+            href="/status"
+            onClick={() => setIsOpen(false)}
+            className={`col-span-2 relative flex items-center justify-between p-3 rounded-2xl border transition-all duration-200 select-none ${
+              pathname === '/status' || pathname === '/health'
+                ? 'border-primary bg-primary/10 text-primary font-bold'
+                : 'border-zinc-100 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-900/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200'
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/20">
+                <Activity className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-semibold tracking-tight block">
+                  Status do Sistema
+                </span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block truncate">
+                  Monitoramento de serviços e disponibilidade
                 </span>
               </div>
             </div>
