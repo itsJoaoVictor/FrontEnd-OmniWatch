@@ -28,12 +28,13 @@ interface StatsMediaRankingTableProps {
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
+const MEDIA_RANKING_CACHE_TTL_MS = 5 * 60 * 1000;
+const mediaRankingCache = new Map<string, { data: MediaRankingResponse; ts: number }>();
+
 export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [data, setData] = useState<MediaRankingResponse | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const getPageFromUrl = () => {
     if (typeof window !== 'undefined') {
@@ -45,16 +46,28 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
   };
 
   const [page, setPageState] = useState<number>(getPageFromUrl);
+  const [sortBy, setSortBy] = useState<MediaSortField>('time');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
+  const initialCacheKey = `${mediaType}:${period}:time:${page}:`;
+  const initialCached = mediaRankingCache.get(initialCacheKey);
+  const [data, setData] = useState<MediaRankingResponse | null>(initialCached ? initialCached.data : null);
+  const [loading, setLoading] = useState(!initialCached);
+
+  // Sincroniza página apenas em navegação real (popstate), evitando re-render duplicado em replaceState
   useEffect(() => {
-    const current = getPageFromUrl();
-    if (current !== page) {
-      setPageState(current);
-    }
-  }, [searchParams]);
+    const onPopState = () => {
+      const current = getPageFromUrl();
+      setPageState((prev) => (prev !== current ? current : prev));
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const setPage = (newPage: number | ((prev: number) => number)) => {
     const next = typeof newPage === 'function' ? newPage(page) : newPage;
+    if (next === page) return;
     setPageState(next);
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -67,12 +80,6 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
     }
   };
 
-  const [sortBy, setSortBy] = useState<MediaSortField>('time');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-
-  // Cache local em memória por chave de requisição para trocas instantâneas
-  const localCacheRef = useRef<Map<string, MediaRankingResponse>>(new Map());
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Debounce da barra de pesquisa: só reseta para página 1 se o termo realmente mudou
@@ -95,9 +102,10 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
 
   const fetchRankings = useCallback(async () => {
     const cacheKey = `${mediaType}:${period}:${sortBy}:${page}:${debouncedSearch}`;
+    const cached = mediaRankingCache.get(cacheKey);
 
-    if (localCacheRef.current.has(cacheKey)) {
-      setData(localCacheRef.current.get(cacheKey)!);
+    if (cached && Date.now() - cached.ts < MEDIA_RANKING_CACHE_TTL_MS) {
+      setData(cached.data);
       setLoading(false);
       return;
     }
@@ -123,7 +131,7 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
         signal: controller.signal,
       });
 
-      localCacheRef.current.set(cacheKey, response.data);
+      mediaRankingCache.set(cacheKey, { data: response.data, ts: Date.now() });
       setData(response.data);
     } catch (err: any) {
       if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {

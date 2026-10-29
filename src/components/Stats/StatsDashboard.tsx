@@ -81,17 +81,22 @@ export function StatsDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   // Client-side cache: instantanea para filtros já consultados (0ms)
-  const clientCacheRef = useRef<Map<string, StatisticsResponse>>(new Map());
+  const clientCacheRef = useRef<Map<string, { data: StatisticsResponse; ts: number }>>(new Map());
   // AbortController para prevenir race conditions em trocas rápidas de filtros
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchStats = useCallback(async (isInitial = false) => {
     const cacheKey = `${period}:${mediaType}`;
+    const cached = clientCacheRef.current.get(cacheKey);
 
-    // Se estiver em cache, exibe imediatamente e revalida em background
-    if (clientCacheRef.current.has(cacheKey)) {
-      setData(clientCacheRef.current.get(cacheKey)!);
+    // Se estiver em cache recente (< 60s), exibe imediatamente sem disparar requisição redundante
+    if (cached) {
+      setData(cached.data);
       setLoading(false);
+      if (Date.now() - cached.ts < 60_000) {
+        setIsRefreshing(false);
+        return;
+      }
       setIsRefreshing(true);
     } else {
       if (isInitial || !data) {
@@ -119,7 +124,7 @@ export function StatsDashboard() {
       });
 
       // Atualiza o cache do cliente e o estado da tela
-      clientCacheRef.current.set(cacheKey, response.data);
+      clientCacheRef.current.set(cacheKey, { data: response.data, ts: Date.now() });
       setData(response.data);
     } catch (err: any) {
       // Ignora cancelamentos intencionais

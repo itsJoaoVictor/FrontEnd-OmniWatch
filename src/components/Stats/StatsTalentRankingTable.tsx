@@ -83,6 +83,9 @@ function TalentAvatar({
   );
 }
 
+const PEOPLE_RANKING_CACHE_TTL_MS = 5 * 60 * 1000;
+const peopleRankingCache = new Map<string, { data: PeopleRankingResponse; ts: number }>();
+
 export function StatsTalentRankingTable({
   type,
   period = 'all',
@@ -96,9 +99,6 @@ export function StatsTalentRankingTable({
   const labelPlural = isCast ? 'Atores e Atrizes' : 'Diretores e Criadores';
   const labelSingular = isCast ? 'Artista' : 'Diretor';
 
-  const [data, setData] = useState<PeopleRankingResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
   const getPageFromUrl = () => {
     if (typeof window !== 'undefined') {
       const p = Number(new URLSearchParams(window.location.search).get('page'));
@@ -109,16 +109,56 @@ export function StatsTalentRankingTable({
   };
 
   const [page, setPageState] = useState<number>(getPageFromUrl);
+  const [sortBy, setSortBy] = useState<PeopleSortField>('count');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  useEffect(() => {
-    const current = getPageFromUrl();
-    if (current !== page) {
-      setPageState(current);
+  const initialCacheKey = `${type}:${period}:count:${page}:`;
+  const initialCached = peopleRankingCache.get(initialCacheKey);
+
+  const [data, setData] = useState<PeopleRankingResponse | null>(() => {
+    if (initialCached) return initialCached.data;
+    if (initialItems && initialItems.length > 0 && page === 1) {
+      const totalItemsCount = initialItems.length;
+      return {
+        items: initialItems.slice(0, 10).map((item, idx) => ({
+          rank: idx + 1,
+          name: item.name,
+          person_id: item.person_id ?? null,
+          profile_path: item.profile_path ?? null,
+          role: type,
+          count: item.count,
+          totalTime: item.totalTime,
+          avgRating: item.avgRating,
+          sample_titles: [],
+        })),
+        total_items: totalItemsCount,
+        page: 1,
+        page_size: 10,
+        total_pages: Math.max(1, Math.ceil(totalItemsCount / 10)),
+        role: type,
+        sort_by: 'count',
+        period,
+        search: '',
+      };
     }
-  }, [searchParams]);
+    return null;
+  });
+  const [loading, setLoading] = useState(!initialCached && !(initialItems && initialItems.length > 0 && page === 1));
+
+  // Sincroniza página apenas em navegação real (popstate), evitando re-render duplicado em replaceState
+  useEffect(() => {
+    const onPopState = () => {
+      const current = getPageFromUrl();
+      setPageState((prev) => (prev !== current ? current : prev));
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const setPage = (newPage: number | ((prev: number) => number)) => {
     const next = typeof newPage === 'function' ? newPage(page) : newPage;
+    if (next === page) return;
     setPageState(next);
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -131,12 +171,6 @@ export function StatsTalentRankingTable({
     }
   };
 
-  const [sortBy, setSortBy] = useState<PeopleSortField>('count');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-
-  // Cache local em memória por chave para trocas e paginação instantâneas
-  const localCacheRef = useRef<Map<string, PeopleRankingResponse>>(new Map());
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Debounce da barra de busca: só reseta para página 1 se o termo realmente mudou
@@ -159,14 +193,17 @@ export function StatsTalentRankingTable({
 
   const fetchRankings = useCallback(async () => {
     const cacheKey = `${type}:${period}:${sortBy}:${page}:${debouncedSearch}`;
+    const cached = peopleRankingCache.get(cacheKey);
 
-    if (localCacheRef.current.has(cacheKey)) {
-      setData(localCacheRef.current.get(cacheKey)!);
+    if (cached && Date.now() - cached.ts < PEOPLE_RANKING_CACHE_TTL_MS) {
+      setData(cached.data);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (!data) {
+      setLoading(true);
+    }
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -187,7 +224,7 @@ export function StatsTalentRankingTable({
         signal: controller.signal,
       });
 
-      localCacheRef.current.set(cacheKey, response.data);
+      peopleRankingCache.set(cacheKey, { data: response.data, ts: Date.now() });
       setData(response.data);
     } catch (err: any) {
       if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
