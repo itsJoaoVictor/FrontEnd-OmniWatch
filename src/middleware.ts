@@ -29,15 +29,12 @@ export function middleware(request: NextRequest) {
   const isAuthPage = pathname.startsWith('/login') || 
                      pathname.startsWith('/forgot-password');
                      
-  const isPublicStatusPage = pathname.startsWith('/status') ||
-                             pathname.startsWith('/health');
-
   const isHomePage = pathname === '/';
   
   const isLoggedIn = request.cookies.has('is_logged_in');
 
-  // Protect internal routes (allow public status/health pages without login)
-  if (!isLoggedIn && !isAuthPage && !isHomePage && !isPublicStatusPage) {
+  // Protect internal routes
+  if (!isLoggedIn && !isAuthPage && !isHomePage) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 

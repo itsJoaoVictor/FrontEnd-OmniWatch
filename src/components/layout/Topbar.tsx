@@ -14,8 +14,15 @@ import { useFriendsStore } from "@/store/useFriendsStore";
 
 export function Topbar() {
   const router = useRouter();
-  const { user, clearUser } = useUserStore();
+  const { user, fetchUser, clearUser } = useUserStore();
   const { pendingCount, fetchPendingCount } = useFriendsStore();
+  const isAdmin = user?.email?.trim().toLowerCase() === "jvgf98@gmail.com";
+
+  useEffect(() => {
+    if (!user) {
+      fetchUser();
+    }
+  }, [user, fetchUser]);
 
   useEffect(() => {
     fetchPendingCount();
@@ -67,13 +74,15 @@ export function Topbar() {
           <SearchInput />
           <NotificationBell />
           <div className="hidden lg:flex items-center gap-2">
-            <Link
-              href="/status"
-              className="p-2 hover:bg-foreground/10 rounded-full transition-colors text-emerald-500 flex items-center justify-center"
-              title="Status do Sistema (Health Check)"
-            >
-              <Activity className="w-4 h-4" />
-            </Link>
+            {isAdmin && (
+              <Link
+                href="/status"
+                className="p-2 hover:bg-foreground/10 rounded-full transition-colors text-emerald-500 flex items-center justify-center"
+                title="Status do Sistema (Health Check)"
+              >
+                <Activity className="w-4 h-4" />
+              </Link>
+            )}
             <Link 
               href="/profile" 
               className="flex items-center gap-2 py-1.5 px-2.5 hover:bg-foreground/10 rounded-full transition-colors text-xs font-medium"

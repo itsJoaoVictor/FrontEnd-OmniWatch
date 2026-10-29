@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -19,6 +20,7 @@ import {
   Zap,
   ArrowLeft,
   Radio,
+  Lock,
 } from "lucide-react";
 import {
   fetchSystemHealth,
@@ -29,6 +31,9 @@ import {
 } from "@/services/healthService";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { useUserStore } from "@/store/useUserStore";
+
+const ADMIN_EMAIL = "jvgf98@gmail.com";
 
 const FALLBACK_COMPONENT_IDS = [
   {
@@ -165,6 +170,8 @@ function buildOfflineFallback(): HealthSummaryResponse {
 }
 
 export function SystemStatusDashboard() {
+  const router = useRouter();
+  const { user, fetchUser, isInitialized, isLoading: userLoading } = useUserStore();
   const [data, setData] = useState<HealthSummaryResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -172,6 +179,15 @@ export function SystemStatusDashboard() {
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [hoveredDay, setHoveredDay] = useState<UptimeDay | null>(null);
   const [countdown, setCountdown] = useState<number>(30);
+  const [forbidden, setForbidden] = useState<boolean>(false);
+
+  const isAdmin = user?.email?.trim().toLowerCase() === ADMIN_EMAIL;
+
+  useEffect(() => {
+    if (!isInitialized && !userLoading) {
+      fetchUser();
+    }
+  }, [isInitialized, userLoading, fetchUser]);
 
   const loadHealth = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
@@ -181,9 +197,15 @@ export function SystemStatusDashboard() {
       const elapsed = Math.round(performance.now() - startClient);
       setClientPingMs(elapsed);
       setData(res);
-    } catch {
-      setClientPingMs(null);
-      setData(buildOfflineFallback());
+      setForbidden(false);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        setForbidden(true);
+      } else {
+        setClientPingMs(null);
+        setData(buildOfflineFallback());
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -192,11 +214,17 @@ export function SystemStatusDashboard() {
   }, []);
 
   useEffect(() => {
+    if (!isInitialized) return;
+    if (!isAdmin) {
+      setForbidden(true);
+      setLoading(false);
+      return;
+    }
     loadHealth(false);
-  }, [loadHealth]);
+  }, [isInitialized, isAdmin, loadHealth]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh || !isAdmin || forbidden) return;
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -207,7 +235,47 @@ export function SystemStatusDashboard() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [autoRefresh, loadHealth]);
+  }, [autoRefresh, isAdmin, forbidden, loadHealth]);
+
+  if (!isInitialized || userLoading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
+          <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+          <span>Verificando credenciais de administrador...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin || forbidden) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-2xl border border-red-500/30 bg-card p-8 text-center space-y-5 shadow-lg">
+          <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 flex items-center justify-center mx-auto">
+            <Lock className="w-7 h-7" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              Acesso Restrito ao Administrador
+            </h1>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Esta página de monitoramento e diagnóstico de infraestrutura é exclusiva para a conta{" "}
+              <span className="font-mono font-semibold text-foreground">{ADMIN_EMAIL}</span>.
+            </p>
+          </div>
+          <Button
+            variant="default"
+            className="w-full rounded-xl gap-2"
+            onClick={() => router.replace("/dashboard")}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar ao Início
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const overallStatus: ServiceStatusType = data?.overall_status || "operational";
   const bannerCfg = getStatusConfig(overallStatus);
