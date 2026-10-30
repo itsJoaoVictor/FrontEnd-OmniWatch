@@ -27,18 +27,21 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // Se receber 401, a requisição não for de login e ainda não tentou dar retry
+    // Se receber 401, a requisição não for de autenticação e ainda não tentou dar retry
     if (
       error.response?.status === 401 && 
+      originalRequest &&
       !originalRequest._retry && 
       originalRequest.url !== '/api/auth/login' &&
-      originalRequest.url !== '/api/auth/refresh'
+      originalRequest.url !== '/api/auth/refresh' &&
+      originalRequest.url !== '/api/auth/logout'
     ) {
       if (isRefreshing) {
-        // Se já está renovando, coloca na fila e aguarda
+        // Se já está renovando o token, enfileira a requisição
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         }).then(() => {
+          originalRequest._retry = true;
           return api(originalRequest);
         }).catch((err) => {
           return Promise.reject(err);
@@ -49,20 +52,26 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Tenta renovar o token
+        // Tenta renovar a sessão silenciosamente
         await api.post('/api/auth/refresh');
         
         isRefreshing = false;
-        processQueue(null); // Resolve fila de espera
+        processQueue(null); // Resolve requisições na fila de espera
         
-        // Se der certo, repete a requisição original
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         isRefreshing = false;
-        processQueue(refreshError); // Rejeita fila de espera
+        processQueue(refreshError); // Rejeita requisições pendentes
         
-        // Se falhar (ex: refresh_token expirado/inválido), apenas rejeita
-        // Opcionalmente, pode redirecionar para o login aqui
+        // Se a sessão expirou de fato (401 no refresh), limpa estado e redireciona com segurança
+        if (typeof window !== 'undefined') {
+          document.cookie = 'is_logged_in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax';
+          const path = window.location.pathname;
+          if (path !== '/login' && !path.startsWith('/login') && !path.startsWith('/forgot-password')) {
+            window.location.href = '/login';
+          }
+        }
+        
         return Promise.reject(refreshError);
       }
     }

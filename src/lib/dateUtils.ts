@@ -16,30 +16,40 @@
  */
 export function parseReleaseDate(dateStr: string): Date {
   if (!dateStr) return new Date();
-  const [datePart] = dateStr.split('T');
-  const [yearStr, monthStr, dayStr] = datePart.split('-');
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10);
-  const day = parseInt(dayStr, 10);
-  
-  if (isNaN(year) || isNaN(month) || isNaN(day)) {
-    return new Date(dateStr);
+
+  // Caso seja apenas data pura de calendário (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0);
   }
 
-  return new Date(year, month - 1, day, 12, 0, 0);
+  const parsed = new Date(dateStr);
+  if (isNaN(parsed.getTime())) {
+    return new Date();
+  }
+
+  // Como o backend armazena datas de lançamento do TMDB em UTC meia-noite (00:00:00 UTC),
+  // a serialização em fusos negativos (ex: America/Sao_Paulo UTC-3) gera 'T21:00:00-03:00'.
+  // O dia real do calendário original do TMDB é obtido com precisão a partir de getUTCFullYear, getUTCMonth e getUTCDate.
+  const year = parsed.getUTCFullYear();
+  const month = parsed.getUTCMonth();
+  const day = parsed.getUTCDate();
+
+  // Cria um objeto Date local fixado ao meio-dia (12:00) para garantir estabilidade visual na UI
+  return new Date(year, month, day, 12, 0, 0);
 }
 
 /**
- * Formata uma data no formato "YYYY-MM-DD" para "DD/MM/YYYY"
- * sem passar pelo objeto Date para evitar qualquer desvio de fuso horário.
+ * Formata uma data para "DD/MM/YYYY" de forma segura e resiliente a offsets de fuso.
  */
 export function formatReleaseDate(dateStr?: string | null): string {
   if (!dateStr) return "";
   try {
-    const [datePart] = dateStr.split('T');
-    const [year, month, day] = datePart.split('-');
-    if (!year || !month || !day) return dateStr;
-    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+    const d = parseReleaseDate(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   } catch {
     return dateStr || "";
   }

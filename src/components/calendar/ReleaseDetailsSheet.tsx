@@ -73,15 +73,21 @@ export function ReleaseDetailsSheet({ isOpen, onClose, release }: ReleaseDetails
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-zinc-800/80">
-          <Button variant="outline" onClick={onClose} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300">Fechar</Button>
+        <div className="flex justify-end gap-2.5 mt-4 pt-3 border-t border-zinc-800/80">
+          <Button 
+            variant="outline" 
+            onClick={onClose} 
+            className="min-h-[42px] sm:min-h-[36px] px-4 border-zinc-700 hover:bg-zinc-800 text-zinc-300 text-xs sm:text-sm"
+          >
+            Fechar
+          </Button>
           <Link 
             href={
               release.media.media_type === 'tv' && release.season_number != null && release.episode_number != null
                 ? `/tv/${release.media.tmdb_id}/season/${release.season_number}/episode/${release.episode_number}`
                 : `/${release.media.media_type}/${release.media.tmdb_id}`
             }
-            className="inline-flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-3.5 py-1.5 shadow-sm transition-colors"
+            className="min-h-[42px] sm:min-h-[36px] inline-flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-xs sm:text-sm px-4 shadow-sm transition-colors"
           >
             Ver Detalhes
           </Link>

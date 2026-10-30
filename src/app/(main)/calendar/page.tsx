@@ -137,35 +137,10 @@ function CalendarContent() {
   const displayMonth = useMemo(() => formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1), [formattedMonth]);
   const isCurrentMonthNow = currentMonth === todayMonthStr;
 
-  // Busca lançamentos do mês selecionado com cache em memória
-  useEffect(() => {
-    const fetchMonth = async () => {
-      if (monthCacheRef.current[currentMonth]) {
-        setGridReleases(monthCacheRef.current[currentMonth]);
-        setGridLoading(false);
-        return;
-      }
-
-      setGridLoading(true);
-      try {
-        const res = await api.get('/api/calendar/my-releases', { params: { month: currentMonth } });
-        monthCacheRef.current[currentMonth] = res.data;
-        setGridReleases(res.data);
-      } catch (error) {
-        console.error('Error fetching calendar month releases:', error);
-      } finally {
-        setGridLoading(false);
-      }
-    };
-
-    fetchMonth();
-  }, [currentMonth]);
-
   // Função para buscar lançamentos da agenda sob demanda
   const fetchAgenda = useCallback(async () => {
     if (agendaFetchedRef.current) return;
     agendaFetchedRef.current = true;
-    setAgendaLoading(true);
     try {
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const res = await api.get('/api/calendar/my-releases', { params: { from_date: todayStr } });
@@ -178,31 +153,104 @@ function CalendarContent() {
     }
   }, []);
 
-  // Carregamento sob demanda ao alternar para lista ou em idle
+  // Carregamento sob demanda: dispara para a Grade quando ativa ou quando o mês selecionado mudar
   useEffect(() => {
-    if (activeTab === 'list') {
-      fetchAgenda();
-      return;
+    let isCancelled = false;
+
+    if (activeTab === 'grid') {
+      const loadGrid = async () => {
+        if (monthCacheRef.current[currentMonth]) {
+          setGridReleases(monthCacheRef.current[currentMonth]);
+          setGridLoading(false);
+          return;
+        }
+
+        setGridLoading(true);
+        try {
+          const res = await api.get('/api/calendar/my-releases', { params: { month: currentMonth } });
+          if (!isCancelled) {
+            monthCacheRef.current[currentMonth] = res.data;
+            setGridReleases(res.data);
+          }
+        } catch (error) {
+          console.error('Error fetching calendar month releases:', error);
+        } finally {
+          if (!isCancelled) {
+            setGridLoading(false);
+          }
+        }
+      };
+
+      loadGrid();
     }
 
-    if (!gridLoading && !agendaFetchedRef.current) {
-      const schedulePrefetch = typeof window !== 'undefined' && 'requestIdleCallback' in window
-        ? (window as any).requestIdleCallback
-        : (cb: () => void) => setTimeout(cb, 1000);
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeTab, currentMonth]);
+
+  // Carregamento sob demanda: dispara para a Lista (Agenda) quando ativa
+  useEffect(() => {
+    if (activeTab === 'list' && !agendaFetchedRef.current) {
+      fetchAgenda();
+    }
+  }, [activeTab, fetchAgenda]);
+
+  // Pré-carregamento cruzado diferido (idle) para manter navegação instantânea entre abas sem concorrer no mount
+  useEffect(() => {
+    type IdleCapableWindow = Window & {
+      requestIdleCallback?: (cb: () => void) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    const win = typeof window !== 'undefined' ? (window as unknown as IdleCapableWindow) : null;
+
+    // Se estiver na Lista e a grade do mês ainda não foi buscada, faz prefetch diferido em idle
+    if (activeTab === 'list' && !agendaLoading && !monthCacheRef.current[currentMonth]) {
+      const schedulePrefetch = win && typeof win.requestIdleCallback === 'function'
+        ? win.requestIdleCallback.bind(win)
+        : (cb: () => void) => setTimeout(cb, 1200);
+
+      const handle = schedulePrefetch(async () => {
+        try {
+          const res = await api.get('/api/calendar/my-releases', { params: { month: currentMonth } });
+          monthCacheRef.current[currentMonth] = res.data;
+          setGridReleases(res.data);
+        } catch (error) {
+          console.error('Error prefetching month releases:', error);
+        } finally {
+          setGridLoading(false);
+        }
+      });
+
+      return () => {
+        if (win && typeof win.cancelIdleCallback === 'function' && typeof handle === 'number') {
+          win.cancelIdleCallback(handle);
+        } else {
+          clearTimeout(handle as unknown as NodeJS.Timeout);
+        }
+      };
+    }
+
+    // Se estiver na Grade e a agenda ainda não foi buscada, faz prefetch diferido em idle
+    if (activeTab === 'grid' && !gridLoading && !agendaFetchedRef.current) {
+      const schedulePrefetch = win && typeof win.requestIdleCallback === 'function'
+        ? win.requestIdleCallback.bind(win)
+        : (cb: () => void) => setTimeout(cb, 1200);
 
       const handle = schedulePrefetch(() => {
         fetchAgenda();
       });
 
       return () => {
-        if (typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-          (window as any).cancelIdleCallback(handle);
+        if (win && typeof win.cancelIdleCallback === 'function' && typeof handle === 'number') {
+          win.cancelIdleCallback(handle);
         } else {
-          clearTimeout(handle);
+          clearTimeout(handle as unknown as NodeJS.Timeout);
         }
       };
     }
-  }, [activeTab, gridLoading, fetchAgenda]);
+  }, [activeTab, agendaLoading, gridLoading, currentMonth, fetchAgenda]);
 
   const activeReleases = activeTab === 'grid' ? gridReleases : agendaReleases;
 
@@ -290,8 +338,8 @@ function CalendarContent() {
               className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold rounded-lg"
             >
               <span>Lista (Agenda)</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {agendaReleases.length}
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
+                {agendaLoading && agendaReleases.length === 0 ? '–' : agendaReleases.length}
               </span>
             </TabsTrigger>
             <TabsTrigger 
@@ -299,64 +347,68 @@ function CalendarContent() {
               className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold rounded-lg"
             >
               <span>Grade (Mensal)</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {gridReleases.length}
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
+                {gridLoading && gridReleases.length === 0 ? '–' : gridReleases.length}
               </span>
             </TabsTrigger>
           </TabsList>
 
-          {/* Chips de Filtro por Tipo com Área de Toque Otimizada (>= 44px) */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            <button
-              type="button"
-              onClick={() => handleFilterChange('all')}
-              className={`flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
-                mediaFilter === 'all'
-                  ? 'bg-red-600 border-red-500 text-white shadow-sm'
-                  : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
-              }`}
-            >
-              <span>Todos</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                mediaFilter === 'all' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
-              }`}>
-                {counts.all}
-              </span>
-            </button>
+          {/* Chips de Filtro por Tipo com Área de Toque Otimizada (>= 44px) e Indicador de Transbordo */}
+          <div className="relative max-w-full">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none pr-3 sm:pr-0">
+              <button
+                type="button"
+                onClick={() => handleFilterChange('all')}
+                className={`flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
+                  mediaFilter === 'all'
+                    ? 'bg-red-600 border-red-500 text-white shadow-sm'
+                    : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
+                }`}
+              >
+                <span>Todos</span>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  mediaFilter === 'all' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                }`}>
+                  {counts.all}
+                </span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleFilterChange('movie')}
-              className={`flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
-                mediaFilter === 'movie'
-                  ? 'bg-sky-600 border-sky-500 text-white shadow-sm'
-                  : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
-              }`}
-            >
-              <span>🎬 Filmes</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                mediaFilter === 'movie' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
-              }`}>
-                {counts.movie}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleFilterChange('movie')}
+                className={`flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                  mediaFilter === 'movie'
+                    ? 'bg-sky-600 border-sky-500 text-white shadow-sm'
+                    : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
+                }`}
+              >
+                <span>🎬 Filmes</span>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  mediaFilter === 'movie' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                }`}>
+                  {counts.movie}
+                </span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleFilterChange('tv')}
-              className={`flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
-                mediaFilter === 'tv'
-                  ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
-                  : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
-              }`}
-            >
-              <span>📺 Séries</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                mediaFilter === 'tv' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
-              }`}>
-                {counts.tv}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleFilterChange('tv')}
+                className={`flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+                  mediaFilter === 'tv'
+                    ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
+                    : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
+                }`}
+              >
+                <span>📺 Séries</span>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  mediaFilter === 'tv' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                }`}>
+                  {counts.tv}
+                </span>
+              </button>
+            </div>
+            {/* Fade gradiente sutil na borda direita apenas no mobile indicando continuidade de rolagem */}
+            <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-6 bg-gradient-to-l from-black/80 to-transparent sm:hidden" />
           </div>
         </div>
 

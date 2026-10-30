@@ -118,7 +118,7 @@ export function MonthYearPickerModal({
               <button
                 key={name}
                 onClick={() => handleSelect(idx)}
-                className={`py-2 px-1 text-xs font-semibold rounded-lg transition-all border text-center ${
+                className={`min-h-[42px] sm:min-h-[36px] py-2 px-1 text-xs font-semibold rounded-lg transition-all border text-center flex items-center justify-center ${
                   isSelected
                     ? 'bg-red-600 border-red-500 text-white font-bold shadow-md'
                     : isCurrentMonthNow
@@ -133,12 +133,12 @@ export function MonthYearPickerModal({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
+        <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
           <Button
             variant="outline"
             size="sm"
             onClick={handleJumpToToday}
-            className="text-xs border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:text-white"
+            className="min-h-[40px] sm:min-h-[32px] text-xs px-3 border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:text-white"
           >
             Ir para Mês Atual
           </Button>
@@ -146,7 +146,7 @@ export function MonthYearPickerModal({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-xs text-zinc-400 hover:text-white"
+            className="min-h-[40px] sm:min-h-[32px] text-xs px-3 text-zinc-400 hover:text-white"
           >
             Fechar
           </Button>
