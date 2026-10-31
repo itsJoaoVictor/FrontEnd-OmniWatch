@@ -22,9 +22,10 @@ export const friendsService = {
     return res.data.count;
   },
 
-  async searchUsers(q: string): Promise<UserSearchResult[]> {
+  async searchUsers(q: string, signal?: AbortSignal): Promise<UserSearchResult[]> {
     const res = await api.get<UserSearchResult[]>('/api/friends/search', {
       params: { q },
+      signal,
     });
     return res.data;
   },

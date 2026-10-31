@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { friendsService } from '@/services/friendsService';
+import { useFriendsStore } from '@/store/useFriendsStore';
 import {
   FriendUser,
   FriendRequest,
@@ -40,8 +42,41 @@ import {
   UserMinus,
 } from 'lucide-react';
 
-export default function FriendsPage() {
-  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'search'>('friends');
+function FriendsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Sincroniza aba ativa inicial com a query string ?tab=
+  const initialTabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'search'>(() => {
+    if (initialTabParam === 'requests' || initialTabParam === 'search') {
+      return initialTabParam;
+    }
+    return 'friends';
+  });
+
+  // Reage à navegação do histórico (voltar / avançar)
+  useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    if (currentTab === 'requests' || currentTab === 'search') {
+      setActiveTab(currentTab);
+    } else {
+      setActiveTab('friends');
+    }
+  }, [searchParams]);
+
+  // Transição de aba com espelhamento na URL
+  const handleTabChange = (newTab: 'friends' | 'requests' | 'search') => {
+    setActiveTab(newTab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newTab === 'friends') {
+      params.delete('tab');
+    } else {
+      params.set('tab', newTab);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false });
+  };
 
   // Dados
   const [friends, setFriends] = useState<FriendUser[]>([]);
@@ -85,6 +120,7 @@ export default function FriendsPage() {
       const data = await friendsService.getRequests();
       setReceivedRequests(data.received);
       setSentRequests(data.sent);
+      useFriendsStore.getState().setPendingCount(data.received.length);
     } catch (err) {
       console.error('Erro ao carregar solicitações:', err);
     } finally {
@@ -106,7 +142,7 @@ export default function FriendsPage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Executa a busca na API
+  // Executa a busca na API com cancelamento via AbortController
   useEffect(() => {
     if (!debouncedQuery) {
       setSearchResults([]);
@@ -114,29 +150,28 @@ export default function FriendsPage() {
       return;
     }
 
-    let isCancelled = false;
+    const controller = new AbortController();
     setIsSearching(true);
 
     friendsService
-      .searchUsers(debouncedQuery)
+      .searchUsers(debouncedQuery, controller.signal)
       .then((data) => {
-        if (!isCancelled) {
-          setSearchResults(data);
-        }
+        setSearchResults(data);
       })
-      .catch((err) => {
-        if (!isCancelled) {
-          console.error('Erro ao buscar usuários:', err);
+      .catch((err: any) => {
+        if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') {
+          return;
         }
+        console.error('Erro ao buscar usuários:', err);
       })
       .finally(() => {
-        if (!isCancelled) {
+        if (!controller.signal.aborted) {
           setIsSearching(false);
         }
       });
 
     return () => {
-      isCancelled = true;
+      controller.abort();
     };
   }, [debouncedQuery]);
 
@@ -326,7 +361,7 @@ export default function FriendsPage() {
   const pendingReceivedCount = receivedRequests.length;
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
+    <div className="p-4 md:p-8 pb-24 lg:pb-8 max-w-6xl mx-auto space-y-8">
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
         <div>
@@ -343,59 +378,83 @@ export default function FriendsPage() {
 
         {/* Botão de atalho para buscar */}
         <Button
-          onClick={() => setActiveTab('search')}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md cursor-pointer self-start sm:self-auto"
+          onClick={() => handleTabChange('search')}
+          aria-label="Adicionar Amigos"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md cursor-pointer self-start sm:self-auto h-10 sm:h-9 px-4"
         >
           <UserPlus className="w-4 h-4 mr-2" />
           Adicionar Amigos
         </Button>
       </div>
 
-      {/* Navegação por Abas */}
-      <div className="flex items-center gap-2 border-b border-zinc-800 pb-px overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('friends')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'friends'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
+      {/* Navegação por Abas com Indicador de Scroll no Mobile */}
+      <div className="relative">
+        <div
+          className="flex items-center gap-2 border-b border-zinc-800 pb-px overflow-x-auto"
+          role="tablist"
+          aria-label="Abas da página de amigos"
         >
-          <HeartHandshake className="w-4 h-4" />
-          <span>Meus Amigos</span>
-          <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-zinc-800 text-zinc-300">
-            {friends.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('requests')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'requests'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Inbox className="w-4 h-4" />
-          <span>Solicitações</span>
-          {pendingReceivedCount > 0 && (
-            <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-foreground animate-pulse">
-              {pendingReceivedCount}
+          <button
+            role="tab"
+            aria-selected={activeTab === 'friends'}
+            aria-label={`Meus Amigos (${friends.length})`}
+            onClick={() => handleTabChange('friends')}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-3 min-h-[44px] text-sm font-medium border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'friends'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <HeartHandshake className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Meus Amigos</span>
+            <span className="sm:hidden">Amigos</span>
+            <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-zinc-800 text-zinc-300">
+              {friends.length}
             </span>
-          )}
-        </button>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('search')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'search'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Search className="w-4 h-4" />
-          <span>Buscar Usuários</span>
-        </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'requests'}
+            aria-label={`Solicitações de amizade (${pendingReceivedCount} pendentes)`}
+            onClick={() => handleTabChange('requests')}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-3 min-h-[44px] text-sm font-medium border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'requests'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Inbox className="w-4 h-4 shrink-0" />
+            <span>Solicitações</span>
+            {pendingReceivedCount > 0 && (
+              <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-foreground animate-pulse">
+                {pendingReceivedCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            role="tab"
+            aria-selected={activeTab === 'search'}
+            aria-label="Buscar Usuários"
+            onClick={() => handleTabChange('search')}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-3 min-h-[44px] text-sm font-medium border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'search'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Search className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Buscar Usuários</span>
+            <span className="sm:hidden">Buscar</span>
+          </button>
+        </div>
+
+        {/* Gradiente sutil para indicar affordance de rolagem horizontal em telas móveis estreitas */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 bottom-px w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
+        />
       </div>
 
       {/* CONTEÚDO DA ABA 1: MEUS AMIGOS */}
@@ -407,6 +466,9 @@ export default function FriendsPage() {
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
+                  id="friends-filter-input"
+                  name="friends_filter"
+                  aria-label="Filtrar por nome ou @username"
                   value={friendsFilter}
                   onChange={(e) => setFriendsFilter(e.target.value)}
                   placeholder="Filtrar por nome ou @username..."
@@ -440,8 +502,8 @@ export default function FriendsPage() {
                 </p>
               </div>
               <Button
-                onClick={() => setActiveTab('search')}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold cursor-pointer"
+                onClick={() => handleTabChange('search')}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold cursor-pointer h-10 px-4"
               >
                 <Search className="w-4 h-4 mr-2" />
                 Buscar Usuários
@@ -475,8 +537,8 @@ export default function FriendsPage() {
                             @{friend.username}
                           </p>
                         )}
-                        <p className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
-                          <Calendar className="w-3 h-3" />
+                        <p className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-3 h-3 text-zinc-500" />
                           Amigos desde {formatDate(friend.since)}
                         </p>
                       </div>
@@ -487,7 +549,7 @@ export default function FriendsPage() {
                       size="sm"
                       onClick={() => setFriendToRemove(friend)}
                       disabled={processingId === friend.friendship_id}
-                      className="text-zinc-400 hover:text-red-400 hover:bg-red-500/10 h-8 px-2.5 text-xs shrink-0 cursor-pointer"
+                      className="text-zinc-400 hover:text-red-400 hover:bg-red-500/10 h-9 sm:h-8 px-3 text-xs shrink-0 cursor-pointer"
                       title="Desfazer amizade"
                     >
                       <UserX className="w-4 h-4 mr-1.5" />
@@ -549,7 +611,7 @@ export default function FriendsPage() {
                           {req.user.username && (
                             <p className="text-xs text-primary font-mono">@{req.user.username}</p>
                           )}
-                          <p className="text-[11px] text-zinc-500 mt-0.5">
+                          <p className="text-[11px] text-zinc-400 mt-0.5">
                             Enviado em {formatDate(req.created_at)}
                           </p>
                         </div>
@@ -560,7 +622,7 @@ export default function FriendsPage() {
                           size="sm"
                           onClick={() => handleAcceptRequest(req.friendship_id, req.user.name)}
                           disabled={processingId === req.friendship_id}
-                          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-8 text-xs cursor-pointer"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 sm:h-8 px-3.5 sm:px-3 text-xs cursor-pointer"
                         >
                           {processingId === req.friendship_id ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -574,7 +636,7 @@ export default function FriendsPage() {
                           variant="outline"
                           onClick={() => handleRejectRequest(req.friendship_id)}
                           disabled={processingId === req.friendship_id}
-                          className="border-zinc-700 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-zinc-300 h-8 cursor-pointer"
+                          className="border-zinc-700 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-zinc-300 h-9 sm:h-8 px-3.5 sm:px-3 cursor-pointer"
                         >
                           <X className="w-3.5 h-3.5 mr-1.5 text-zinc-400" />
                           Recusar
@@ -619,7 +681,7 @@ export default function FriendsPage() {
                           {req.user.username && (
                             <p className="text-xs text-zinc-400 font-mono">@{req.user.username}</p>
                           )}
-                          <p className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
+                          <p className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
                             <Clock className="w-3 h-3 text-amber-500" /> Aguardando resposta • Enviado em{' '}
                             {formatDate(req.created_at)}
                           </p>
@@ -631,7 +693,7 @@ export default function FriendsPage() {
                         variant="outline"
                         onClick={() => handleCancelRequest(req.friendship_id)}
                         disabled={processingId === req.friendship_id}
-                        className="border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-zinc-400 hover:text-red-400 h-8 self-end sm:self-auto cursor-pointer"
+                        className="border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-zinc-400 hover:text-red-400 h-9 sm:h-8 px-3.5 sm:px-3 self-end sm:self-auto cursor-pointer"
                       >
                         {processingId === req.friendship_id ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -662,11 +724,13 @@ export default function FriendsPage() {
                 <AtSign className="w-4 h-4" />
               </div>
               <Input
+                id="search-user-input"
+                name="search_query"
+                aria-label="Digite o @username ou nome do usuário"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Digite o @username ou nome do usuário..."
-                autoFocus
                 className="pl-9 pr-10 bg-zinc-900/80 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-primary h-11 text-sm font-medium"
               />
               {isSearching && (
@@ -736,7 +800,7 @@ export default function FriendsPage() {
                           {user.username ? (
                             <p className="text-xs text-primary font-mono">@{user.username}</p>
                           ) : (
-                            <p className="text-xs text-zinc-500">Sem @username</p>
+                            <p className="text-xs text-zinc-400">Sem @username</p>
                           )}
                         </div>
                       </Link>
@@ -748,7 +812,7 @@ export default function FriendsPage() {
                             size="sm"
                             onClick={() => handleSendRequest(user)}
                             disabled={processingId === user.id}
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-8 text-xs cursor-pointer"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 sm:h-8 px-3.5 sm:px-3 text-xs cursor-pointer"
                           >
                             {processingId === user.id ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -771,7 +835,7 @@ export default function FriendsPage() {
                                 variant="ghost"
                                 onClick={() => handleCancelRequest(user.friendship_id!)}
                                 disabled={processingId === user.friendship_id}
-                                className="h-8 text-xs text-zinc-400 hover:text-red-400 cursor-pointer"
+                                className="h-9 sm:h-8 px-3 text-xs text-zinc-400 hover:text-red-400 cursor-pointer"
                               >
                                 Cancelar
                               </Button>
@@ -785,7 +849,7 @@ export default function FriendsPage() {
                               size="sm"
                               onClick={() => handleAcceptRequest(user.friendship_id!, user.name)}
                               disabled={processingId === user.friendship_id}
-                              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-8 text-xs cursor-pointer"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 sm:h-8 px-3.5 sm:px-3 text-xs cursor-pointer"
                             >
                               <Check className="w-3.5 h-3.5 mr-1.5" />
                               Aceitar
@@ -795,7 +859,7 @@ export default function FriendsPage() {
                               variant="outline"
                               onClick={() => handleRejectRequest(user.friendship_id!)}
                               disabled={processingId === user.friendship_id}
-                              className="border-zinc-700 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-zinc-300 h-8 cursor-pointer"
+                              className="border-zinc-700 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-zinc-300 h-9 sm:h-8 px-3.5 sm:px-3 cursor-pointer"
                             >
                               <X className="w-3.5 h-3.5 mr-1.5 text-zinc-400" />
                               Recusar
@@ -822,7 +886,7 @@ export default function FriendsPage() {
                                     since: '',
                                   })
                                 }
-                                className="h-8 text-xs text-zinc-400 hover:text-red-400 cursor-pointer"
+                                className="h-9 sm:h-8 px-3 text-xs text-zinc-400 hover:text-red-400 cursor-pointer"
                               >
                                 Desfazer
                               </Button>
@@ -856,7 +920,7 @@ export default function FriendsPage() {
           </DialogHeader>
 
           <DialogFooter className="pt-4 flex gap-2 justify-end">
-            <DialogClose render={<Button type="button" variant="ghost" disabled={!!processingId} />}>
+            <DialogClose render={<Button type="button" variant="ghost" disabled={!!processingId} className="h-10 sm:h-9 cursor-pointer" />}>
               Cancelar
             </DialogClose>
             <Button
@@ -864,7 +928,7 @@ export default function FriendsPage() {
               variant="destructive"
               disabled={!!processingId}
               onClick={handleConfirmRemoveFriend}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold cursor-pointer"
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold cursor-pointer h-10 sm:h-9"
             >
               {processingId ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Confirmar e Desfazer
@@ -873,5 +937,43 @@ export default function FriendsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function FriendsSkeleton() {
+  return (
+    <div className="p-4 md:p-8 pb-24 lg:pb-8 max-w-6xl mx-auto space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
+        <div className="space-y-2">
+          <Skeleton className="w-36 h-8 rounded-lg" />
+          <Skeleton className="w-64 h-4 rounded" />
+        </div>
+        <Skeleton className="w-36 h-10 rounded-lg" />
+      </div>
+      <div className="flex items-center gap-2 border-b border-zinc-800 pb-px">
+        <Skeleton className="w-28 h-10 rounded-t-lg" />
+        <Skeleton className="w-28 h-10 rounded-t-lg" />
+        <Skeleton className="w-28 h-10 rounded-t-lg" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 flex items-center gap-4">
+            <Skeleton className="w-12 h-12 rounded-full" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="w-32 h-4" />
+              <Skeleton className="w-24 h-3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function FriendsPage() {
+  return (
+    <Suspense fallback={<FriendsSkeleton />}>
+      <FriendsContent />
+    </Suspense>
   );
 }
