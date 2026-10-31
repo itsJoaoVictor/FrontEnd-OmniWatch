@@ -56,4 +56,5 @@ export interface FriendFeedResponse {
   page: number;
   limit: number;
   has_more: boolean;
+  next_cursor?: string | null;
 }

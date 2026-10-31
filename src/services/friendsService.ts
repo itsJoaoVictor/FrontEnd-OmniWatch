@@ -57,11 +57,19 @@ export const friendsService = {
   async getFeed(
     page: number = 1,
     limit: number = 20,
-    mediaType?: 'all' | 'movie' | 'tv'
+    mediaType?: 'all' | 'movie' | 'tv',
+    cursor?: string | null,
+    friend?: string | null
   ): Promise<FriendFeedResponse> {
     const params: Record<string, any> = { page, limit };
     if (mediaType && mediaType !== 'all') {
       params.media_type = mediaType;
+    }
+    if (cursor) {
+      params.cursor = cursor;
+    }
+    if (friend) {
+      params.friend = friend;
     }
     const res = await api.get<FriendFeedResponse>('/api/friends/feed', { params });
     return res.data;

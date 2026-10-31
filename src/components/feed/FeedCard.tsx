@@ -16,7 +16,7 @@ import {
   User as UserIcon,
   ExternalLink 
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -25,10 +25,9 @@ interface FeedCardProps {
 }
 
 export function FeedCard({ item }: FeedCardProps) {
-  const { items, addToList } = useMyListStore();
+  const isInMyList = useMyListStore((state) => !!state.items[item.tmdb_id]);
+  const addToList = useMyListStore((state) => state.addToList);
   const [isAdding, setIsAdding] = useState(false);
-
-  const isInMyList = !!items[item.tmdb_id];
 
   const handleAddToList = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -146,10 +145,10 @@ export function FeedCard({ item }: FeedCardProps) {
 
         <div className="flex-1 min-w-0 flex flex-col justify-between py-1 self-stretch">
           <div className="space-y-1.5">
-            <Link href={mediaHref} className="hover:text-primary transition-colors block">
-              <h4 className="font-bold text-base sm:text-lg text-foreground line-clamp-1">
+            <Link href={mediaHref} prefetch={false} className="hover:text-primary transition-colors block">
+              <h3 className="font-bold text-base sm:text-lg text-foreground line-clamp-2 leading-snug">
                 {item.title}
-              </h4>
+              </h3>
             </Link>
 
             {item.episodes_label && (
@@ -167,7 +166,7 @@ export function FeedCard({ item }: FeedCardProps) {
           </div>
 
           {/* Quick Action buttons */}
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center gap-2 pt-2">
             <Button
               size="sm"
               variant={isInMyList ? 'secondary' : 'outline'}
@@ -188,11 +187,14 @@ export function FeedCard({ item }: FeedCardProps) {
               )}
             </Button>
 
-            <Link href={mediaHref}>
-              <Button size="sm" variant="ghost" className="h-8 text-xs gap-1">
-                Detalhes
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Button>
+            <Link
+              href={mediaHref}
+              prefetch={false}
+              aria-label={`Ver detalhes de ${item.title}`}
+              className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'h-8 text-xs gap-1' })}
+            >
+              Detalhes
+              <ExternalLink className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
