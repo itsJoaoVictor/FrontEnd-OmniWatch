@@ -1,33 +1,48 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Search, Film, Loader2, Sparkles } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Search, Film, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { customListsService } from '@/services/customLists';
 import { CustomListSummary } from '@/types/customLists';
 import { CustomListCard } from '@/components/custom_lists/CustomListCard';
 import { CreateEditListModal } from '@/components/custom_lists/CreateEditListModal';
 import { toast } from '@/components/ui/toast';
+import { useCustomListsStore } from '@/store/useCustomListsStore';
+
+function CustomListSkeletonGrid() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <div
+          key={idx}
+          className="rounded-xl overflow-hidden bg-zinc-900/60 border border-zinc-800/80 animate-pulse flex flex-col"
+        >
+          <div className="aspect-[16/9] bg-zinc-800/40 w-full" />
+          <div className="p-4 flex flex-col flex-1 justify-between gap-3">
+            <div>
+              <div className="h-5 bg-zinc-800/70 rounded w-3/4 mb-2" />
+              <div className="h-3 bg-zinc-800/40 rounded w-full mb-1.5" />
+              <div className="h-3 bg-zinc-800/40 rounded w-2/3" />
+            </div>
+            <div className="pt-2 border-t border-zinc-800/60 flex items-center justify-between">
+              <div className="h-3 bg-zinc-800/50 rounded w-16" />
+              <div className="h-3 bg-zinc-800/50 rounded w-12" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function ListsPage() {
-  const [myLists, setMyLists] = useState<CustomListSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { myLists, isLoading, hasLoaded, fetchMyLists, removeList, upsertList } = useCustomListsStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modal create/edit
   const [modalOpen, setModalOpen] = useState(false);
   const [editingList, setEditingList] = useState<CustomListSummary | null>(null);
-
-  const fetchMyLists = useCallback(async () => {
-    try {
-      const data = await customListsService.getMyLists();
-      setMyLists(data);
-    } catch (err) {
-      console.error('Erro ao buscar listas do usuário:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     fetchMyLists();
@@ -64,7 +79,7 @@ export default function ListsPage() {
         description: 'A lista foi removida com sucesso.',
         type: 'info',
       });
-      setMyLists((prev) => prev.filter((l) => l.id !== listId));
+      removeList(listId);
     } catch (err) {
       toast.add({
         title: 'Erro ao excluir',
@@ -75,11 +90,7 @@ export default function ListsPage() {
   };
 
   const handleSuccess = (savedList: CustomListSummary) => {
-    if (editingList) {
-      setMyLists((prev) => prev.map((l) => (l.id === savedList.id ? savedList : l)));
-    } else {
-      setMyLists((prev) => [savedList, ...prev]);
-    }
+    upsertList(savedList);
   };
 
   return (
@@ -123,6 +134,7 @@ export default function ListsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar nas suas listas..."
+              aria-label="Buscar nas suas listas"
               className="w-full bg-zinc-900 border border-zinc-700/80 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
@@ -130,11 +142,8 @@ export default function ListsPage() {
       )}
 
       {/* Content */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-zinc-400 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="text-sm">Carregando listas...</span>
-        </div>
+      {isLoading && !hasLoaded ? (
+        <CustomListSkeletonGrid />
       ) : myLists.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-8 mt-8">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">

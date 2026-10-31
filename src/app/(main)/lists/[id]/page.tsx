@@ -24,6 +24,7 @@ import { CustomListDetail, CustomListItem } from '@/types/customLists';
 import { useMyListStore } from '@/store/useMyListStore';
 import { CustomListItemGrid } from '@/components/custom_lists/CustomListItemGrid';
 import { CustomListItemRow } from '@/components/custom_lists/CustomListItemRow';
+import { VirtualCustomListRows } from '@/components/custom_lists/VirtualCustomListRows';
 import { ListSearchAddBar } from '@/components/custom_lists/ListSearchAddBar';
 import { CreateEditListModal } from '@/components/custom_lists/CreateEditListModal';
 import { EditItemNoteModal } from '@/components/custom_lists/EditItemNoteModal';
@@ -79,7 +80,7 @@ export default function CustomListDetailPage() {
       if (it.media_type === 'tv') tvs++;
       else movies++;
 
-      const tracking = myTrackingItems[it.tmdb_id];
+      const tracking = myTrackingItems[`${it.media_type}_${it.tmdb_id}`] || myTrackingItems[it.tmdb_id];
       if (tracking?.status === 'completed') {
         watched++;
       }
@@ -134,6 +135,17 @@ export default function CustomListDetailPage() {
       items: [...list.items, newItem],
       items_count: list.items.length + 1,
       total_runtime_minutes: (list.total_runtime_minutes || 0) + (newItem.runtime || 0),
+    });
+  };
+
+  const handleItemsAdded = (newItems: CustomListItem[]) => {
+    if (!list || newItems.length === 0) return;
+    const addedRuntime = newItems.reduce((acc, it) => acc + (it.runtime || 0), 0);
+    setList({
+      ...list,
+      items: [...list.items, ...newItems],
+      items_count: list.items.length + newItems.length,
+      total_runtime_minutes: (list.total_runtime_minutes || 0) + addedRuntime,
     });
   };
 
@@ -351,6 +363,7 @@ export default function CustomListDetailPage() {
               listId={list.id}
               existingTmdbIds={existingTmdbIds}
               onItemAdded={handleItemAdded}
+              onItemsAdded={handleItemsAdded}
             />
           ) : (
             <div />
@@ -410,22 +423,15 @@ export default function CustomListDetailPage() {
               onRemove={handleRemoveItem}
             />
           ) : (
-            <div className="space-y-2">
-              {list.items.map((it, idx) => (
-                <CustomListItemRow
-                  key={it.id}
-                  item={it}
-                  index={idx}
-                  totalItems={list.items.length}
-                  isRanked={list.is_ranked}
-                  isOwner={list.is_owner}
-                  onMoveUp={(i) => handleMove(i, 'up')}
-                  onMoveDown={(i) => handleMove(i, 'down')}
-                  onEditNote={(item) => setEditingNoteItem(item)}
-                  onRemove={handleRemoveItem}
-                />
-              ))}
-            </div>
+            <VirtualCustomListRows
+              items={list.items}
+              isRanked={list.is_ranked}
+              isOwner={list.is_owner}
+              onMoveUp={(i) => handleMove(i, 'up')}
+              onMoveDown={(i) => handleMove(i, 'down')}
+              onEditNote={(item) => setEditingNoteItem(item)}
+              onRemove={handleRemoveItem}
+            />
           )}
         </div>
       </div>

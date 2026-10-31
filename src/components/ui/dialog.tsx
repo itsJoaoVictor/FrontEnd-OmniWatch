@@ -65,14 +65,15 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-2.5 right-2.5 size-8 sm:size-7 cursor-pointer"
+                className="absolute top-2.5 right-2.5 size-8 cursor-pointer touch-manipulation"
                 size="icon"
+                aria-label="Fechar"
               />
             }
           >
             <XIcon
             />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">Fechar</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>

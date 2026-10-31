@@ -97,46 +97,57 @@ export function CustomListItemRow({
           poster_path={item.poster_path}
           backdrop_path={item.backdrop_path}
           release_date={item.release_date}
-          className="h-8 w-8 [&>svg]:w-4 [&>svg]:h-4"
+          className="h-9 w-9 min-h-[36px] min-w-[36px] touch-manipulation [&>svg]:w-4 [&>svg]:h-4"
         />
 
         {isOwner && (
           <div className="flex items-center gap-1 border-l border-zinc-800 pl-2">
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               disabled={index === 0}
               onClick={() => onMoveUp && onMoveUp(index)}
-              className="h-8 w-8 text-zinc-400 hover:text-white disabled:opacity-20"
+              className="h-9 w-9 min-h-[36px] min-w-[36px] touch-manipulation text-zinc-400 hover:text-white disabled:opacity-20"
               title="Mover para cima"
+              aria-label="Mover item para cima"
             >
               <ArrowUp className="w-4 h-4" />
             </Button>
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               disabled={index === totalItems - 1}
               onClick={() => onMoveDown && onMoveDown(index)}
-              className="h-8 w-8 text-zinc-400 hover:text-white disabled:opacity-20"
+              className="h-9 w-9 min-h-[36px] min-w-[36px] touch-manipulation text-zinc-400 hover:text-white disabled:opacity-20"
               title="Mover para baixo"
+              aria-label="Mover item para baixo"
             >
               <ArrowDown className="w-4 h-4" />
             </Button>
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               onClick={() => onEditNote && onEditNote(item)}
-              className="h-8 w-8 text-zinc-400 hover:text-primary"
+              className="h-9 w-9 min-h-[36px] min-w-[36px] touch-manipulation text-zinc-400 hover:text-primary"
               title="Editar nota"
+              aria-label="Editar anotação"
             >
               <Edit3 className="w-4 h-4" />
             </Button>
+
+            <div className="h-4 w-px bg-zinc-800 mx-0.5" aria-hidden="true" />
+
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               onClick={() => onRemove && onRemove(item)}
-              className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-950/40"
-              title="Remover"
+              className="h-9 w-9 min-h-[36px] min-w-[36px] touch-manipulation text-red-400 hover:text-red-300 hover:bg-red-950/40"
+              title="Remover da lista"
+              aria-label="Remover item da lista"
             >
               <Trash2 className="w-4 h-4" />
             </Button>

@@ -17,12 +17,14 @@ interface ListSearchAddBarProps {
   listId: string;
   existingTmdbIds: Set<number>;
   onItemAdded: (item: CustomListItem) => void;
+  onItemsAdded?: (items: CustomListItem[]) => void;
 }
 
 export function ListSearchAddBar({
   listId,
   existingTmdbIds,
   onItemAdded,
+  onItemsAdded,
 }: ListSearchAddBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchItem[]>([]);
@@ -336,6 +338,7 @@ export function ListSearchAddBar({
         listId={listId}
         existingTmdbIds={existingTmdbIds}
         onItemAdded={onItemAdded}
+        onItemsAdded={onItemsAdded}
       />
     </>
   );

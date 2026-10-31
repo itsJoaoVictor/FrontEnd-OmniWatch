@@ -126,6 +126,9 @@ export function SearchInput() {
         <input
           ref={inputRef}
           type="text"
+          id="global-header-search-input"
+          name="search_query"
+          aria-label="Buscar títulos, pessoas, gêneros"
           placeholder="Títulos, pessoas, gêneros"
           className={`bg-transparent border-none outline-none text-sm h-full transition-all duration-300 ${
             isExpanded ? "opacity-100 w-full ml-1" : "opacity-0 w-0"

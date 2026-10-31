@@ -62,7 +62,7 @@ export function CustomListCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
 
         {/* Badges on top */}
-        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
+        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-20">
           <div className="flex items-center gap-1.5">
             {list.is_ranked && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/90 text-black backdrop-blur-md shadow">
@@ -96,7 +96,8 @@ export function CustomListCard({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-zinc-400 hover:text-white -mr-2"
+                      aria-label="Opções da lista"
+                      className="h-9 w-9 min-h-[36px] min-w-[36px] text-zinc-400 hover:text-white -mr-2"
                     />
                   }
                 >

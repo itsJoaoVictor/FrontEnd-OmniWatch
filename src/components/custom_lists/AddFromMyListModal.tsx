@@ -33,7 +33,8 @@ interface AddFromMyListModalProps {
   onOpenChange: (open: boolean) => void;
   listId: string;
   existingTmdbIds: Set<number>;
-  onItemAdded: (item: CustomListItem) => void;
+  onItemAdded?: (item: CustomListItem) => void;
+  onItemsAdded?: (items: CustomListItem[]) => void;
 }
 
 type FilterCategory = 'all' | 'favorites' | 'completed' | 'watching' | 'plan_to_watch' | 'movie' | 'tv';
@@ -52,6 +53,7 @@ export function AddFromMyListModal({
   listId,
   existingTmdbIds,
   onItemAdded,
+  onItemsAdded,
 }: AddFromMyListModalProps) {
   const { items, fetchMyList, isLoading } = useMyListStore();
   const [search, setSearch] = useState('');
@@ -120,7 +122,7 @@ export function AddFromMyListModal({
         description: `"${item.title}" foi incluído.`,
         type: 'success',
       });
-      onItemAdded(added);
+      onItemAdded?.(added);
     } catch (error: any) {
       toast.add({
         title: 'Erro ao adicionar',
@@ -153,32 +155,42 @@ export function AddFromMyListModal({
     if (toAdd.length === 0) return;
 
     setIsBulkAdding(true);
-    let successCount = 0;
 
-    for (const item of toAdd) {
-      try {
-        const added = await customListsService.addItemToList(listId, {
-          tmdb_id: item.tmdb_id,
-          media_type: item.media_type,
-          title: item.title || 'Sem título',
-          poster_path: item.poster_path,
-          backdrop_path: item.backdrop_path,
-          release_date: item.release_date,
-        });
-        onItemAdded(added);
-        successCount++;
-      } catch (e) {
-        console.error(e);
+    try {
+      const itemsPayload = toAdd.map((item) => ({
+        tmdb_id: item.tmdb_id,
+        media_type: item.media_type,
+        title: item.title || 'Sem título',
+        poster_path: item.poster_path,
+        backdrop_path: item.backdrop_path,
+        release_date: item.release_date,
+      }));
+
+      const addedItems = await customListsService.addItemsBulkToList(listId, itemsPayload);
+
+      if (onItemsAdded) {
+        onItemsAdded(addedItems);
+      } else if (onItemAdded) {
+        addedItems.forEach((it) => onItemAdded(it));
       }
-    }
 
-    setIsBulkAdding(false);
-    setSelectedIds(new Set());
-    toast.add({
-      title: 'Títulos adicionados!',
-      description: `${successCount} títulos foram adicionados com sucesso à sua lista.`,
-      type: 'success',
-    });
+      setSelectedIds(new Set());
+      toast.add({
+        title: 'Títulos adicionados!',
+        description: `${addedItems.length} títulos foram adicionados com sucesso à sua lista.`,
+        type: 'success',
+      });
+      onOpenChange(false);
+    } catch (e: any) {
+      console.error(e);
+      toast.add({
+        title: 'Erro ao adicionar títulos',
+        description: e?.response?.data?.detail || 'Ocorreu um erro ao adicionar os itens em lote.',
+        type: 'error',
+      });
+    } finally {
+      setIsBulkAdding(false);
+    }
   };
 
   return (
@@ -310,9 +322,25 @@ export function AddFromMyListModal({
               return (
                 <div
                   key={item.tmdb_id}
+                  role="checkbox"
+                  aria-checked={isSelected}
+                  aria-disabled={isInList}
+                  aria-label={
+                    isInList
+                      ? `${item.title || 'Título'} já está na lista`
+                      : `${isSelected ? 'Desmarcar' : 'Selecionar'} ${item.title || 'título'}`
+                  }
+                  tabIndex={isInList ? -1 : 0}
                   onClick={() => !isInList && toggleSelect(item.tmdb_id)}
+                  onKeyDown={(e) => {
+                    if (isInList) return;
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      toggleSelect(item.tmdb_id);
+                    }
+                  }}
                   className={cn(
-                    'flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none',
+                    'flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     isInList
                       ? 'bg-zinc-900/30 border-zinc-800/40 opacity-60 cursor-default'
                       : isSelected

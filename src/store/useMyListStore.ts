@@ -44,7 +44,7 @@ export interface EpisodeProgress {
 }
 
 interface MyListStore {
-  items: Record<number, SavedItem>;
+  items: Record<string | number, SavedItem>;
   episodeProgress: Record<number, EpisodeProgress[]>;
   isLoading: boolean;
   fetchMyList: () => Promise<void>;
@@ -110,7 +110,7 @@ export const useMyListStore = create<MyListStore>()(
               return;
             }
 
-            const itemsMap: Record<number, SavedItem> = {};
+            const itemsMap: Record<string | number, SavedItem> = {};
             const newCorrections: Record<number, { season: number; episode: number }> = {};
             
             rawList.forEach((item: any) => {
@@ -118,14 +118,15 @@ export const useMyListStore = create<MyListStore>()(
               const parsedTmdbId = typeof rawTmdbId === 'string' ? parseInt(rawTmdbId, 10) : Number(rawTmdbId);
               const tmdbId = (!isNaN(parsedTmdbId) && parsedTmdbId > 0) ? parsedTmdbId : (typeof item.id === 'number' ? item.id : undefined);
               if (tmdbId) {
-                itemsMap[tmdbId] = {
+                const mediaType = item.media?.media_type || item.media_type || 'movie';
+                const savedItem: SavedItem = {
                   id: item.id?.toString() || String(tmdbId),
                   tmdb_id: tmdbId,
                   status: item.status || 'plan_to_watch',
                   rating: item.rating,
                   rewatch_count: item.rewatch_count ?? 0,
                   is_favorite: Boolean(item.is_favorite),
-                  media_type: item.media?.media_type || item.media_type || 'movie',
+                  media_type: mediaType,
                   title: item.media?.title || item.title || 'Título Desconhecido',
                   poster_path: item.media?.poster_path || item.poster_path,
                   backdrop_path: item.media?.backdrop_path || item.backdrop_path,
@@ -134,6 +135,9 @@ export const useMyListStore = create<MyListStore>()(
                   is_up_to_date: item.is_up_to_date !== undefined ? item.is_up_to_date : null,
                   next_episode: item.next_episode || null,
                 };
+                itemsMap[tmdbId] = savedItem;
+                // Chave composta polimórfica: previne colisão entre filmes e séries com o mesmo tmdb_id
+                itemsMap[`${mediaType}_${tmdbId}`] = savedItem;
 
                 // Sincroniza o cache local com a resposta oficial do backend
                 if (item.is_up_to_date === true) {

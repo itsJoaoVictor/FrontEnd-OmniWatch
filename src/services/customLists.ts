@@ -6,6 +6,7 @@ import {
   CustomListUpdateInput,
   CustomListItemCreateInput,
   CustomListItem,
+  CustomListItemsPaged,
   MediaListMembership,
 } from '@/types/customLists';
 
@@ -17,6 +18,16 @@ export const customListsService = {
 
   async getListDetail(id: string): Promise<CustomListDetail> {
     const res = await api.get<CustomListDetail>(`/api/custom-lists/${id}`);
+    return res.data;
+  },
+
+  async getListItemsPaged(
+    id: string,
+    params?: { cursor?: number; limit?: number }
+  ): Promise<CustomListItemsPaged> {
+    const res = await api.get<CustomListItemsPaged>(`/api/custom-lists/${id}/items`, {
+      params,
+    });
     return res.data;
   },
 
@@ -36,6 +47,14 @@ export const customListsService = {
 
   async addItemToList(listId: string, item: CustomListItemCreateInput): Promise<CustomListItem> {
     const res = await api.post<CustomListItem>(`/api/custom-lists/${listId}/items`, item);
+    return res.data;
+  },
+
+  async addItemsBulkToList(
+    listId: string,
+    items: CustomListItemCreateInput[]
+  ): Promise<CustomListItem[]> {
+    const res = await api.post<CustomListItem[]>(`/api/custom-lists/${listId}/items/bulk`, { items });
     return res.data;
   },
 

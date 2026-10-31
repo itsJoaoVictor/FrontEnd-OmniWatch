@@ -99,7 +99,7 @@ export function CreateEditListModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800 text-white">
+      <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800 text-white max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
             {listToEdit ? 'Editar Lista' : 'Criar Nova Lista'}
@@ -108,10 +108,12 @@ export function CreateEditListModal({
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-300">
+            <label htmlFor="custom-list-title" className="text-sm font-medium text-zinc-300">
               Nome da Lista <span className="text-primary">*</span>
             </label>
             <Input
+              id="custom-list-title"
+              name="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex: Indicados ao Oscar 2025, Melhores de Sci-Fi..."
@@ -122,8 +124,10 @@ export function CreateEditListModal({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-300">Descrição (opcional)</label>
+            <label htmlFor="custom-list-description" className="text-sm font-medium text-zinc-300">Descrição (opcional)</label>
             <textarea
+              id="custom-list-description"
+              name="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Adicione uma breve descrição sobre o tema da lista..."
@@ -135,8 +139,10 @@ export function CreateEditListModal({
           </div>
 
           <div className="space-y-3 pt-2 border-t border-zinc-800">
-            <label className="flex items-start gap-3 cursor-pointer group">
+            <label htmlFor="custom-list-is-ranked" className="flex items-start gap-3 cursor-pointer group">
               <input
+                id="custom-list-is-ranked"
+                name="is_ranked"
                 type="checkbox"
                 checked={isRanked}
                 onChange={(e) => setIsRanked(e.target.checked)}

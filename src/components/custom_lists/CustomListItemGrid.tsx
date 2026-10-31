@@ -32,7 +32,7 @@ export function CustomListItemGrid({
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
       {items.map((item, index) => {
-        const myItem = myItems[item.tmdb_id];
+        const myItem = myItems[`${item.media_type}_${item.tmdb_id}`] || myItems[item.tmdb_id];
         const isWatched = myItem?.status === 'completed';
         const mediaHref = item.media_type === 'tv' ? `/tv/${item.tmdb_id}` : `/movie/${item.tmdb_id}`;
 
@@ -75,46 +75,70 @@ export function CustomListItemGrid({
 
               {/* Owner quick action controls overlay */}
               {isOwner && (
-                <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between gap-1 z-20">
-                  <div className="flex items-center gap-0.5">
+                <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/95 via-black/75 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-between gap-1 z-20">
+                  <div className="flex items-center gap-1">
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
                       disabled={index === 0}
-                      onClick={() => onMoveUp && onMoveUp(index)}
-                      className="h-7 w-7 text-white hover:bg-white/20 disabled:opacity-30"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onMoveUp && onMoveUp(index);
+                      }}
+                      className="h-8 w-8 md:h-7 md:w-7 text-white hover:bg-white/20 disabled:opacity-30 touch-manipulation"
                       title="Mover para cima"
+                      aria-label="Mover item para cima"
                     >
                       <ArrowUp className="w-3.5 h-3.5" />
                     </Button>
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
                       disabled={index === items.length - 1}
-                      onClick={() => onMoveDown && onMoveDown(index)}
-                      className="h-7 w-7 text-white hover:bg-white/20 disabled:opacity-30"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onMoveDown && onMoveDown(index);
+                      }}
+                      className="h-8 w-8 md:h-7 md:w-7 text-white hover:bg-white/20 disabled:opacity-30 touch-manipulation"
                       title="Mover para baixo"
+                      aria-label="Mover item para baixo"
                     >
                       <ArrowDown className="w-3.5 h-3.5" />
                     </Button>
                   </div>
 
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-1">
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => onEditNote && onEditNote(item)}
-                      className="h-7 w-7 text-zinc-300 hover:text-primary hover:bg-white/20"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onEditNote && onEditNote(item);
+                      }}
+                      className="h-8 w-8 md:h-7 md:w-7 text-zinc-300 hover:text-primary hover:bg-white/20 touch-manipulation"
                       title="Editar anotação"
+                      aria-label="Editar anotação do item"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                     </Button>
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => onRemove && onRemove(item)}
-                      className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-950/50"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onRemove && onRemove(item);
+                      }}
+                      className="h-8 w-8 md:h-7 md:w-7 text-red-400 hover:text-red-300 hover:bg-red-950/50 touch-manipulation"
                       title="Remover da lista"
+                      aria-label="Remover item da lista"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>

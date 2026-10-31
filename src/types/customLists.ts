@@ -35,6 +35,13 @@ export interface CustomListDetail extends CustomListSummary {
   is_owner: boolean;
 }
 
+export interface CustomListItemsPaged {
+  items: CustomListItem[];
+  next_cursor: number | null;
+  has_more: boolean;
+  total_count: number;
+}
+
 export interface CustomListCreateInput {
   title: string;
   description?: string;
