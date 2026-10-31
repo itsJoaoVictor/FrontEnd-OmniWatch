@@ -442,7 +442,7 @@ function CalendarContent() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filtrar lançamentos..."
-                className="w-full bg-card border border-border rounded-xl pl-9 pr-8 py-2 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+                className="w-full bg-card border border-border rounded-xl pl-9 pr-8 py-2 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm"
               />
               {searchQuery && (
                 <button
@@ -463,15 +463,15 @@ function CalendarContent() {
               <button
                 type="button"
                 onClick={() => handleFilterChange('all')}
-                className={`flex items-center gap-2 min-h-[42px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
+                className={`flex items-center gap-2 min-h-[42px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   mediaFilter === 'all'
-                    ? 'bg-red-600 border-red-500 text-white shadow-sm'
+                    ? 'bg-primary border-primary text-primary-foreground shadow-sm'
                     : 'bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border'
                 }`}
               >
                 <span>Todos</span>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                  mediaFilter === 'all' ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
+                  mediaFilter === 'all' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
                 }`}>
                   {counts.all}
                 </span>

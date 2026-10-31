@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, .theme-netflix *, .theme-anime *, .theme-ocean *));
 
 @theme inline {
   --color-background: var(--background);
@@ -121,72 +121,120 @@
 .theme-netflix {
   --background: oklch(0.1 0 0);
   --foreground: oklch(0.985 0 0);
-  --primary: oklch(0.5 0.2 20); /* Red */
+  --primary: oklch(0.55 0.22 25); /* Netflix Red */
   --primary-foreground: oklch(0.985 0 0);
-  --card: oklch(0.15 0 0);
+  --card: oklch(0.14 0 0);
   --card-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 15%);
-  --input: oklch(1 0 0 / 20%);
-  --ring: oklch(0.5 0.2 20);
+  --popover: oklch(0.14 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.2 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.2 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.22 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.55 0.22 25);
 }
 .theme-netflix.light, .light.theme-netflix {
   --background: oklch(0.98 0 0);
   --foreground: oklch(0.145 0 0);
-  --primary: oklch(0.5 0.2 20); /* Red */
+  --primary: oklch(0.55 0.22 25); /* Netflix Red */
   --primary-foreground: oklch(0.985 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.5 0.2 20);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0.2 0 0);
+  --muted: oklch(0.94 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.92 0 0);
+  --accent-foreground: oklch(0.145 0 0);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.88 0 0);
+  --ring: oklch(0.55 0.22 25);
 }
 
-/* THEME: ANIME (Purple & Neon Pink) */
+/* THEME: ANIME (Purple & Neon Pink/Magenta) */
 .theme-anime {
-  --background: oklch(0.15 0.05 300);
+  --background: oklch(0.14 0.05 300);
   --foreground: oklch(0.985 0 0);
-  --primary: oklch(0.6 0.25 320); /* Neon Pink/Purple */
+  --primary: oklch(0.65 0.26 320); /* Neon Magenta/Purple */
   --primary-foreground: oklch(0.985 0 0);
-  --card: oklch(0.2 0.05 300);
+  --card: oklch(0.18 0.05 300);
   --card-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 15%);
-  --input: oklch(1 0 0 / 20%);
-  --ring: oklch(0.6 0.25 320);
+  --popover: oklch(0.18 0.05 300);
+  --popover-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.24 0.06 300);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.22 0.05 300);
+  --muted-foreground: oklch(0.75 0.04 300);
+  --accent: oklch(0.26 0.07 300);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.65 0.26 320 / 22%);
+  --input: oklch(0.65 0.26 320 / 25%);
+  --ring: oklch(0.65 0.26 320);
 }
 .theme-anime.light, .light.theme-anime {
-  --background: oklch(0.99 0 300);
-  --foreground: oklch(0.2 0 300);
-  --primary: oklch(0.6 0.2 300); /* Purple */
+  --background: oklch(0.98 0.01 300);
+  --foreground: oklch(0.18 0.04 300);
+  --primary: oklch(0.58 0.24 315); /* Deep Magenta */
   --primary-foreground: oklch(0.985 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0 300);
-  --border: oklch(0.9 0.05 300);
-  --input: oklch(0.9 0.05 300);
-  --ring: oklch(0.6 0.2 300);
+  --card-foreground: oklch(0.18 0.04 300);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.04 300);
+  --secondary: oklch(0.94 0.02 300);
+  --secondary-foreground: oklch(0.2 0.04 300);
+  --muted: oklch(0.94 0.02 300);
+  --muted-foreground: oklch(0.5 0.03 300);
+  --accent: oklch(0.92 0.03 300);
+  --accent-foreground: oklch(0.18 0.04 300);
+  --border: oklch(0.88 0.04 300);
+  --input: oklch(0.88 0.04 300);
+  --ring: oklch(0.58 0.24 315);
 }
 
-/* THEME: OCEAN (Deep Blue) */
+/* THEME: OCEAN (Deep Oceanic Blue) */
 .theme-ocean {
   --background: oklch(0.12 0.05 250);
   --foreground: oklch(0.985 0 0);
-  --primary: oklch(0.6 0.2 250); /* Bright Blue */
+  --primary: oklch(0.62 0.22 245); /* Electric Ocean Blue */
   --primary-foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0.05 250);
+  --card: oklch(0.16 0.05 250);
   --card-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 15%);
-  --input: oklch(1 0 0 / 20%);
-  --ring: oklch(0.6 0.2 250);
+  --popover: oklch(0.16 0.05 250);
+  --popover-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0.06 250);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.20 0.05 250);
+  --muted-foreground: oklch(0.72 0.05 250);
+  --accent: oklch(0.24 0.06 250);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.62 0.22 245 / 22%);
+  --input: oklch(0.62 0.22 245 / 25%);
+  --ring: oklch(0.62 0.22 245);
 }
 .theme-ocean.light, .light.theme-ocean {
-  --background: oklch(0.98 0.02 240);
+  --background: oklch(0.98 0.01 240);
   --foreground: oklch(0.15 0.05 240);
-  --primary: oklch(0.5 0.15 250); /* Blue */
+  --primary: oklch(0.52 0.18 245); /* Deep Oceanic Blue */
   --primary-foreground: oklch(0.985 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.15 0.05 240);
-  --border: oklch(0.9 0.05 240);
-  --input: oklch(0.9 0.05 240);
-  --ring: oklch(0.5 0.15 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.05 240);
+  --secondary: oklch(0.93 0.02 240);
+  --secondary-foreground: oklch(0.18 0.05 240);
+  --muted: oklch(0.93 0.02 240);
+  --muted-foreground: oklch(0.48 0.04 240);
+  --accent: oklch(0.90 0.03 240);
+  --accent-foreground: oklch(0.15 0.05 240);
+  --border: oklch(0.86 0.04 240);
+  --input: oklch(0.86 0.04 240);
+  --ring: oklch(0.52 0.18 245);
 }
 @layer base {
   * {

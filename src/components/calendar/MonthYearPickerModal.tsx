@@ -59,7 +59,7 @@ export function MonthYearPickerModal({
 
         <DialogHeader className="text-left mb-2">
           <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-red-500" />
+            <CalendarIcon className="w-4 h-4 text-primary" />
             <DialogTitle className="text-lg font-bold text-foreground">Escolher Mês e Ano</DialogTitle>
           </div>
         </DialogHeader>
@@ -99,7 +99,7 @@ export function MonthYearPickerModal({
               onClick={() => setSelectedYear(year)}
               className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
                 selectedYear === year
-                  ? 'bg-red-600 text-white shadow-sm'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border border-border'
               }`}
             >
@@ -120,9 +120,9 @@ export function MonthYearPickerModal({
                 onClick={() => handleSelect(idx)}
                 className={`min-h-[42px] sm:min-h-[36px] py-2 px-1 text-xs font-semibold rounded-lg transition-all border text-center flex items-center justify-center ${
                   isSelected
-                    ? 'bg-red-600 border-red-500 text-white font-bold shadow-md'
+                    ? 'bg-primary border-primary text-primary-foreground font-bold shadow-md'
                     : isCurrentMonthNow
-                    ? 'bg-muted border-red-500/50 text-red-500 hover:bg-muted/80'
+                    ? 'bg-muted border-primary/50 text-primary hover:bg-muted/80'
                     : 'bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border'
                 }`}
               >

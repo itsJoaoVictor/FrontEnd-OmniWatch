@@ -84,15 +84,15 @@ export function CalendarListView({
   if (releases.length === 0) {
     return (
       <div className="bg-card rounded-2xl p-8 sm:p-12 border border-border text-center max-w-lg mx-auto shadow-lg">
-        <div className="w-16 h-16 rounded-2xl bg-red-600/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
-          <CalendarX2 className="w-8 h-8 text-red-500" />
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
+          <CalendarX2 className="w-8 h-8 text-primary" />
         </div>
         <h3 className="text-xl font-bold text-foreground mb-2">Nenhum lançamento encontrado</h3>
         <p className="text-muted-foreground text-sm leading-relaxed mb-6">
           Você não possui filmes ou novos episódios agendados para este filtro. Explore novos títulos e adicione à sua lista para acompanhar seu calendário pessoal!
         </p>
         <Link href="/explore">
-          <Button className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2.5 rounded-xl shadow-md transition-all inline-flex items-center gap-2">
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-2.5 rounded-xl shadow-md transition-all inline-flex items-center gap-2">
             <Compass className="w-4 h-4" />
             Explorar Novos Títulos
           </Button>
@@ -108,7 +108,7 @@ export function CalendarListView({
           {/* Timeline Month Header */}
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-border/80">
             <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-600 shadow-sm" />
+              <span className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm" />
               <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
                 {group.monthLabel}
               </h2>
@@ -141,7 +141,7 @@ export function CalendarListView({
                       handleOpenEvent(release);
                     }
                   }}
-                  className="flex items-center gap-3 md:gap-4 bg-muted/30 hover:bg-muted/70 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 p-3 rounded-xl border border-border dark:border-zinc-700/60 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                  className="flex items-center gap-3 md:gap-4 bg-muted/40 hover:bg-muted/80 p-3 rounded-xl border border-border transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   {/* Date Block */}
                   <div className="flex-shrink-0 w-16 md:w-20 text-center py-1 px-1 rounded-lg bg-card/80 border border-border">
@@ -172,7 +172,7 @@ export function CalendarListView({
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-foreground text-base md:text-lg group-hover:text-red-500 transition-colors truncate">
+                    <h3 className="font-bold text-foreground text-base md:text-lg group-hover:text-primary transition-colors truncate">
                       {release.media.title}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">

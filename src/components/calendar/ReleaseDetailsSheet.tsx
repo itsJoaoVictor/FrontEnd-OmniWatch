@@ -40,7 +40,7 @@ export function ReleaseDetailsSheet({ isOpen, onClose, release }: ReleaseDetails
               {isMovie ? 'Filme' : 'Série'}
             </span>
             {!isMovie && release.season_number != null && release.episode_number != null && (
-              <span className="text-[10px] text-red-500 dark:text-red-400 font-semibold">
+              <span className="text-[10px] text-primary font-semibold">
                 Temporada {release.season_number} • Ep. {release.episode_number}
               </span>
             )}
@@ -87,7 +87,7 @@ export function ReleaseDetailsSheet({ isOpen, onClose, release }: ReleaseDetails
                 ? `/tv/${release.media.tmdb_id}/season/${release.season_number}/episode/${release.episode_number}`
                 : `/${release.media.media_type}/${release.media.tmdb_id}`
             }
-            className="min-h-[42px] sm:min-h-[36px] inline-flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-xs sm:text-sm px-4 shadow-sm transition-colors"
+            className="min-h-[42px] sm:min-h-[36px] inline-flex items-center justify-center rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs sm:text-sm px-4 shadow-sm transition-colors"
           >
             Ver Detalhes
           </Link>

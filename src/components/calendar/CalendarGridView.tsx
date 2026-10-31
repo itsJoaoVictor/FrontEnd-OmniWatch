@@ -234,11 +234,11 @@ export function CalendarGridView({
               }}
               aria-label={formattedDayLabel}
               aria-selected={isSelected}
-              className={`min-h-[52px] md:h-28 rounded-xl p-1 md:p-1.5 border text-left transition-all cursor-pointer flex flex-col justify-between md:justify-start relative outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:z-10 ${
+              className={`min-h-[52px] md:h-28 rounded-xl p-1 md:p-1.5 border text-left transition-all cursor-pointer flex flex-col justify-between md:justify-start relative outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:z-10 ${
                 isSelected
-                  ? 'bg-muted border-red-500 ring-2 ring-red-500/40 shadow-lg'
+                  ? 'bg-muted border-primary ring-2 ring-primary/40 shadow-lg'
                   : isToday
-                  ? 'bg-muted/90 border-red-500/60 ring-1 ring-red-500/30'
+                  ? 'bg-muted/90 border-primary/60 ring-1 ring-primary/30'
                   : 'bg-card hover:bg-muted/60 border-border'
               }`}
             >
@@ -248,16 +248,16 @@ export function CalendarGridView({
                   <span
                     className={`text-xs font-bold flex items-center justify-center transition-colors ${
                       isToday
-                        ? 'w-5 h-5 md:w-6 md:h-6 rounded-full bg-red-600 text-white shadow-sm font-black'
+                        ? 'w-5 h-5 md:w-6 md:h-6 rounded-full bg-primary text-primary-foreground shadow-sm font-black'
                         : isSelected
-                        ? 'text-red-500 font-bold'
+                        ? 'text-primary font-bold'
                         : 'text-muted-foreground'
                     }`}
                   >
                     {d}
                   </span>
                   {isToday && (
-                    <span className="hidden lg:inline-block text-[10px] uppercase font-bold text-red-500 tracking-wider">
+                    <span className="hidden lg:inline-block text-[10px] uppercase font-bold text-primary tracking-wider">
                       Hoje
                     </span>
                   )}
@@ -287,7 +287,7 @@ export function CalendarGridView({
                       );
                     })}
                     {dayReleases.length > 3 && (
-                      <span className="text-[9px] font-bold text-red-400 leading-none">
+                      <span className="text-[9px] font-bold text-primary leading-none">
                         +{dayReleases.length - 3}
                       </span>
                     )}
@@ -315,15 +315,15 @@ export function CalendarGridView({
                           handleOpenEvent(release);
                         }
                       }}
-                      className={`text-left text-xs rounded p-1 truncate transition-colors flex items-center gap-1.5 border cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-white ${
+                      className={`text-left text-xs rounded p-1 truncate transition-colors flex items-center gap-1.5 border cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary ${
                         !isTv
-                          ? 'bg-sky-500/15 hover:bg-sky-500/25 text-sky-200 border-sky-500/25'
-                          : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border-amber-500/25'
+                          ? 'bg-sky-500/15 hover:bg-sky-500/25 text-sky-700 dark:text-sky-200 border-sky-500/25'
+                          : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-200 border-amber-500/25'
                       }`}
                       title={`${isTv ? 'Série' : 'Filme'}: ${release.media.title}${release.title ? ` • ${release.title}` : ''}`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${!isTv ? 'bg-sky-400' : 'bg-amber-400'}`} />
-                      <span className="truncate font-medium text-zinc-100 flex-1 text-[11px]">
+                      <span className="truncate font-medium text-foreground flex-1 text-[11px]">
                         {release.media.title}
                       </span>
                       {isTv && release.season_number != null && release.episode_number != null ? (
@@ -348,8 +348,8 @@ export function CalendarGridView({
       {releases.length === 0 && (
         <div className="mt-4 p-4 sm:p-5 bg-muted/40 rounded-xl border border-border text-center flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-left">
-            <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center shrink-0">
-              <CalendarX2 className="w-5 h-5 text-red-500" />
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <CalendarX2 className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-foreground">Nenhum lançamento previsto para este mês</h2>
@@ -357,7 +357,7 @@ export function CalendarGridView({
             </div>
           </div>
           <Link href="/explore">
-            <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-4 py-2 rounded-lg shrink-0 inline-flex items-center gap-1.5 shadow-sm">
+            <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs px-4 py-2 rounded-lg shrink-0 inline-flex items-center gap-1.5 shadow-sm">
               <Compass className="w-3.5 h-3.5" />
               Explorar Catálogo
             </Button>
@@ -396,7 +396,7 @@ export function CalendarGridView({
             )}
           </h2>
           {selectedDayReleases.length > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/15 text-red-500 dark:text-red-400 border border-red-500/30 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium">
               {selectedDayReleases.length} {selectedDayReleases.length === 1 ? 'evento' : 'eventos'}
             </span>
           )}
@@ -419,7 +419,7 @@ export function CalendarGridView({
                         handleOpenEvent(release);
                       }
                     }}
-                    className="flex items-center gap-3 p-2.5 rounded-xl bg-card hover:bg-muted/70 border border-border active:scale-[0.99] transition-all cursor-pointer min-h-[56px] outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                    className="flex items-center gap-3 p-2.5 rounded-xl bg-card hover:bg-muted/70 border border-border active:scale-[0.99] transition-all cursor-pointer min-h-[56px] outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     {release.media.poster_path ? (
                       <img
@@ -453,7 +453,7 @@ export function CalendarGridView({
                         )}
                       </div>
                     </div>
-                    <span className="text-xs font-semibold px-2 py-1 shrink-0 text-red-500 inline-flex items-center gap-1">
+                    <span className="text-xs font-semibold px-2 py-1 shrink-0 text-primary inline-flex items-center gap-1">
                       Ver <ChevronRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
@@ -468,7 +468,7 @@ export function CalendarGridView({
               <div className="py-6 px-4 text-center bg-muted/30 rounded-xl border border-border flex flex-col items-center justify-center">
                 <CalendarX2 className="w-6 h-6 text-muted-foreground mb-1.5" />
                 <p className="text-xs text-muted-foreground">Nenhum lançamento previsto para este dia.</p>
-                <Link href="/explore" className="text-xs text-red-500 hover:text-red-600 font-semibold mt-2 inline-flex items-center gap-1">
+                <Link href="/explore" className="text-xs text-primary hover:text-primary/80 font-semibold mt-2 inline-flex items-center gap-1">
                   <Compass className="w-3.5 h-3.5" />
                   Explorar novos títulos &rarr;
                 </Link>
