@@ -290,15 +290,15 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
                   {/* Posição com medalhas para o top 3 */}
                   <div className="w-6 text-center font-bold shrink-0">
                     {rank === 1 ? (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-extrabold">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/50 text-[10px] font-extrabold shadow-sm shadow-amber-500/20">
                         1º
                       </span>
                     ) : rank === 2 ? (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-400/20 text-slate-300 border border-slate-400/30 text-[10px] font-extrabold">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-300/20 text-slate-200 border border-slate-300/40 text-[10px] font-extrabold shadow-sm shadow-slate-400/10">
                         2º
                       </span>
                     ) : rank === 3 ? (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-700/20 text-amber-600 border border-amber-700/30 text-[10px] font-extrabold">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-900/30 text-amber-500 border border-amber-700/50 text-[10px] font-extrabold shadow-sm shadow-amber-800/10">
                         3º
                       </span>
                     ) : (
@@ -461,15 +461,15 @@ export function StatsMediaRankingTable({ mediaType, period }: StatsMediaRankingT
                     {/* Posição com medalhas para o top 3 */}
                     <td className="py-3 px-3 sm:px-4 text-center font-bold">
                       {rank === 1 ? (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-extrabold shadow-sm shadow-amber-500/10">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/50 text-xs font-extrabold shadow-sm shadow-amber-500/20">
                           1º
                         </span>
                       ) : rank === 2 ? (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-400/20 text-slate-300 border border-slate-400/30 text-xs font-extrabold">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300/20 text-slate-200 border border-slate-300/40 text-xs font-extrabold shadow-sm shadow-slate-400/10">
                           2º
                         </span>
                       ) : rank === 3 ? (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700/20 text-amber-600 border border-amber-700/30 text-xs font-extrabold">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-900/30 text-amber-500 border border-amber-700/50 text-xs font-extrabold shadow-sm shadow-amber-800/10">
                           3º
                         </span>
                       ) : (

@@ -403,15 +403,15 @@ export function StatsTalentRankingTable({
                   {/* Badge de Posição */}
                   <div className="w-6 text-center font-bold text-xs shrink-0">
                     {item.rank === 1 ? (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px]">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/50 text-[11px] font-extrabold shadow-sm shadow-amber-500/20">
                         1º
                       </span>
                     ) : item.rank === 2 ? (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300/20 text-slate-200 border border-slate-300/40 text-[11px]">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-300/20 text-slate-200 border border-slate-300/40 text-[11px] font-extrabold shadow-sm shadow-slate-400/10">
                         2º
                       </span>
                     ) : item.rank === 3 ? (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700/20 text-amber-500 border border-amber-700/40 text-[11px]">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-900/30 text-amber-500 border border-amber-700/50 text-[11px] font-extrabold shadow-sm shadow-amber-800/10">
                         3º
                       </span>
                     ) : (
@@ -539,15 +539,15 @@ export function StatsTalentRankingTable({
                     {/* Medalha ou Posição */}
                     <td className="py-3.5 px-3 sm:px-4 text-center font-bold">
                       {item.rank === 1 ? (
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs shadow-sm">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/50 text-xs font-black shadow-sm shadow-amber-500/20">
                           <Trophy className="w-3.5 h-3.5 mr-0.5" /> 1
                         </span>
                       ) : item.rank === 2 ? (
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-300/20 text-slate-200 border border-slate-300/40 text-xs shadow-sm">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-300/20 text-slate-200 border border-slate-300/40 text-xs font-black shadow-sm shadow-slate-400/10">
                           2
                         </span>
                       ) : item.rank === 3 ? (
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-700/20 text-amber-500 border border-amber-700/40 text-xs shadow-sm">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-900/30 text-amber-500 border border-amber-700/50 text-xs font-black shadow-sm shadow-amber-800/10">
                           3
                         </span>
                       ) : (

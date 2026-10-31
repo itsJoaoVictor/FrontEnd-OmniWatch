@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
-import { Globe, Compass, Sparkles, Award, Clapperboard, Film, Tv, Flame } from 'lucide-react';
+import { Globe, Compass, Sparkles, Award, Clapperboard, Film, Tv, Flame, Share2, Check } from 'lucide-react';
 import { StatisticsResponse, MediaTypeFilter, PeriodFilter } from './types';
 import { formatWatchTime, formatSimpleDuration } from './StatsKpiCards';
 
@@ -67,9 +67,19 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
     focusDesc = `${completionRate}% de taxa de conclusão da sua fila, mantendo ótimo ritmo de encerramento.`;
   }
 
+  const [copied, setCopied] = React.useState(false);
+
+  const handleShareHighlights = () => {
+    const timeFormatted = totalDays > 0 ? `${totalDays} dias` : `${Math.floor(totalMinutes / 60)}h`;
+    const summary = `✨ OmniWatch Highlights | ${timeFormatted} assistidos • Perfil: ${dnaTitle} (${dnaBadge}) • Conclusão: ${completionRate}%!`;
+    navigator.clipboard.writeText(summary);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Sparkles className="w-4 h-4" />
@@ -78,7 +88,27 @@ export function StatsHighlights({ data, mediaType = 'all' }: StatsHighlightsProp
             OmniWatch Highlights
           </h2>
         </div>
-        <span className="text-[11px] text-zinc-500 hidden sm:inline">Insights baseados no seu consumo</span>
+        <div className="flex items-center gap-2.5">
+          <span className="text-[11px] text-zinc-500 hidden sm:inline">Insights baseados no seu consumo</span>
+          <button
+            type="button"
+            onClick={handleShareHighlights}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer"
+            title="Compartilhar Destaques"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-400 font-semibold">Copiado!</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="w-3.5 h-3.5 text-amber-400" />
+                <span>Compartilhar</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

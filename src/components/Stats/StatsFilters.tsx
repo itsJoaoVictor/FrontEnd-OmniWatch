@@ -58,7 +58,7 @@ export function StatsFilters({
 
       {/* Seletor de Período */}
       <div className="relative group/period min-w-0 max-w-full">
-        <div className="flex items-center gap-1 overflow-x-auto scroll-smooth scrollbar-none p-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl max-w-full">
+        <div className="flex items-center gap-1 overflow-x-auto scroll-smooth scrollbar-none p-1 pr-6 md:pr-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl max-w-full touch-pan-x">
           <div className="items-center pl-2 pr-1 text-zinc-500 text-xs hidden lg:flex shrink-0">
             <Calendar className="w-3.5 h-3.5 mr-1" />
             <span>Período:</span>
@@ -82,7 +82,7 @@ export function StatsFilters({
           })}
         </div>
         {/* Indicador de scroll horizontal sutil no mobile / tablet */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-zinc-900/90 to-transparent rounded-r-xl md:hidden" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-950 via-zinc-950/80 to-transparent rounded-r-xl md:hidden" />
       </div>
     </div>
   );

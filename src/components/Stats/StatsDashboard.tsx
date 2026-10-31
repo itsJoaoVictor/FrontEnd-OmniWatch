@@ -194,7 +194,7 @@ export function StatsDashboard() {
   if (!data) return null;
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-16">
+    <div className="space-y-6 pb-32 sm:pb-20">
       {/* Barra de Filtros no Topo */}
       <StatsFilters
         period={period}

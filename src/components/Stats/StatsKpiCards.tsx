@@ -60,6 +60,10 @@ export function StatsKpiCards({ data, mediaType = 'all' }: StatsKpiCardsProps) {
     return [...valid].sort((a, b) => (b.avgRating! - a.avgRating!) || (b.count - a.count))[0];
   }, [data]);
 
+  const rawDailyMins = kpis?.dailyAverageMinutes ?? 0;
+  const safeDailyMins = Math.min(rawDailyMins, 1440);
+  const safeWeeklyMins = kpis?.weeklyAverageMinutes ? Math.min(kpis.weeklyAverageMinutes, 1440 * 7) : safeDailyMins * 7;
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
       {/* 1. Hero Card: Tempo Assistido (Spans 2 cols on mobile) */}
@@ -210,14 +214,14 @@ export function StatsKpiCards({ data, mediaType = 'all' }: StatsKpiCardsProps) {
           </div>
           <div>
             <div className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-              {formatSimpleDuration(kpis?.dailyAverageMinutes ?? 0)}
+              {formatSimpleDuration(safeDailyMins)}
               <span className="text-[10px] sm:text-xs font-normal text-zinc-400"> / dia</span>
             </div>
             <div className="mt-2 text-[11px] text-zinc-400 flex flex-col space-y-0.5">
               <span>
                 Semanal:{' '}
                 <strong className="text-zinc-200">
-                  {formatSimpleDuration(kpis?.weeklyAverageMinutes ?? 0)}
+                  {formatSimpleDuration(safeWeeklyMins)}
                 </strong>
               </span>
             </div>

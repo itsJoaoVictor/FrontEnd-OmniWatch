@@ -14,7 +14,9 @@ import {
   TrendingUp,
   Sliders,
   Flame,
-  Zap
+  Zap,
+  Share2,
+  Check
 } from 'lucide-react';
 import { formatSimpleDuration } from './StatsKpiCards';
 
@@ -33,6 +35,7 @@ const PRESET_PACES = [
 
 export function StatsBacklogEstimator({ backlog, mediaType = 'all' }: StatsBacklogEstimatorProps) {
   const [paceMinutes, setPaceMinutes] = useState<number>(90);
+  const [copied, setCopied] = useState(false);
 
   // Carrega preferência do usuário salva no localStorage
   useEffect(() => {
@@ -244,7 +247,7 @@ export function StatsBacklogEstimator({ backlog, mediaType = 'all' }: StatsBackl
           </div>
 
           {/* Chips de Ritmo Pré-definidos */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="flex overflow-x-auto sm:grid sm:grid-cols-5 gap-2 scrollbar-none pb-1">
             {PRESET_PACES.map((p) => {
               const isSelected = paceMinutes === p.minutes;
               return (
@@ -252,7 +255,7 @@ export function StatsBacklogEstimator({ backlog, mediaType = 'all' }: StatsBackl
                   key={p.minutes}
                   type="button"
                   onClick={() => handlePaceChange(p.minutes)}
-                  className={`p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer min-h-[44px] last:col-span-2 sm:last:col-span-1 ${
+                  className={`p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer min-h-[44px] shrink-0 w-[120px] sm:w-auto ${
                     isSelected
                       ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/30 scale-[1.02]'
                       : 'bg-zinc-900/60 text-zinc-300 border-zinc-800/80 hover:bg-zinc-800/80 hover:border-zinc-700'
@@ -296,13 +299,38 @@ export function StatsBacklogEstimator({ backlog, mediaType = 'all' }: StatsBackl
           {/* Card Principal: Data Prevista */}
           <div className="lg:col-span-2 p-5 rounded-2xl bg-gradient-to-r from-indigo-950/40 via-zinc-900/80 to-zinc-900/40 border border-indigo-500/30 flex flex-col justify-between space-y-4">
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded border border-indigo-500/20">
-                  Data Prevista de Conclusão
-                </span>
-                <span className="text-xs text-zinc-400 font-medium">
-                  ({relativeDuration})
-                </span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded border border-indigo-500/20">
+                    Data Prevista de Conclusão
+                  </span>
+                  <span className="text-xs text-zinc-400 font-medium">
+                    ({relativeDuration})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const shareText = `🎬 OmniWatch | Minha meta é zerar minha lista de ${backlog.totalItems} obras até ${formattedTargetDate} assistindo ${paceLabel}/dia!`;
+                    navigator.clipboard.writeText(shareText);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2500);
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-indigo-300 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 transition-all cursor-pointer"
+                  title="Copiar meta para compartilhar"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400 font-semibold">Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="hidden sm:inline">Compartilhar</span>
+                    </>
+                  )}
+                </button>
               </div>
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-400 shrink-0">
