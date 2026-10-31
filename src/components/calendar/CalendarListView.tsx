@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { parseReleaseDate } from '@/lib/dateUtils';
 import { ptBR } from 'date-fns/locale';
-import { CalendarX2, Compass } from 'lucide-react';
+import { CalendarX2, Compass, ChevronRight } from 'lucide-react';
 
 interface CalendarListViewProps {
   releases: ReleaseEvent[];
@@ -75,20 +75,20 @@ export function CalendarListView({
   if (loading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-32 w-full bg-zinc-800/60 rounded-xl" />
-        <Skeleton className="h-32 w-full bg-zinc-800/60 rounded-xl" />
+        <Skeleton className="h-32 w-full bg-muted/60 rounded-xl" />
+        <Skeleton className="h-32 w-full bg-muted/60 rounded-xl" />
       </div>
     );
   }
 
   if (releases.length === 0) {
     return (
-      <div className="bg-zinc-900 rounded-2xl p-8 sm:p-12 border border-zinc-800 text-center max-w-lg mx-auto shadow-lg">
+      <div className="bg-card rounded-2xl p-8 sm:p-12 border border-border text-center max-w-lg mx-auto shadow-lg">
         <div className="w-16 h-16 rounded-2xl bg-red-600/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
           <CalendarX2 className="w-8 h-8 text-red-500" />
         </div>
-        <h3 className="text-xl font-bold text-white mb-2">Nenhum lançamento encontrado</h3>
-        <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+        <h3 className="text-xl font-bold text-foreground mb-2">Nenhum lançamento encontrado</h3>
+        <p className="text-muted-foreground text-sm leading-relaxed mb-6">
           Você não possui filmes ou novos episódios agendados para este filtro. Explore novos títulos e adicione à sua lista para acompanhar seu calendário pessoal!
         </p>
         <Link href="/explore">
@@ -104,16 +104,16 @@ export function CalendarListView({
   return (
     <div className="space-y-6">
       {groupedReleases.map(group => (
-        <div key={group.monthKey} className="bg-zinc-900 rounded-xl p-3 md:p-5 border border-zinc-800 shadow-sm">
+        <div key={group.monthKey} className="bg-card rounded-xl p-3 md:p-5 border border-border shadow-sm">
           {/* Timeline Month Header */}
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-800/80">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-border/80">
             <div className="flex items-center gap-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-red-600 shadow-sm" />
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+              <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
                 {group.monthLabel}
               </h2>
             </div>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-zinc-800/80 text-zinc-400 border border-zinc-700/60 font-medium">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border font-medium">
               {group.items.length} {group.items.length === 1 ? 'lançamento' : 'lançamentos'}
             </span>
           </div>
@@ -132,15 +132,23 @@ export function CalendarListView({
               return (
                 <div 
                   key={release.id} 
-                  className="flex items-center gap-3 md:gap-4 bg-zinc-800/80 hover:bg-zinc-800 p-3 rounded-xl border border-zinc-700/60 transition-all cursor-pointer group"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleOpenEvent(release)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleOpenEvent(release);
+                    }
+                  }}
+                  className="flex items-center gap-3 md:gap-4 bg-muted/30 hover:bg-muted/70 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 p-3 rounded-xl border border-border dark:border-zinc-700/60 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                 >
                   {/* Date Block */}
-                  <div className="flex-shrink-0 w-16 md:w-20 text-center py-1 px-1 rounded-lg bg-zinc-900/60 border border-zinc-700/40">
-                    <div className="text-[11px] text-zinc-400 uppercase font-bold tracking-wider">
+                  <div className="flex-shrink-0 w-16 md:w-20 text-center py-1 px-1 rounded-lg bg-card/80 border border-border">
+                    <div className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">
                       {format(releaseDate, 'EEE', { locale: ptBR })}
                     </div>
-                    <div className="text-xl md:text-2xl font-black text-white">
+                    <div className="text-xl md:text-2xl font-black text-foreground">
                       {format(releaseDate, 'dd')}
                     </div>
                   </div>
@@ -149,7 +157,7 @@ export function CalendarListView({
                   {release.media.poster_path ? (
                     <img
                       src={`https://image.tmdb.org/t/p/w92${release.media.poster_path}`}
-                      className="w-12 h-16 md:w-14 md:h-20 object-cover rounded-lg bg-zinc-700 shadow-sm shrink-0"
+                      className="w-12 h-16 md:w-14 md:h-20 object-cover rounded-lg bg-muted shadow-sm shrink-0"
                       alt={release.media.title}
                       loading="lazy"
                       onError={(e) => {
@@ -157,38 +165,41 @@ export function CalendarListView({
                       }}
                     />
                   ) : (
-                    <div className="w-12 h-16 md:w-14 md:h-20 bg-zinc-700/60 rounded-lg flex items-center justify-center text-xs text-zinc-400 shrink-0">
+                    <div className="w-12 h-16 md:w-14 md:h-20 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground shrink-0">
                       🎬
                     </div>
                   )}
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-white text-base md:text-lg group-hover:text-red-400 transition-colors truncate">
-                        {release.media.title}
-                      </h3>
-                      <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded border ${
+                    <h3 className="font-bold text-foreground text-base md:text-lg group-hover:text-red-500 transition-colors truncate">
+                      {release.media.title}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded border shrink-0 ${
                         isMovie
-                          ? 'bg-sky-500/20 text-sky-300 border-sky-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          ? 'bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/30'
+                          : 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
                       }`}>
                         {isMovie ? 'Filme' : 'Série'}
                       </span>
                       {!isMovie && release.season_number != null && release.episode_number != null && (
-                        <span className="text-[10px] text-amber-400 font-medium shrink-0">
+                        <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium font-mono shrink-0">
                           T{release.season_number}E{release.episode_number}
                         </span>
                       )}
+                      <p className="text-muted-foreground text-xs md:text-sm truncate">
+                        {cleanTitle}
+                      </p>
                     </div>
-                    <p className="text-zinc-400 text-xs md:text-sm mt-1 truncate">
-                      {cleanTitle}
-                    </p>
                   </div>
 
-                  <div className="hidden sm:block text-xs text-zinc-400 group-hover:text-white transition-colors pr-2 shrink-0">
-                    Ver detalhes &rarr;
+                  {/* Desktop 'Ver detalhes' vs Mobile Chevron */}
+                  <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground transition-colors pr-2 shrink-0">
+                    <span>Ver detalhes</span>
+                    <span aria-hidden="true">&rarr;</span>
                   </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground sm:hidden shrink-0 group-hover:text-foreground transition-colors" />
                 </div>
               );
             })}

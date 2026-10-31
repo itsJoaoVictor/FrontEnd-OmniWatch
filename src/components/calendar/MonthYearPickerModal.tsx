@@ -53,30 +53,30 @@ export function MonthYearPickerModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-sm max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-full max-sm:max-w-full max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:border-t max-sm:border-x-0 max-sm:border-b-0 max-sm:p-5 max-sm:pb-8 shadow-2xl">
+      <DialogContent className="bg-card border-border text-foreground sm:max-w-sm max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-full max-sm:max-w-full max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:border-t max-sm:border-x-0 max-sm:border-b-0 max-sm:p-5 max-sm:pb-8 shadow-2xl">
         {/* Mobile handle */}
-        <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto -mt-1 mb-2 sm:hidden" />
+        <div className="w-12 h-1.5 bg-muted rounded-full mx-auto -mt-1 mb-2 sm:hidden" />
 
         <DialogHeader className="text-left mb-2">
           <div className="flex items-center gap-2">
             <CalendarIcon className="w-4 h-4 text-red-500" />
-            <DialogTitle className="text-lg font-bold text-white">Escolher Mês e Ano</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-foreground">Escolher Mês e Ano</DialogTitle>
           </div>
         </DialogHeader>
 
         {/* Year Selector Control */}
-        <div className="flex items-center justify-between bg-zinc-800/80 p-2 rounded-xl border border-zinc-700/60 mb-3">
+        <div className="flex items-center justify-between bg-muted/60 p-2 rounded-xl border border-border mb-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSelectedYear(y => y - 1)}
-            className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-lg"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
             title="Ano anterior"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
 
-          <span className="text-base font-bold text-white tracking-wider">
+          <span className="text-base font-bold text-foreground tracking-wider">
             {selectedYear}
           </span>
 
@@ -84,7 +84,7 @@ export function MonthYearPickerModal({
             variant="ghost"
             size="icon"
             onClick={() => setSelectedYear(y => y + 1)}
-            className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-lg"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
             title="Próximo ano"
           >
             <ChevronRight className="h-4 w-4" />
@@ -100,7 +100,7 @@ export function MonthYearPickerModal({
               className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
                 selectedYear === year
                   ? 'bg-red-600 text-white shadow-sm'
-                  : 'bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-750'
+                  : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border border-border'
               }`}
             >
               {year}
@@ -122,8 +122,8 @@ export function MonthYearPickerModal({
                   isSelected
                     ? 'bg-red-600 border-red-500 text-white font-bold shadow-md'
                     : isCurrentMonthNow
-                    ? 'bg-zinc-800 border-red-500/50 text-red-400 hover:bg-zinc-750'
-                    : 'bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300 border-zinc-700/60'
+                    ? 'bg-muted border-red-500/50 text-red-500 hover:bg-muted/80'
+                    : 'bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border'
                 }`}
               >
                 {name.slice(0, 3)}
@@ -133,12 +133,12 @@ export function MonthYearPickerModal({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
+        <div className="flex items-center justify-between pt-3 border-t border-border">
           <Button
             variant="outline"
             size="sm"
             onClick={handleJumpToToday}
-            className="min-h-[40px] sm:min-h-[32px] text-xs px-3 border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:text-white"
+            className="min-h-[40px] sm:min-h-[32px] text-xs px-3 border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
           >
             Ir para Mês Atual
           </Button>
@@ -146,7 +146,7 @@ export function MonthYearPickerModal({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="min-h-[40px] sm:min-h-[32px] text-xs px-3 text-zinc-400 hover:text-white"
+            className="min-h-[40px] sm:min-h-[32px] text-xs px-3 text-muted-foreground hover:text-foreground"
           >
             Fechar
           </Button>

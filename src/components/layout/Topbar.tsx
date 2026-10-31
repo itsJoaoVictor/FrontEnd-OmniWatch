@@ -46,7 +46,7 @@ export function Topbar() {
   };
 
   return (
-    <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md shadow-sm border-b border-border/40 text-foreground transition-colors duration-300">
+    <header className="fixed top-0 w-full z-50 bg-background/95 md:bg-background/85 backdrop-blur-md shadow-sm border-b border-border text-foreground transition-colors duration-300">
       <div className="container mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/dashboard" className="text-xl font-bold text-primary">

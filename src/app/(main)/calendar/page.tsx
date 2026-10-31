@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ReleaseEvent } from '@/types/calendar';
 import { api } from '@/lib/axios';
-import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Search, X, Download } from 'lucide-react';
 import { format, parse, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MonthYearPickerModal } from '@/components/calendar/MonthYearPickerModal';
@@ -24,6 +24,7 @@ function CalendarContent() {
   const [gridLoading, setGridLoading] = useState(true);
   const [agendaLoading, setAgendaLoading] = useState(true);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const monthCacheRef = useRef<Record<string, ReleaseEvent[]>>({});
   const agendaFetchedRef = useRef(false);
@@ -265,109 +266,212 @@ function CalendarContent() {
   }, [activeReleases]);
 
   const filteredReleases = useMemo(() => {
-    if (mediaFilter === 'all') return activeReleases;
-    return activeReleases.filter(r => r.media.media_type === mediaFilter);
-  }, [activeReleases, mediaFilter]);
+    let list = activeReleases;
+    if (mediaFilter !== 'all') {
+      list = list.filter(r => r.media.media_type === mediaFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(r =>
+        r.media.title.toLowerCase().includes(q) ||
+        (r.title && r.title.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [activeReleases, mediaFilter, searchQuery]);
+
+  // Exportação iCalendar (.ics) para sincronizar com Google Calendar / Apple Calendar
+  const handleExportIcs = useCallback(() => {
+    if (!filteredReleases || filteredReleases.length === 0) return;
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const formatIcsDate = (dateStr: string) => {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
+    };
+
+    const icsLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//OmniWatch//Calendário de Lançamentos//PT',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:OmniWatch - Lançamentos',
+    ];
+
+    for (const event of filteredReleases) {
+      const isTv = event.media.media_type === 'tv';
+      const dateVal = formatIcsDate(event.release_date);
+      if (!dateVal) continue;
+
+      const title = isTv
+        ? `${event.media.title} (T${event.season_number || 1}E${event.episode_number || 1})${event.title ? ` - ${event.title}` : ''}`
+        : `${event.media.title} - Estreia`;
+
+      const desc = (event.description || '').replace(/\r?\n/g, '\\n');
+      const uid = `omniwatch-${event.id}@omniwatch.app`;
+
+      icsLines.push('BEGIN:VEVENT');
+      icsLines.push(`UID:${uid}`);
+      icsLines.push(`DTSTAMP:${formatIcsDate(new Date().toISOString())}T000000Z`);
+      icsLines.push(`DTSTART;VALUE=DATE:${dateVal}`);
+      icsLines.push(`SUMMARY:${title}`);
+      if (desc) icsLines.push(`DESCRIPTION:${desc}`);
+      icsLines.push('END:VEVENT');
+    }
+
+    icsLines.push('END:VCALENDAR');
+
+    const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `omniwatch-lancamentos-${currentMonth}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [filteredReleases, currentMonth]);
 
   return (
     <div className="min-h-screen pt-24 px-4 md:px-8 max-w-[1600px] mx-auto pb-32 md:pb-28">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white tracking-tight">Calendário de Lançamentos</h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1">Acompanhe as estreias e novos episódios dos títulos que você segue</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground tracking-tight">Calendário de Lançamentos</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Acompanhe as estreias e novos episódios dos títulos que você segue</p>
         </div>
 
-        {activeTab === 'grid' && (
-          <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 p-1.5 rounded-xl w-full sm:w-auto justify-between sm:justify-start shadow-sm">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={goToPreviousMonth}
-              className="h-11 w-11 sm:h-8 sm:w-8 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg shrink-0"
-              title="Mês anterior"
-              aria-label="Mês anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+          {/* Botão de Exportação .ICS */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportIcs}
+            disabled={filteredReleases.length === 0}
+            className="h-9 px-3 text-xs border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 shadow-sm rounded-xl"
+            title="Exportar lançamentos filtrados para o seu calendário (.ics)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Exportar .ics</span>
+          </Button>
 
-            {/* Container com largura mínima estável para evitar layout shift com o botão Hoje */}
-            <div className="flex items-center justify-center gap-1.5 px-1 min-w-[160px] sm:min-w-[185px]">
-              <button
-                type="button"
-                onClick={() => setIsPickerOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-bold text-white hover:bg-zinc-800 transition-colors group cursor-pointer"
-                title="Escolher mês e ano diretamente"
-                aria-haspopup="dialog"
-                aria-expanded={isPickerOpen}
+          {activeTab === 'grid' && (
+            <div className="flex items-center gap-1.5 bg-card border border-border p-1.5 rounded-xl shadow-sm">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={goToPreviousMonth}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+                title="Mês anterior"
+                aria-label="Mês anterior"
               >
-                <span>{displayMonth}</span>
-                <ChevronDown className="h-3.5 w-3.5 text-zinc-400 group-hover:text-white transition-transform" />
-              </button>
-              {!isCurrentMonthNow && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={goToCurrentMonth}
-                  className="h-7 text-xs px-2 border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-md shrink-0"
-                >
-                  Hoje
-                </Button>
-              )}
-            </div>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
 
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={goToNextMonth}
-              className="h-11 w-11 sm:h-8 sm:w-8 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg shrink-0"
-              title="Próximo mês"
-              aria-label="Próximo mês"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+              <div className="flex items-center justify-center gap-1.5 px-1 min-w-[150px] sm:min-w-[175px]">
+                <button
+                  type="button"
+                  onClick={() => setIsPickerOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-bold text-foreground hover:bg-muted transition-colors group cursor-pointer"
+                  title="Escolher mês e ano diretamente"
+                  aria-haspopup="dialog"
+                  aria-expanded={isPickerOpen}
+                >
+                  <span>{displayMonth}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-transform" />
+                </button>
+                {!isCurrentMonthNow && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={goToCurrentMonth}
+                    className="h-7 text-xs px-2 border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md shrink-0"
+                  >
+                    Hoje
+                  </Button>
+                )}
+              </div>
+
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={goToNextMonth}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+                title="Próximo mês"
+                aria-label="Próximo mês"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          {/* Seletor de Abas com Área de Toque Ergonômica (min-h-[44px]) */}
-          <TabsList className="bg-secondary/50 w-full sm:w-auto p-1 h-auto">
-            <TabsTrigger 
-              value="list" 
-              className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold rounded-lg"
-            >
-              <span>Lista (Agenda)</span>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {agendaLoading && agendaReleases.length === 0 ? '–' : agendaReleases.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="grid" 
-              className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold rounded-lg"
-            >
-              <span>Grade (Mensal)</span>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {gridLoading && gridReleases.length === 0 ? '–' : gridReleases.length}
-              </span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Barra superior de controles: Busca rápida, Abas e Filtros */}
+        <div className="flex flex-col gap-3 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Seletor de Abas com Área de Toque Ergonômica (min-h-[44px]) */}
+            <TabsList className="bg-secondary/60 border border-border/40 w-full sm:w-auto p-1 h-auto">
+              <TabsTrigger 
+                value="list" 
+                className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                <span>Lista (Agenda)</span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-muted text-muted-foreground border border-border">
+                  {agendaLoading && agendaReleases.length === 0 ? '–' : agendaReleases.length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="grid" 
+                className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                <span>Grade (Mensal)</span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-muted text-muted-foreground border border-border">
+                  {gridLoading && gridReleases.length === 0 ? '–' : gridReleases.length}
+                </span>
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Chips de Filtro por Tipo com Área de Toque Otimizada (>= 44px) e Indicador de Transbordo */}
+            {/* Barra de Filtro Rápido Local */}
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filtrar lançamentos..."
+                className="w-full bg-card border border-border rounded-xl pl-9 pr-8 py-2 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full"
+                  title="Limpar filtro"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Chips de Filtro por Tipo */}
           <div className="relative max-w-full">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none pr-3 sm:pr-0">
               <button
                 type="button"
                 onClick={() => handleFilterChange('all')}
-                className={`flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
+                className={`flex items-center gap-2 min-h-[42px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
                   mediaFilter === 'all'
                     ? 'bg-red-600 border-red-500 text-white shadow-sm'
-                    : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
+                    : 'bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border'
                 }`}
               >
                 <span>Todos</span>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                  mediaFilter === 'all' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                  mediaFilter === 'all' ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
                 }`}>
                   {counts.all}
                 </span>
@@ -376,15 +480,15 @@ function CalendarContent() {
               <button
                 type="button"
                 onClick={() => handleFilterChange('movie')}
-                className={`flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                className={`flex items-center gap-2 min-h-[42px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                   mediaFilter === 'movie'
                     ? 'bg-sky-600 border-sky-500 text-white shadow-sm'
-                    : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
+                    : 'bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border'
                 }`}
               >
                 <span>🎬 Filmes</span>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                  mediaFilter === 'movie' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                  mediaFilter === 'movie' ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
                 }`}>
                   {counts.movie}
                 </span>
@@ -393,22 +497,22 @@ function CalendarContent() {
               <button
                 type="button"
                 onClick={() => handleFilterChange('tv')}
-                className={`flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+                className={`flex items-center gap-2 min-h-[42px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
                   mediaFilter === 'tv'
                     ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
-                    : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
+                    : 'bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border'
                 }`}
               >
                 <span>📺 Séries</span>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                  mediaFilter === 'tv' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'
+                  mediaFilter === 'tv' ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
                 }`}>
                   {counts.tv}
                 </span>
               </button>
             </div>
             {/* Fade gradiente sutil na borda direita apenas no mobile indicando continuidade de rolagem */}
-            <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-6 bg-gradient-to-l from-black/80 to-transparent sm:hidden" />
+            <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-6 bg-gradient-to-l from-background to-transparent sm:hidden" />
           </div>
         </div>
 
@@ -447,12 +551,12 @@ function CalendarPageSkeleton() {
   return (
     <div className="min-h-screen pt-24 px-4 md:px-8 max-w-[1600px] mx-auto pb-32 md:pb-28">
       <div className="flex justify-between items-center mb-6">
-        <Skeleton className="h-10 w-64 bg-zinc-800/80 rounded-lg" />
-        <Skeleton className="h-10 w-44 bg-zinc-800/80 rounded-lg" />
+        <Skeleton className="h-10 w-64 bg-muted/80 rounded-lg" />
+        <Skeleton className="h-10 w-44 bg-muted/80 rounded-lg" />
       </div>
       <div className="space-y-4">
-        <Skeleton className="h-12 w-full bg-zinc-800/60 rounded-xl" />
-        <Skeleton className="h-96 w-full bg-zinc-800/40 rounded-xl" />
+        <Skeleton className="h-12 w-full bg-muted/60 rounded-xl" />
+        <Skeleton className="h-96 w-full bg-muted/40 rounded-xl" />
       </div>
     </div>
   );

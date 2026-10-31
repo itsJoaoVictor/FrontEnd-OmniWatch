@@ -9,7 +9,7 @@ import { parseReleaseDate } from '@/lib/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { CalendarX2, Compass } from 'lucide-react';
+import { CalendarX2, Compass, ChevronRight } from 'lucide-react';
 
 interface CalendarGridViewProps {
   releases: ReleaseEvent[];
@@ -152,15 +152,15 @@ export function CalendarGridView({
 
   if (loading) {
     return (
-      <div className="bg-zinc-900 rounded-xl p-3 md:p-4 border border-zinc-800 space-y-3">
+      <div className="bg-card rounded-xl p-3 md:p-4 border border-border space-y-3">
         <div className="grid grid-cols-7 gap-1 md:gap-2">
           {Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} className="h-6 w-full bg-zinc-800/80 rounded" />
+            <Skeleton key={i} className="h-6 w-full bg-muted/80 rounded" />
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1 md:gap-2">
           {Array.from({ length: 28 }).map((_, i) => (
-            <Skeleton key={i} className="h-14 md:h-28 w-full bg-zinc-800/50 rounded-md" />
+            <Skeleton key={i} className="h-14 md:h-28 w-full bg-muted/50 rounded-md" />
           ))}
         </div>
       </div>
@@ -170,9 +170,9 @@ export function CalendarGridView({
   const selectedDayReleases = selectedDay ? getReleasesForDay(selectedDay) : [];
 
   return (
-    <div className="bg-zinc-900 rounded-xl p-3 md:p-4 border border-zinc-800 shadow-sm">
+    <div className="bg-card rounded-xl p-3 md:p-4 border border-border shadow-sm">
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-1 md:gap-2 text-center text-zinc-400 font-semibold mb-2 text-xs md:text-sm">
+      <div className="grid grid-cols-7 gap-1 md:gap-2 text-center text-muted-foreground font-semibold mb-2 text-xs md:text-sm">
         {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
           <div key={d} className="py-1">{d}</div>
         ))}
@@ -181,7 +181,7 @@ export function CalendarGridView({
       {/* Grid of days */}
       <div className="grid grid-cols-7 gap-1 md:gap-2" role="grid" aria-label={`Calendário de ${format(date, 'MMMM yyyy', { locale: ptBR })}`}>
         {blanks.map(b => (
-          <div key={`blank-${b}`} className="min-h-[52px] md:h-28 bg-zinc-800/10 rounded-xl border border-zinc-800/20" aria-hidden="true" />
+          <div key={`blank-${b}`} className="min-h-[52px] md:h-28 bg-muted/20 rounded-xl border border-border/30" aria-hidden="true" />
         ))}
         {days.map(d => {
           const dayReleases = getReleasesForDay(d);
@@ -236,10 +236,10 @@ export function CalendarGridView({
               aria-selected={isSelected}
               className={`min-h-[52px] md:h-28 rounded-xl p-1 md:p-1.5 border text-left transition-all cursor-pointer flex flex-col justify-between md:justify-start relative outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:z-10 ${
                 isSelected
-                  ? 'bg-zinc-800 border-red-500 ring-2 ring-red-500/40 shadow-lg'
+                  ? 'bg-muted border-red-500 ring-2 ring-red-500/40 shadow-lg'
                   : isToday
-                  ? 'bg-zinc-800/90 border-red-500/60 ring-1 ring-red-500/30'
-                  : 'bg-zinc-800/40 hover:bg-zinc-800/80 border-zinc-750'
+                  ? 'bg-muted/90 border-red-500/60 ring-1 ring-red-500/30'
+                  : 'bg-card hover:bg-muted/60 border-border'
               }`}
             >
               {/* Day Header */}
@@ -250,14 +250,14 @@ export function CalendarGridView({
                       isToday
                         ? 'w-5 h-5 md:w-6 md:h-6 rounded-full bg-red-600 text-white shadow-sm font-black'
                         : isSelected
-                        ? 'text-red-400 font-bold'
-                        : 'text-zinc-400'
+                        ? 'text-red-500 font-bold'
+                        : 'text-muted-foreground'
                     }`}
                   >
                     {d}
                   </span>
                   {isToday && (
-                    <span className="hidden lg:inline-block text-[10px] uppercase font-bold text-red-400 tracking-wider">
+                    <span className="hidden lg:inline-block text-[10px] uppercase font-bold text-red-500 tracking-wider">
                       Hoje
                     </span>
                   )}
@@ -265,7 +265,7 @@ export function CalendarGridView({
 
                 {/* Desktop releases count */}
                 {hasReleases && (
-                  <span className="hidden md:inline-block text-[10px] text-zinc-400 font-normal">
+                  <span className="hidden md:inline-block text-[10px] text-muted-foreground font-normal">
                     {dayReleases.length} {dayReleases.length === 1 ? 'evento' : 'eventos'}
                   </span>
                 )}
@@ -346,14 +346,14 @@ export function CalendarGridView({
 
       {/* Empty Month Banner / Call to Action */}
       {releases.length === 0 && (
-        <div className="mt-4 p-4 sm:p-5 bg-zinc-800/40 rounded-xl border border-zinc-800 text-center flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-4 p-4 sm:p-5 bg-muted/40 rounded-xl border border-border text-center flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-left">
             <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center shrink-0">
               <CalendarX2 className="w-5 h-5 text-red-500" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white">Nenhum lançamento previsto para este mês</h2>
-              <p className="text-xs text-zinc-400">Adicione filmes e séries à sua lista para preencher este mês no calendário.</p>
+              <h2 className="text-sm font-bold text-foreground">Nenhum lançamento previsto para este mês</h2>
+              <p className="text-xs text-muted-foreground">Adicione filmes e séries à sua lista para preencher este mês no calendário.</p>
             </div>
           </div>
           <Link href="/explore">
@@ -366,28 +366,28 @@ export function CalendarGridView({
       )}
 
       {/* Mini-legenda cromática */}
-      <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-5 mt-3 pt-3 border-t border-zinc-800/60 text-xs text-zinc-400">
+      <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-5 mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-sky-400 shadow-sm" />
-          <span className="text-zinc-300 font-medium">Filme</span>
-          <span className="text-zinc-400 text-[11px]">(Cinema / Streaming)</span>
+          <span className="text-foreground font-medium">Filme</span>
+          <span className="text-muted-foreground text-[11px]">(Cinema / Streaming)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm" />
-          <span className="text-zinc-300 font-medium">Série</span>
-          <span className="text-zinc-400 text-[11px]">(Novo Episódio)</span>
+          <span className="text-foreground font-medium">Série</span>
+          <span className="text-muted-foreground text-[11px]">(Novo Episódio)</span>
         </div>
       </div>
 
       {/* MOBILE ONLY: Selected Day Events Drawer / Panel (omitted if entire month is empty) */}
       {releases.length > 0 && (
-        <div ref={mobileDrawerRef} className="block md:hidden mt-4 pt-4 border-t border-zinc-800">
+        <div ref={mobileDrawerRef} className="block md:hidden mt-4 pt-4 border-t border-border">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-zinc-300">
+          <h2 className="text-sm font-semibold text-muted-foreground">
             {selectedDay ? (
               <>
                 Lançamentos em{' '}
-                <span className="text-white font-bold">
+                <span className="text-foreground font-bold">
                   {format(new Date(year, month, selectedDay), "dd 'de' MMMM", { locale: ptBR })}
                 </span>
               </>
@@ -396,7 +396,7 @@ export function CalendarGridView({
             )}
           </h2>
           {selectedDayReleases.length > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/15 text-red-500 dark:text-red-400 border border-red-500/30 font-medium">
               {selectedDayReleases.length} {selectedDayReleases.length === 1 ? 'evento' : 'eventos'}
             </span>
           )}
@@ -410,45 +410,51 @@ export function CalendarGridView({
                 return (
                   <div
                     key={release.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleOpenEvent(release)}
-                    className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 active:scale-[0.99] transition-all cursor-pointer min-h-[56px]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleOpenEvent(release);
+                      }
+                    }}
+                    className="flex items-center gap-3 p-2.5 rounded-xl bg-card hover:bg-muted/70 border border-border active:scale-[0.99] transition-all cursor-pointer min-h-[56px] outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >
                     {release.media.poster_path ? (
                       <img
                         src={`https://image.tmdb.org/t/p/w92${release.media.poster_path}`}
                         alt={release.media.title}
-                        className="w-11 h-16 object-cover rounded bg-zinc-700 shrink-0 shadow-sm"
+                        className="w-11 h-16 object-cover rounded-lg bg-muted shrink-0 shadow-sm"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-11 h-16 bg-zinc-700/60 rounded flex items-center justify-center text-xs text-zinc-400 shrink-0">
+                      <div className="w-11 h-16 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground shrink-0">
                         🎬
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-white truncate">{release.media.title}</h3>
-                      <p className="text-xs text-zinc-400 truncate mt-0.5">
+                      <h3 className="text-sm font-bold text-foreground truncate">{release.media.title}</h3>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
                         {release.title}
                       </p>
                       <div className="mt-1.5 flex items-center gap-2">
                         <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded border ${
                           isMovie 
-                            ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' 
-                            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                            ? 'bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/30' 
+                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
                         }`}>
                           {isMovie ? 'Filme' : 'Série'}
                         </span>
                         {!isMovie && release.season_number != null && release.episode_number != null && (
-                          <span className="text-[10px] text-amber-400 font-medium">
+                          <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium font-mono">
                             T{release.season_number}E{release.episode_number}
                           </span>
                         )}
                       </div>
                     </div>
-                    <span className={`text-xs font-medium px-2 py-1 shrink-0 ${
-                      isMovie ? 'text-sky-400 hover:text-sky-300' : 'text-amber-400 hover:text-amber-300'
-                    }`}>
-                      Ver &rarr;
+                    <span className="text-xs font-semibold px-2 py-1 shrink-0 text-red-500 inline-flex items-center gap-1">
+                      Ver <ChevronRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 );
@@ -457,12 +463,12 @@ export function CalendarGridView({
           ) : (
             // If the whole month is empty, the empty banner already appeared above. Show a simplified line to avoid duplication.
             releases.length === 0 ? (
-              <p className="text-xs text-zinc-500 text-center py-2">Nenhum evento neste dia.</p>
+              <p className="text-xs text-muted-foreground text-center py-2">Nenhum evento neste dia.</p>
             ) : (
-              <div className="py-6 px-4 text-center bg-zinc-800/30 rounded-xl border border-zinc-800/50 flex flex-col items-center justify-center">
-                <CalendarX2 className="w-6 h-6 text-zinc-500 mb-1.5" />
-                <p className="text-xs text-zinc-400">Nenhum lançamento previsto para este dia.</p>
-                <Link href="/explore" className="text-xs text-red-400 hover:text-red-300 font-semibold mt-2 inline-flex items-center gap-1">
+              <div className="py-6 px-4 text-center bg-muted/30 rounded-xl border border-border flex flex-col items-center justify-center">
+                <CalendarX2 className="w-6 h-6 text-muted-foreground mb-1.5" />
+                <p className="text-xs text-muted-foreground">Nenhum lançamento previsto para este dia.</p>
+                <Link href="/explore" className="text-xs text-red-500 hover:text-red-600 font-semibold mt-2 inline-flex items-center gap-1">
                   <Compass className="w-3.5 h-3.5" />
                   Explorar novos títulos &rarr;
                 </Link>
@@ -470,7 +476,7 @@ export function CalendarGridView({
             )
           )
         ) : (
-          <div className="py-6 text-center text-xs text-zinc-500 bg-zinc-800/30 rounded-lg border border-zinc-800/50">
+          <div className="py-6 text-center text-xs text-muted-foreground bg-muted/20 rounded-lg border border-border">
             Toque em um dia no calendário para ver os detalhes.
           </div>
         )}
