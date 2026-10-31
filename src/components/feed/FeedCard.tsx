@@ -69,8 +69,8 @@ export function FeedCard({ item }: FeedCardProps) {
   const renderBadge = () => {
     if (item.action_type === 'binge_watched') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-          <Flame className="w-3.5 h-3.5" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/30 shadow-sm animate-pulse-slow">
+          <Flame className="w-3.5 h-3.5 text-purple-400 fill-purple-400/40" />
           Maratonou
         </span>
       );
@@ -96,20 +96,22 @@ export function FeedCard({ item }: FeedCardProps) {
     ? `https://image.tmdb.org/t/p/w342${item.poster_path}`
     : '/placeholder-poster.png';
 
+  const isBinge = item.action_type === 'binge_watched';
+
   return (
-    <div className="bg-card/70 border border-border/60 hover:border-border transition-all duration-300 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md flex flex-col gap-4">
+    <div className="bg-card/70 backdrop-blur-sm border border-border/50 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 rounded-2xl p-4 sm:p-5 flex flex-col gap-3.5 group">
       {/* Top Header: Friend info & action badge */}
       <div className="flex items-center justify-between gap-3">
         <Link
           href={item.username ? `/profile/${item.username}` : `/profile/${item.user_id}`}
-          className="flex items-center gap-3 min-w-0 group hover:opacity-90 transition-opacity"
+          className="flex items-center gap-3 min-w-0 group/author hover:opacity-95 transition-opacity"
         >
-          <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm shrink-0 shadow-inner group-hover:ring-1 group-hover:ring-primary transition-all">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 border border-primary/20 shadow-sm group-hover/author:ring-2 group-hover/author:ring-primary/40 transition-all">
             {item.user_name ? item.user_name.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
+              <span className="font-semibold text-sm text-foreground group-hover/author:text-primary transition-colors truncate">
                 {item.user_name}
               </span>
               {item.username && (
@@ -118,7 +120,7 @@ export function FeedCard({ item }: FeedCardProps) {
                 </span>
               )}
             </div>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground/80 block">
               {getRelativeTime(item.watched_at)}
             </span>
           </div>
@@ -130,14 +132,14 @@ export function FeedCard({ item }: FeedCardProps) {
       </div>
 
       {/* Main Content Card */}
-      <div className="flex gap-4 items-center bg-secondary/30 rounded-xl p-3 border border-border/40">
-        <Link href={mediaHref} className="shrink-0 relative group">
-          <div className="w-20 h-28 sm:w-24 sm:h-36 rounded-lg overflow-hidden bg-muted relative shadow-md">
+      <div className="flex gap-4 items-center bg-secondary/25 hover:bg-secondary/35 transition-colors rounded-xl p-3 border border-border/40">
+        <Link href={mediaHref} className="shrink-0 relative group/poster block overflow-hidden rounded-xl">
+          <div className="w-20 h-28 sm:w-24 sm:h-36 rounded-xl overflow-hidden bg-muted relative shadow-md">
             <Image
               src={posterUrl}
               alt={item.title}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-cover group-hover/poster:scale-105 group-hover:scale-105 transition-transform duration-300"
               sizes="96px"
             />
           </div>
@@ -146,31 +148,38 @@ export function FeedCard({ item }: FeedCardProps) {
         <div className="flex-1 min-w-0 flex flex-col justify-between py-1 self-stretch">
           <div className="space-y-1.5">
             <Link href={mediaHref} prefetch={false} className="hover:text-primary transition-colors block">
-              <h3 className="font-bold text-base sm:text-lg text-foreground line-clamp-2 leading-snug">
+              <h3 className="font-bold text-base sm:text-lg text-foreground line-clamp-2 leading-snug hover:underline decoration-primary/50 underline-offset-2">
                 {item.title}
               </h3>
             </Link>
 
             {item.episodes_label && (
-              <div className="inline-block px-2 py-0.5 rounded-md text-xs font-semibold bg-primary/15 text-primary border border-primary/25">
+              <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                isBinge 
+                  ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' 
+                  : 'bg-primary/15 text-primary border border-primary/25'
+              }`}>
+                {isBinge && <Flame className="w-3 h-3 text-purple-400" />}
                 {item.episodes_label}
               </div>
             )}
 
             {item.rating !== null && item.rating !== undefined && (
-              <div className="flex items-center gap-1.5 text-xs text-amber-400 font-medium pt-0.5">
-                <Star className="w-4 h-4 fill-amber-400" />
-                <span>Nota: {Number(item.rating > 5 ? item.rating / 2 : item.rating).toFixed(1)} / 5</span>
+              <div className="flex items-center pt-0.5">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-amber-500/15 to-yellow-500/10 text-amber-300 border border-amber-500/30 shadow-xs">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span>Nota {Number(item.rating > 5 ? item.rating / 2 : item.rating).toFixed(1)} / 5</span>
+                </span>
               </div>
             )}
           </div>
 
           {/* Quick Action buttons */}
-          <div className="flex flex-wrap items-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center gap-2 pt-2.5">
             <Button
               size="sm"
               variant={isInMyList ? 'secondary' : 'outline'}
-              className="h-8 text-xs font-medium gap-1.5"
+              className="h-8 text-xs font-medium gap-1.5 touch-manipulation hover:border-primary/40"
               onClick={handleAddToList}
               disabled={isInMyList || isAdding}
             >
@@ -191,7 +200,7 @@ export function FeedCard({ item }: FeedCardProps) {
               href={mediaHref}
               prefetch={false}
               aria-label={`Ver detalhes de ${item.title}`}
-              className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'h-8 text-xs gap-1' })}
+              className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'h-8 text-xs gap-1 touch-manipulation text-muted-foreground hover:text-foreground' })}
             >
               Detalhes
               <ExternalLink className="w-3.5 h-3.5" />
