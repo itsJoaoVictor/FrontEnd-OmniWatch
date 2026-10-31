@@ -147,8 +147,8 @@ export function StatsCharts({ data }: StatsChartsProps) {
           </CardHeader>
           <CardContent className="pt-4 flex-1 flex flex-col justify-center">
             {genreViewMode === 'bars' ? (
-              <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
-                {topGenres.slice(0, 6).map((genre, idx) => {
+              <div className="space-y-2.5 max-h-[240px] overflow-y-auto scrollbar-none pr-1">
+                {topGenres.slice(0, 5).map((genre, idx) => {
                   const percentOfTop = Math.round(((genre.totalTime || 0) / maxGenreTime) * 100);
                   const rank = idx + 1;
                   const rankBadgeClass =
@@ -252,7 +252,7 @@ export function StatsCharts({ data }: StatsChartsProps) {
                 </div>
 
                 {/* Legenda Lateral */}
-                <div className="w-full md:w-1/2 flex flex-col gap-1.5 max-h-[220px] overflow-y-auto pr-2">
+                <div className="w-full md:w-1/2 flex flex-col gap-1.5 max-h-[220px] overflow-y-auto scrollbar-none pr-1">
                   <span className="text-[10px] text-zinc-500 italic pb-1">
                     *Títulos contêm múltiplos gêneros simultâneos
                   </span>

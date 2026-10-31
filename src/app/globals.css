@@ -191,6 +191,8 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
   }
   body {
     @apply bg-background text-foreground font-sans;
@@ -200,4 +202,11 @@
     @apply font-sans;
     font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   }
+}
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
