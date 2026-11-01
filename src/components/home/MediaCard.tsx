@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Image from "next/image";
 import { Check, Star, StarOff, Play, Clock, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,10 +31,12 @@ interface MediaCardProps {
   priority?: boolean;
 }
 
-export function MediaCard({ item, layout = "poster", priority = false }: MediaCardProps) {
-  const { items, updateStatus, addToList, toggleEpisode } = useMyListStore();
+export const MediaCard = memo(function MediaCard({ item, layout = "poster", priority = false }: MediaCardProps) {
+  const updateStatus = useMyListStore((state) => state.updateStatus);
+  const addToList = useMyListStore((state) => state.addToList);
+  const toggleEpisode = useMyListStore((state) => state.toggleEpisode);
   const tmdbId = parseInt(item.id);
-  const savedItem = !isNaN(tmdbId) ? items[tmdbId] : undefined;
+  const savedItem = useMyListStore((state) => (!isNaN(tmdbId) ? state.items[tmdbId] : undefined));
   const isWatched = savedItem?.status === 'completed';
 
   // Layout para "Continue Assistindo" (Estilo Tracker/TV Time)
@@ -253,4 +256,4 @@ export function MediaCard({ item, layout = "poster", priority = false }: MediaCa
       </div>
     </Link>
   );
-}
+});

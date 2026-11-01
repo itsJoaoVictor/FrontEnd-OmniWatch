@@ -169,10 +169,13 @@ export default function MyListPage() {
     }
   }, []);
 
-  // Carrega sugestões para preencher os badges das abas
+  // Carrega sugestões para preencher os badges das abas desacopladas do carregamento inicial da lista
   useEffect(() => {
-    loadSuggestions();
-    loadUniverseSuggestions();
+    const timer = setTimeout(() => {
+      loadSuggestions();
+      loadUniverseSuggestions();
+    }, 300);
+    return () => clearTimeout(timer);
   }, [loadSuggestions, loadUniverseSuggestions]);
 
   useEffect(() => {

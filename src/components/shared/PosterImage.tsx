@@ -257,6 +257,8 @@ export function PosterImage({
         key={currentUrl}
         src={currentUrl}
         alt={alt}
+        width={342}
+        height={513}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         fetchPriority={priority ? "high" : "auto"}
