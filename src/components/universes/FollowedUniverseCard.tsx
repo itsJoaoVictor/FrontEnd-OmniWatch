@@ -274,7 +274,7 @@ export function FollowedUniverseCard({
               <div
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
-                  isCompleted ? "bg-emerald-500" : "bg-gradient-to-r from-primary to-amber-500"
+                  isCompleted ? "bg-emerald-500" : "bg-primary"
                 )}
                 style={{ width: `${Math.min(100, Math.max(0, universe.personal_completion_percentage ?? universe.completion_percentage))}%` }}
               />

@@ -436,7 +436,7 @@ export default function CollectionPage() {
                   <div
                     className={cn(
                       "h-full rounded-full transition-all duration-500",
-                      isAllCompleted ? "bg-emerald-500" : "bg-gradient-to-r from-primary to-amber-500"
+                      isAllCompleted ? "bg-emerald-500" : "bg-primary"
                     )}
                     style={{ width: `${stats.pct}%` }}
                   />

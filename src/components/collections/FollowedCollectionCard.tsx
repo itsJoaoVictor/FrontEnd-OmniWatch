@@ -247,12 +247,12 @@ export function FollowedCollectionCard({
               </span>
             </div>
 
-            {/* Barra de Progresso com Gradiente */}
+            {/* Barra de Progresso Sólida */}
             <div className="w-full bg-secondary rounded-full h-2 overflow-hidden border border-border/40">
               <div
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
-                  isCompleted ? "bg-emerald-500" : "bg-gradient-to-r from-primary to-amber-500"
+                  isCompleted ? "bg-emerald-500" : "bg-primary"
                 )}
                 style={{ width: `${pct}%` }}
               />
