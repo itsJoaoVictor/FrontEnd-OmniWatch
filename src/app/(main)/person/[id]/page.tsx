@@ -187,7 +187,14 @@ export default async function PersonDetailsPage({ params }: { params: Promise<{ 
                               )}
                             </div>
                             <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                              <AddToListButton tmdb_id={item.id} media_type={item.media_type as 'movie' | 'tv'} release_date={item.release_date} className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4" />
+                              <AddToListButton
+                                tmdb_id={item.id}
+                                media_type={item.media_type as 'movie' | 'tv'}
+                                title={item.title}
+                                poster_path={item.poster_path}
+                                release_date={item.release_date}
+                                className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4"
+                              />
                             </div>
                           </div>
                         )
