@@ -31,40 +31,46 @@ type MediaTabType = (typeof VALID_TABS)[number];
 const VALID_SORTS = ['recent', 'rating_desc', 'rating_asc', 'release_date_desc', 'release_date_asc', 'title_asc', 'title_desc'] as const;
 export type SortByType = (typeof VALID_SORTS)[number];
 
+const VALID_STATUSES = ['all', 'plan_to_watch', 'watching', 'completed', 'dropped', 'upcoming'] as const;
+type StatusFilterType = (typeof VALID_STATUSES)[number];
+
+const VALID_RATINGS = ['all', 'unrated', 'rated'] as const;
+type RatingFilterType = (typeof VALID_RATINGS)[number];
+
+const VALID_PROGRESS = ['all', 'up_to_date', 'pending'] as const;
+type ProgressFilterType = (typeof VALID_PROGRESS)[number];
+
 function MyListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
   const sortParam = searchParams.get('sort');
+  const statusParam = searchParams.get('status');
+  const ratingParam = searchParams.get('rating');
+  const progressParam = searchParams.get('progress');
+  const favoriteParam = searchParams.get('favorites') === 'true';
 
   const { items, isLoading, fetchMyList } = useMyListStore();
   const [mediaTab, setMediaTab] = useState<MediaTabType>(() => {
     return VALID_TABS.includes(tabParam as any) ? (tabParam as MediaTabType) : 'all';
   });
-  const [statusFilter, setStatusFilter] = useState<ListStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>(() => {
+    return VALID_STATUSES.includes(statusParam as any) ? (statusParam as StatusFilterType) : 'all';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortByType>(() => {
     return VALID_SORTS.includes(sortParam as any) ? (sortParam as SortByType) : 'recent';
   });
   const [isSuggestionsBannerDismissed, setIsSuggestionsBannerDismissed] = useState(false);
 
-  const handleSortChange = (newSort: string) => {
-    const nextSort = VALID_SORTS.includes(newSort as any) ? (newSort as SortByType) : 'recent';
-    setSortBy(nextSort);
-    const params = new URLSearchParams(searchParams.toString());
-    if (nextSort === 'recent') {
-      params.delete('sort');
-    } else {
-      params.set('sort', nextSort);
-    }
-    const query = params.toString() ? `?${params.toString()}` : '';
-    router.replace(`/my-list${query}`, { scroll: false });
-  };
-
-  // Sub-filters for rating & progress & favorites
-  const [ratingFilter, setRatingFilter] = useState<'all' | 'unrated' | 'rated'>('all');
-  const [watchProgressFilter, setWatchProgressFilter] = useState<'all' | 'up_to_date' | 'pending'>('all');
-  const [favoriteFilter, setFavoriteFilter] = useState<boolean>(false);
+  // Sub-filters for rating & progress & favorites inicializados a partir da URL
+  const [ratingFilter, setRatingFilter] = useState<RatingFilterType>(() => {
+    return VALID_RATINGS.includes(ratingParam as any) ? (ratingParam as RatingFilterType) : 'all';
+  });
+  const [watchProgressFilter, setWatchProgressFilter] = useState<ProgressFilterType>(() => {
+    return VALID_PROGRESS.includes(progressParam as any) ? (progressParam as ProgressFilterType) : 'all';
+  });
+  const [favoriteFilter, setFavoriteFilter] = useState<boolean>(() => favoriteParam);
 
   // Collections & Suggestions state
   const [collections, setCollections] = useState<UserFollowedCollection[]>([]);
@@ -278,11 +284,94 @@ function MyListContent() {
     }
   }
 
-  // Reset sub-filters when status or media tab changes
+  const handleSortChange = (newSort: string) => {
+    const nextSort = VALID_SORTS.includes(newSort as any) ? (newSort as SortByType) : 'recent';
+    setSortBy(nextSort);
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextSort === 'recent') {
+      params.delete('sort');
+    } else {
+      params.set('sort', nextSort);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
+  };
+
   const handleStatusChange = (newStatus: ListStatus | 'all') => {
-    setStatusFilter(newStatus);
+    const nextStatus = VALID_STATUSES.includes(newStatus as any) ? (newStatus as StatusFilterType) : 'all';
+    setStatusFilter(nextStatus);
     setRatingFilter('all');
     setWatchProgressFilter('all');
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextStatus === 'all') {
+      params.delete('status');
+    } else {
+      params.set('status', nextStatus);
+    }
+    // Sub-filtros redefinidos ao alterar status
+    params.delete('rating');
+    params.delete('progress');
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
+  };
+
+  const handleFavoriteToggle = () => {
+    const nextFavorite = !favoriteFilter;
+    setFavoriteFilter(nextFavorite);
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextFavorite) {
+      params.set('favorites', 'true');
+    } else {
+      params.delete('favorites');
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
+  };
+
+  const handleRatingChange = (newRating: RatingFilterType) => {
+    setRatingFilter(newRating);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newRating === 'all') {
+      params.delete('rating');
+    } else {
+      params.set('rating', newRating);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
+  };
+
+  const handleProgressChange = (newProgress: ProgressFilterType) => {
+    setWatchProgressFilter(newProgress);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newProgress === 'all') {
+      params.delete('progress');
+    } else {
+      params.set('progress', newProgress);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
+  };
+
+  const handleMediaTabChange = (val: string) => {
+    const nextTab = VALID_TABS.includes(val as any) ? (val as MediaTabType) : 'all';
+    setMediaTab(nextTab);
+    setRatingFilter('all');
+    setWatchProgressFilter('all');
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextTab === 'all') {
+      params.delete('tab');
+    } else {
+      params.set('tab', nextTab);
+    }
+    params.delete('rating');
+    params.delete('progress');
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
   };
 
   // Sync tab with URL search params when user navigates (e.g. back/forward)
@@ -303,21 +392,40 @@ function MyListContent() {
     }
   }, [searchParams, sortBy]);
 
-  const handleMediaTabChange = (val: string) => {
-    const nextTab = VALID_TABS.includes(val as any) ? (val as MediaTabType) : 'all';
-    setMediaTab(nextTab);
-    setRatingFilter('all');
-    setWatchProgressFilter('all');
-
-    const params = new URLSearchParams(searchParams.toString());
-    if (nextTab === 'all') {
-      params.delete('tab');
-    } else {
-      params.set('tab', nextTab);
+  // Sync status with URL search params when user navigates (e.g. back/forward)
+  useEffect(() => {
+    const currentStatusParam = searchParams.get('status');
+    const resolvedStatus = VALID_STATUSES.includes(currentStatusParam as any) ? (currentStatusParam as StatusFilterType) : 'all';
+    if (resolvedStatus !== statusFilter) {
+      setStatusFilter(resolvedStatus);
     }
-    const query = params.toString() ? `?${params.toString()}` : '';
-    router.replace(`/my-list${query}`, { scroll: false });
-  };
+  }, [searchParams, statusFilter]);
+
+  // Sync favorites with URL search params when user navigates (e.g. back/forward)
+  useEffect(() => {
+    const resolvedFav = searchParams.get('favorites') === 'true';
+    if (resolvedFav !== favoriteFilter) {
+      setFavoriteFilter(resolvedFav);
+    }
+  }, [searchParams, favoriteFilter]);
+
+  // Sync rating filter with URL search params
+  useEffect(() => {
+    const currentRatingParam = searchParams.get('rating');
+    const resolvedRating = VALID_RATINGS.includes(currentRatingParam as any) ? (currentRatingParam as RatingFilterType) : 'all';
+    if (resolvedRating !== ratingFilter) {
+      setRatingFilter(resolvedRating);
+    }
+  }, [searchParams, ratingFilter]);
+
+  // Sync progress filter with URL search params
+  useEffect(() => {
+    const currentProgressParam = searchParams.get('progress');
+    const resolvedProgress = VALID_PROGRESS.includes(currentProgressParam as any) ? (currentProgressParam as ProgressFilterType) : 'all';
+    if (resolvedProgress !== watchProgressFilter) {
+      setWatchProgressFilter(resolvedProgress);
+    }
+  }, [searchParams, watchProgressFilter]);
 
   // Convert dictionary to array for mapping and guarantee unique items
   const itemsArray = useMemo(() => {
@@ -1178,7 +1286,7 @@ function MyListContent() {
               {/* Favoritos Pill */}
               <button
                 type="button"
-                onClick={() => setFavoriteFilter(!favoriteFilter)}
+                onClick={handleFavoriteToggle}
                 className={cn(
                   "px-3 py-1.5 min-h-[36px] rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none shrink-0",
                   favoriteFilter
@@ -1251,7 +1359,7 @@ function MyListContent() {
 
                   <button
                     type="button"
-                    onClick={() => setRatingFilter('all')}
+                    onClick={() => handleRatingChange('all')}
                     className={cn(
                       "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5",
                       ratingFilter === 'all'
@@ -1272,7 +1380,7 @@ function MyListContent() {
 
                   <button
                     type="button"
-                    onClick={() => setRatingFilter('unrated')}
+                    onClick={() => handleRatingChange('unrated')}
                     className={cn(
                       "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                       ratingFilter === 'unrated'
@@ -1296,7 +1404,7 @@ function MyListContent() {
 
                   <button
                     type="button"
-                    onClick={() => setRatingFilter('rated')}
+                    onClick={() => handleRatingChange('rated')}
                     className={cn(
                       "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                       ratingFilter === 'rated'
@@ -1327,7 +1435,7 @@ function MyListContent() {
 
                     <button
                       type="button"
-                      onClick={() => setWatchProgressFilter('all')}
+                      onClick={() => handleProgressChange('all')}
                       className={cn(
                         "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap",
                         watchProgressFilter === 'all'
@@ -1340,7 +1448,7 @@ function MyListContent() {
 
                     <button
                       type="button"
-                      onClick={() => setWatchProgressFilter('pending')}
+                      onClick={() => handleProgressChange('pending')}
                       className={cn(
                         "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                         watchProgressFilter === 'pending'
@@ -1364,7 +1472,7 @@ function MyListContent() {
 
                     <button
                       type="button"
-                      onClick={() => setWatchProgressFilter('up_to_date')}
+                      onClick={() => handleProgressChange('up_to_date')}
                       className={cn(
                         "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                         watchProgressFilter === 'up_to_date'
@@ -1427,6 +1535,7 @@ function MyListContent() {
                   handleStatusChange('all');
                   setSearchQuery('');
                   handleSortChange('recent');
+                  if (favoriteFilter) handleFavoriteToggle();
                 }}
               >
                 Limpar Filtros
