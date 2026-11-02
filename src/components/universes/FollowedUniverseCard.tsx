@@ -22,7 +22,10 @@ import {
   Tv,
   Layers,
   Ban,
+  ArrowRight,
+  Check,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface FollowedUniverseCardProps {
   universe: UserFollowedUniverse;
@@ -123,8 +126,8 @@ export function FollowedUniverseCard({
   function getStatusBadge(item: any) {
     if (item.is_ignored) {
       return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full border border-slate-700/60">
-          <Ban className="w-3 h-3 text-slate-400" /> Ignorado
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md border border-border/40">
+          <Ban className="w-3 h-3 text-muted-foreground" /> Ignorado
         </span>
       );
     }
@@ -133,31 +136,31 @@ export function FollowedUniverseCard({
       case "completed":
       case "watched":
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/50">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
             <CheckCircle2 className="w-3 h-3" /> Assistido
           </span>
         );
       case "watching":
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-800/50">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
             <PlayCircle className="w-3 h-3" /> Assistindo
           </span>
         );
       case "upcoming":
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded-full border border-purple-800/50">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
             <CalendarClock className="w-3 h-3" /> Em Breve
           </span>
         );
       case "plan_to_watch":
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-800/50">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
             <Clock className="w-3 h-3" /> Quero Ver
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded-md border border-border/40">
             Não na lista
           </span>
         );
@@ -165,54 +168,54 @@ export function FollowedUniverseCard({
   }
 
   return (
-    <div className="rounded-xl border border-border/60 bg-card overflow-hidden transition-all duration-200 hover:border-purple-500/40">
-      {/* Header com Backdrop */}
+    <div className="group rounded-2xl border border-border/80 hover:border-border bg-card hover:bg-card/95 overflow-hidden transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between">
+      {/* Header com Backdrop e Badges Flutuantes */}
       <div className="relative h-44 sm:h-52 w-full overflow-hidden bg-muted">
         {backdropUrl ? (
           <Image
             src={backdropUrl}
             alt={universe.name}
             fill
-            className="object-cover object-center transition-transform duration-500 hover:scale-105"
-            sizes="(max-width: 1200px) 100vw, 1200px"
+            className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-secondary/30">
-            <Globe className="w-12 h-12 text-muted-foreground/40" />
+            <Globe className="w-12 h-12 text-muted-foreground/30" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent pointer-events-none" />
         <Link
           href={detailHref}
-          aria-label={`Abrir ${universe.name}`}
+          aria-label={`Abrir detalhes de ${universe.name}`}
           className="absolute inset-0 z-[5]"
         />
 
         {/* Badge flutuante de Nota Média no topo esquerdo */}
         {averageRating && (
-          <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-500/30 shadow-sm pointer-events-none">
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 text-xs font-bold text-amber-400 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-lg border border-amber-500/30 shadow-md pointer-events-none">
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
             <span>{averageRating}</span>
           </div>
         )}
 
         {/* Action buttons no topo direito */}
-        <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
           <Button
             variant="secondary"
             size="icon"
-            className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-md hover:bg-background cursor-pointer"
+            className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-md hover:bg-background border border-border/60 text-foreground cursor-pointer shadow-sm"
             onClick={handleSync}
             disabled={isSyncing}
             title="Sincronizar novas obras do universo"
           >
-            <RotateCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+            <RotateCw className={cn("w-3.5 h-3.5 text-primary", isSyncing && "animate-spin")} />
           </Button>
 
           <Button
             variant="destructive"
             size="icon"
-            className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-md text-destructive hover:bg-destructive hover:text-white cursor-pointer"
+            className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-md hover:bg-destructive hover:text-white border border-border/60 text-destructive cursor-pointer shadow-sm"
             onClick={handleUnfollow}
             disabled={isUnfollowing}
             title="Deixar de seguir este universo"
@@ -225,11 +228,11 @@ export function FollowedUniverseCard({
         <div className="absolute bottom-3 left-4 right-4 z-10 pointer-events-none">
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
             {isCompleted ? (
-              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-700/60">
-                100% Concluído
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-md border border-emerald-700/60 shadow-sm flex items-center gap-1">
+                <Check className="w-3 h-3 stroke-[2.5]" /> 100% Concluído
               </span>
             ) : (
-              <span className="text-xs font-medium text-purple-300 bg-purple-950/80 backdrop-blur-sm px-2.5 py-0.5 rounded-full border border-purple-700/50">
+              <span className="text-[10px] font-semibold text-foreground/90 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10 shadow-sm">
                 Universo Monitorado
               </span>
             )}
@@ -249,96 +252,138 @@ export function FollowedUniverseCard({
               </span>
             )}
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold truncate drop-shadow-sm">
+          <h3 className="text-lg sm:text-xl font-bold truncate drop-shadow-md text-foreground group-hover:text-primary transition-colors">
             {universe.name}
-          </h2>
+          </h3>
         </div>
       </div>
 
       {/* Progress & Overview Content */}
-      <div className="p-4 sm:p-5">
-        <div className="flex items-center justify-between text-sm mb-1">
-          <span className="text-muted-foreground font-medium">
-            Seu Progresso
-          </span>
-          <span className="font-semibold text-purple-300">
-            {universe.watched_items} de {activeTotal} assistidos ({Math.round(universe.personal_completion_percentage ?? universe.completion_percentage)}%)
-          </span>
-        </div>
-
-        {universe.ignored_items_count && universe.ignored_items_count > 0 ? (
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
-            <span>Catálogo canônico total</span>
-            <span>
-              {universe.watched_items} de {universe.total_items} ({Math.round(universe.canonical_completion_percentage ?? ((universe.watched_items / universe.total_items) * 100))}%) • {universe.ignored_items_count} ignorada(s)
-            </span>
-          </div>
-        ) : null}
-
-        {/* Progress Bar */}
-        <div className="w-full bg-secondary/80 rounded-full h-2.5 overflow-hidden mb-3">
-          <div
-            className={`h-2.5 rounded-full transition-all duration-500 ${
-              isCompleted ? "bg-emerald-500" : "bg-purple-600"
-            }`}
-            style={{ width: `${Math.min(100, Math.max(0, universe.personal_completion_percentage ?? universe.completion_percentage))}%` }}
-          />
-        </div>
-
-        {/* Linha de Avaliação do Universo */}
-        <div className="flex items-center justify-between text-xs mb-3 py-1.5 px-3 rounded-lg bg-secondary/30 border border-border/40">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30" />
-            Sua Avaliação
-          </span>
-          {averageRating ? (
-            <span className="font-semibold text-foreground flex items-center gap-1.5">
-              <span className="text-amber-400 font-bold">{averageRating}</span>
-              <span className="text-[11px] text-muted-foreground font-normal">
-                ({ratedCount} de {universe.total_items} obras avaliadas)
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          {/* Progresso de Visualização */}
+          <div className="space-y-1.5 mb-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground font-medium">Progresso</span>
+              <span className="font-bold text-foreground">
+                {universe.watched_items} de {activeTotal} ({Math.round(universe.personal_completion_percentage ?? universe.completion_percentage)}%)
               </span>
-            </span>
-          ) : (
-            <span className="text-muted-foreground text-[11px]">Sem avaliações</span>
+            </div>
+
+            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden border border-border/40">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  isCompleted ? "bg-emerald-500" : "bg-gradient-to-r from-primary to-amber-500"
+                )}
+                style={{ width: `${Math.min(100, Math.max(0, universe.personal_completion_percentage ?? universe.completion_percentage))}%` }}
+              />
+            </div>
+
+            {universe.ignored_items_count && universe.ignored_items_count > 0 ? (
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-0.5">
+                <span>Catálogo total: {universe.total_items}</span>
+                <span>{universe.ignored_items_count} obra(s) ignorada(s)</span>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Miniaturas das Obras do Universo (Visual Rápido Instantâneo) */}
+          {universe.items && universe.items.length > 0 && (
+            <div className="mb-3 pt-2 border-t border-border/50">
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5 font-medium">
+                <span>Obras do universo:</span>
+                <span>{universe.total_items} {universe.total_items === 1 ? 'obra' : 'obras'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                {universe.items.slice(0, 5).map((part, i) => {
+                  const isWatched = part.status === "completed" || part.status === "watched";
+                  const posterUrl = part.poster_path ? `https://image.tmdb.org/t/p/w92${part.poster_path}` : null;
+                  return (
+                    <div
+                      key={`${part.media_type}-${part.tmdb_id}-${i}`}
+                      className="relative w-8 h-12 rounded-md overflow-hidden bg-muted border border-border/60 shrink-0 shadow-xs group/thumb"
+                      title={`${part.title} (${isWatched ? "Assistido" : "Pendente"})`}
+                    >
+                      {posterUrl ? (
+                        <Image
+                          src={posterUrl}
+                          alt={part.title}
+                          fill
+                          className="object-cover"
+                          sizes="32px"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[9px] text-muted-foreground font-mono">
+                          {part.media_type === "tv" ? "TV" : "FILM"}
+                        </div>
+                      )}
+                      {isWatched && (
+                        <div className="absolute inset-0 bg-emerald-950/60 flex items-center justify-center">
+                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {universe.items.length > 5 && (
+                  <span className="text-[10px] text-muted-foreground font-semibold px-1">
+                    +{universe.items.length - 5}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {universe.overview && (
+            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+              {universe.overview}
+            </p>
           )}
         </div>
 
-        {universe.overview && (
-          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-4">
-            {universe.overview}
-          </p>
-        )}
+        {/* Rodapé do Card com Ações (Ver Universo & Expandir) */}
+        <div className="pt-3 border-t border-border/50 flex items-center justify-between gap-2">
+          <Link
+            href={detailHref}
+            className="flex-1"
+          >
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full gap-1.5 text-xs font-semibold cursor-pointer shadow-sm"
+            >
+              <span>Ver Universo</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          </Link>
 
-        {/* Toggle Expand Button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-between text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/40 cursor-pointer"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <span>
-            {isExpanded
-              ? "Ocultar obras do universo"
-              : `Ver todas as ${universe.total_items} obras (Filmes e Séries)`}
-          </span>
-          {isExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            title={isExpanded ? "Ocultar lista interna" : `Ver todas as ${universe.total_items} obras`}
+          >
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+        </div>
 
         {/* Expandable Media List */}
         {isExpanded && (
-          <div className="mt-4 pt-4 border-t border-border/50 divide-y divide-border/30 max-h-96 overflow-y-auto pr-1">
+          <div className="mt-2 pt-2 border-t border-border/40 divide-y divide-border/30 max-h-80 overflow-y-auto pr-1 animate-in fade-in duration-200">
             {universe.items.map((item, idx) => {
               const itemHref = item.media_type === "tv" ? `/tv/${item.tmdb_id}` : `/movie/${item.tmdb_id}`;
               return (
                 <div
                   key={`${item.media_type}-${item.tmdb_id}-${idx}`}
-                  className="py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 px-2 rounded-lg transition-colors"
+                  className="py-2 flex items-center justify-between gap-2.5 hover:bg-muted/40 px-1.5 rounded-lg transition-colors text-xs"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-xs font-mono text-muted-foreground w-5 text-center">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-[10px] text-muted-foreground w-4 text-center shrink-0">
                       {idx + 1}
                     </span>
-                    <div className="relative w-9 h-13 rounded overflow-hidden bg-muted flex-shrink-0">
+                    <div className="relative w-7 h-10 rounded overflow-hidden bg-muted shrink-0 border border-border/40">
                       {item.poster_path ? (
                         <Image
                           src={`https://image.tmdb.org/t/p/w92${item.poster_path}`}
@@ -347,7 +392,7 @@ export function FollowedUniverseCard({
                           className="object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
+                        <div className="w-full h-full flex items-center justify-center text-[8px] text-muted-foreground">
                           N/A
                         </div>
                       )}
@@ -355,33 +400,18 @@ export function FollowedUniverseCard({
                     <div className="min-w-0">
                       <Link
                         href={itemHref}
-                        className="text-sm font-medium hover:underline truncate block"
+                        className="font-medium text-foreground hover:text-primary transition-colors truncate block"
                       >
                         {item.title}
                       </Link>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.2 rounded bg-secondary/70">
-                          {item.media_type === "tv" ? (
-                            <>
-                              <Tv className="w-2.5 h-2.5 text-emerald-400" /> Série
-                            </>
-                          ) : (
-                            <>
-                              <Film className="w-2.5 h-2.5 text-blue-400" /> Filme
-                            </>
-                          )}
-                        </span>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
+                        <span>{item.media_type === "tv" ? "Série" : "Filme"}</span>
                         {item.release_date && (
-                          <span>{item.release_date.split("-")[0]}</span>
-                        )}
-                        {item.collection_name && (
-                          <span className="text-[11px] text-purple-400/90 truncate max-w-[160px]">
-                            • {item.collection_name}
-                          </span>
+                          <span>• {item.release_date.split("-")[0]}</span>
                         )}
                         {item.rating && (
-                          <span className="flex items-center text-yellow-500 font-medium">
-                            <Star className="w-3 h-3 fill-yellow-500 mr-0.5" />
+                          <span className="flex items-center text-amber-500 font-medium">
+                            • <Star className="w-2.5 h-2.5 fill-amber-500 ml-0.5 mr-0.5" />
                             {item.rating}
                           </span>
                         )}
@@ -389,7 +419,7 @@ export function FollowedUniverseCard({
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     {getStatusBadge(item)}
                   </div>
                 </div>

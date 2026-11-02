@@ -87,6 +87,13 @@ function MyListContent() {
   const [universeSuggestions, setUniverseSuggestions] = useState<UniverseSuggestion[]>([]);
   const [, setIsLoadingUniverseSuggestions] = useState(false);
   const [isUniverseSuggestionsCollapsed, setIsUniverseSuggestionsCollapsed] = useState(false);
+  const [showAllUniverseSuggestions, setShowAllUniverseSuggestions] = useState(false);
+  const [universesFilter, setUniversesFilter] = useState<'all' | 'in_progress' | 'completed'>(() => {
+    if (statusParam === 'completed') return 'completed';
+    if (statusParam === 'watching' || statusParam === 'in_progress') return 'in_progress';
+    return 'all';
+  });
+  const [universesSort, setUniversesSort] = useState<'recent' | 'progress_desc' | 'name_asc'>('recent');
   const [dismissedUniverses, setDismissedUniverses] = useState<UniverseSuggestion[]>([]);
   const [isDismissedUniversesOpen, setIsDismissedUniversesOpen] = useState(false);
 
@@ -319,6 +326,30 @@ function MyListContent() {
     router.replace(`/my-list${query}`, { scroll: false });
   };
 
+  const handleUniversesFilterChange = (newFilter: 'all' | 'in_progress' | 'completed') => {
+    setUniversesFilter(newFilter);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newFilter === 'all') {
+      params.delete('status');
+    } else {
+      params.set('status', newFilter);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
+  };
+
+  const handleCollectionsFilterChange = (newFilter: 'all' | 'in_progress' | 'completed') => {
+    setCollectionsFilter(newFilter);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newFilter === 'all') {
+      params.delete('status');
+    } else {
+      params.set('status', newFilter);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
+  };
+
   const handleFavoriteToggle = () => {
     const nextFavorite = !favoriteFilter;
     setFavoriteFilter(nextFavorite);
@@ -400,6 +431,16 @@ function MyListContent() {
     const resolvedStatus = VALID_STATUSES.includes(currentStatusParam as any) ? (currentStatusParam as StatusFilterType) : 'all';
     if (resolvedStatus !== statusFilter) {
       setStatusFilter(resolvedStatus);
+    }
+    if (currentStatusParam === 'completed') {
+      setUniversesFilter('completed');
+      setCollectionsFilter('completed');
+    } else if (currentStatusParam === 'in_progress' || currentStatusParam === 'watching') {
+      setUniversesFilter('in_progress');
+      setCollectionsFilter('in_progress');
+    } else if (!currentStatusParam || currentStatusParam === 'all') {
+      setUniversesFilter('all');
+      setCollectionsFilter('all');
     }
   }, [searchParams, statusFilter]);
 
@@ -556,16 +597,64 @@ function MyListContent() {
     return s.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
   });
 
-  // Filter universes and universe suggestions by search query
-  const filteredUniverses = universes.filter((u) => {
-    if (!searchQuery.trim()) return true;
-    return u.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
-  });
+  // Filter universes and universe suggestions by search query, status and sorting
+  const filteredUniverses = useMemo(() => {
+    return universes.filter((u) => {
+      if (!searchQuery.trim()) return true;
+      return u.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+    });
+  }, [universes, searchQuery]);
 
-  const filteredUniverseSuggestions = universeSuggestions.filter((s) => {
-    if (!searchQuery.trim()) return true;
-    return s.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
-  });
+  const completedUniversesCount = useMemo(() => {
+    return filteredUniverses.filter((u) => {
+      const activeTotal = u.active_items !== undefined ? u.active_items : Math.max(0, u.total_items - (u.ignored_items_count || 0));
+      return activeTotal > 0 && u.watched_items >= activeTotal;
+    }).length;
+  }, [filteredUniverses]);
+
+  const inProgressUniversesCount = useMemo(() => {
+    return filteredUniverses.filter((u) => {
+      const activeTotal = u.active_items !== undefined ? u.active_items : Math.max(0, u.total_items - (u.ignored_items_count || 0));
+      return activeTotal > 0 && u.watched_items < activeTotal;
+    }).length;
+  }, [filteredUniverses]);
+
+  const displayedUniverses = useMemo(() => {
+    let list = [...filteredUniverses];
+
+    if (universesFilter === 'completed') {
+      list = list.filter((u) => {
+        const activeTotal = u.active_items !== undefined ? u.active_items : Math.max(0, u.total_items - (u.ignored_items_count || 0));
+        return activeTotal > 0 && u.watched_items >= activeTotal;
+      });
+    } else if (universesFilter === 'in_progress') {
+      list = list.filter((u) => {
+        const activeTotal = u.active_items !== undefined ? u.active_items : Math.max(0, u.total_items - (u.ignored_items_count || 0));
+        return activeTotal > 0 && u.watched_items < activeTotal;
+      });
+    }
+
+    if (universesSort === 'progress_desc') {
+      list.sort((a, b) => {
+        const totalA = a.active_items !== undefined ? a.active_items : Math.max(0, a.total_items - (a.ignored_items_count || 0));
+        const totalB = b.active_items !== undefined ? b.active_items : Math.max(0, b.total_items - (b.ignored_items_count || 0));
+        const pctA = totalA > 0 ? a.watched_items / totalA : 0;
+        const pctB = totalB > 0 ? b.watched_items / totalB : 0;
+        return pctB - pctA;
+      });
+    } else if (universesSort === 'name_asc') {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return list;
+  }, [filteredUniverses, universesFilter, universesSort]);
+
+  const filteredUniverseSuggestions = useMemo(() => {
+    return universeSuggestions.filter((s) => {
+      if (!searchQuery.trim()) return true;
+      return s.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+    });
+  }, [universeSuggestions, searchQuery]);
 
   // Sort items according to selected sortBy
   const sortedItems = useMemo(() => {
@@ -817,12 +906,12 @@ function MyListContent() {
 
       {mediaTab === 'universes' ? (
         <div className="space-y-8">
-          {/* Seção de Sugestões de Universos */}
+          {/* Seção de Sugestões de Universos (Sólido, adaptativo ao tema, com limite de 6 cards) */}
           {(filteredUniverseSuggestions.length > 0 || dismissedUniverses.length > 0) && (
             <div
               className={cn(
-                "bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/25 rounded-2xl transition-all duration-300",
-                isUniverseSuggestionsCollapsed ? "p-4 sm:p-5 hover:border-purple-500/40" : "p-5 sm:p-6"
+                "bg-card border border-border/80 rounded-2xl shadow-sm transition-all duration-300",
+                isUniverseSuggestionsCollapsed ? "p-4 sm:p-5 hover:border-border" : "p-5 sm:p-6"
               )}
             >
               <div
@@ -836,18 +925,18 @@ function MyListContent() {
                 onKeyDown={isUniverseSuggestionsCollapsed ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleUniverseSuggestionsCollapsed(); } } : undefined}
               >
                 <div className={cn("flex gap-3", isUniverseSuggestionsCollapsed ? "items-center" : "items-start")}>
-                  <div className="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                     <Globe className="w-5 h-5" aria-hidden="true" />
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-bold text-foreground flex flex-wrap items-center gap-2">
                       Sugestões de Universos
                       {filteredUniverseSuggestions.length > 0 ? (
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                           {filteredUniverseSuggestions.length} {filteredUniverseSuggestions.length === 1 ? 'identificado' : 'identificados'}
                         </span>
                       ) : (
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
                           {dismissedUniverses.length} {dismissedUniverses.length === 1 ? 'dispensado' : 'dispensados'}
                         </span>
                       )}
@@ -861,20 +950,20 @@ function MyListContent() {
                 </div>
 
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleUniverseSuggestionsCollapsed();
                   }}
-                  className="bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-zinc-700 hover:border-zinc-600 shadow-sm text-xs shrink-0 cursor-pointer font-medium gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-lg transition-all"
+                  className="bg-card hover:bg-accent text-foreground border border-border shadow-sm text-xs shrink-0 cursor-pointer font-medium gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-lg transition-all"
                   aria-controls="universe-suggestions-content"
                 >
-                  <span className="font-semibold text-zinc-100">{isUniverseSuggestionsCollapsed ? 'Mostrar Sugestões' : 'Ocultar Sugestões'}</span>
+                  <span className="font-semibold">{isUniverseSuggestionsCollapsed ? 'Mostrar Sugestões' : 'Ocultar Sugestões'}</span>
                   {isUniverseSuggestionsCollapsed ? (
-                    <ChevronDown className="w-4 h-4 text-zinc-300" />
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   ) : (
-                    <ChevronUp className="w-4 h-4 text-zinc-300" />
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
                   )}
                 </Button>
               </div>
@@ -882,26 +971,50 @@ function MyListContent() {
               {!isUniverseSuggestionsCollapsed && (
                 <div id="universe-suggestions-content" className="space-y-4 animate-in fade-in duration-200">
                   {filteredUniverseSuggestions.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                      {filteredUniverseSuggestions.map((suggestion) => (
-                        <UniverseSuggestionCard
-                          key={suggestion.id}
-                          suggestion={suggestion}
-                          onFollow={handleFollowUniverseSuggestion}
-                          onDismiss={handleDismissUniverseSuggestion}
-                        />
-                      ))}
-                    </div>
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {(showAllUniverseSuggestions
+                          ? filteredUniverseSuggestions
+                          : filteredUniverseSuggestions.slice(0, 6)
+                        ).map((suggestion) => (
+                          <UniverseSuggestionCard
+                            key={suggestion.id}
+                            suggestion={suggestion}
+                            onFollow={handleFollowUniverseSuggestion}
+                            onDismiss={handleDismissUniverseSuggestion}
+                          />
+                        ))}
+                      </div>
+
+                      {filteredUniverseSuggestions.length > 6 && (
+                        <div className="flex justify-center pt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAllUniverseSuggestions(!showAllUniverseSuggestions)}
+                            className="gap-2 text-xs font-semibold px-4 py-2 rounded-xl border border-border/80 hover:bg-accent cursor-pointer"
+                          >
+                            <span>
+                              {showAllUniverseSuggestions
+                                ? 'Mostrar menos sugestões'
+                                : `Ver mais sugestões (+${filteredUniverseSuggestions.length - 6})`}
+                            </span>
+                            {showAllUniverseSuggestions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {dismissedUniverses.length > 0 && (
-                    <div className={cn("pt-2", filteredUniverseSuggestions.length > 0 ? "border-t border-purple-900/30" : "")}>
+                    <div className={cn("pt-2", filteredUniverseSuggestions.length > 0 ? "border-t border-border/60" : "")}>
                       <button
                         type="button"
                         onClick={() => setIsDismissedUniversesOpen(!isDismissedUniversesOpen)}
-                        className="flex items-center gap-2 text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors cursor-pointer"
+                        className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                       >
-                        <EyeOff className="w-3.5 h-3.5 text-purple-400" />
+                        <EyeOff className="w-3.5 h-3.5" />
                         <span>
                           {isDismissedUniversesOpen ? "Ocultar" : "Ver"} sugestões de universos dispensadas ({dismissedUniverses.length})
                         </span>
@@ -913,11 +1026,11 @@ function MyListContent() {
                           {dismissedUniverses.map((du) => (
                             <div
                               key={du.id}
-                              className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs gap-3"
+                              className="flex items-center justify-between p-3 rounded-xl bg-card border border-border text-xs gap-3"
                             >
                               <div className="min-w-0 flex-1">
-                                <h5 className="font-semibold text-slate-200 truncate">{du.name}</h5>
-                                <p className="text-[11px] text-slate-400 truncate">
+                                <h5 className="font-semibold text-foreground truncate">{du.name}</h5>
+                                <p className="text-[11px] text-muted-foreground truncate">
                                   {du.items_in_list} de {du.total_items} obras na sua lista
                                 </p>
                               </div>
@@ -931,7 +1044,7 @@ function MyListContent() {
                                   variant="secondary"
                                   size="sm"
                                   onClick={() => handleRestoreUniverse(du.universe_key)}
-                                  className="h-7 text-xs px-2.5 bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800/60 cursor-pointer"
+                                  className="h-7 text-xs px-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 cursor-pointer"
                                 >
                                   Restaurar
                                 </Button>
@@ -978,37 +1091,114 @@ function MyListContent() {
                 </Link>
               </div>
             )
-          ) : filteredUniverses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center max-w-md mx-auto">
-              <div className="w-12 h-12 rounded-full bg-secondary/60 flex items-center justify-center mb-3 text-muted-foreground">
-                <Search className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-semibold mb-1">Nenhum universo encontrado</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Nenhum universo corresponde à pesquisa &ldquo;{searchQuery}&rdquo;.
-              </p>
-              <Button variant="outline" size="sm" onClick={() => setSearchQuery('')} className="cursor-pointer">
-                Limpar busca
-              </Button>
-            </div>
           ) : (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">
-                  Universos Seguidos ({filteredUniverses.length}
-                  {searchQuery.trim() ? ` de ${universes.length}` : ''})
-                </h3>
+              {/* Barra de Ferramentas dos Universos Seguidos (Filtros & Ordenação) */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card/70 border border-border/80 p-2 sm:p-2.5 rounded-2xl shadow-sm mb-6">
+                {/* Segmented Control */}
+                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar p-0.5 bg-background/80 rounded-xl border border-border/60">
+                  <button
+                    type="button"
+                    onClick={() => handleUniversesFilterChange('all')}
+                    className={cn(
+                      "px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                      universesFilter === 'all'
+                        ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                    )}
+                  >
+                    <span>Todos</span>
+                    <span className={cn("text-[10px] px-1.5 py-0.2 rounded-full", universesFilter === 'all' ? "bg-black/20 text-white font-bold" : "bg-muted text-muted-foreground")}>
+                      {universes.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleUniversesFilterChange('in_progress')}
+                    className={cn(
+                      "px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                      universesFilter === 'in_progress'
+                        ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                    )}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Em Andamento</span>
+                    <span className={cn("text-[10px] px-1.5 py-0.2 rounded-full", universesFilter === 'in_progress' ? "bg-black/20 text-white font-bold" : "bg-muted text-muted-foreground")}>
+                      {inProgressUniversesCount}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleUniversesFilterChange('completed')}
+                    className={cn(
+                      "px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                      universesFilter === 'completed'
+                        ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                    )}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Concluídos</span>
+                    <span className={cn("text-[10px] px-1.5 py-0.2 rounded-full", universesFilter === 'completed' ? "bg-black/20 text-white font-bold" : "bg-muted text-muted-foreground")}>
+                      {completedUniversesCount}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Ordenação */}
+                <div className="flex items-center gap-1.5 bg-background/80 border border-border/80 px-3 py-1.5 min-h-[36px] rounded-xl text-xs text-muted-foreground self-start md:self-auto shrink-0">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="hidden sm:inline">Ordenar:</span>
+                  <select
+                    value={universesSort}
+                    onChange={(e) => setUniversesSort(e.target.value as any)}
+                    className="bg-transparent text-xs text-foreground font-semibold focus:outline-none cursor-pointer"
+                    aria-label="Critério de ordenação dos universos"
+                  >
+                    <option value="recent" className="bg-popover text-popover-foreground">Recém Adicionados</option>
+                    <option value="progress_desc" className="bg-popover text-popover-foreground">Maior Progresso (%)</option>
+                    <option value="name_asc" className="bg-popover text-popover-foreground">Nome (A → Z)</option>
+                  </select>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredUniverses.map((univ) => (
-                  <FollowedUniverseCard
-                    key={univ.id}
-                    universe={univ}
-                    onUnfollow={handleUnfollowUniverse}
-                    onSyncComplete={loadUniverses}
-                  />
-                ))}
-              </div>
+
+              {displayedUniverses.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center max-w-md mx-auto bg-card/40 border border-border/60 rounded-2xl p-6">
+                  <Search className="w-8 h-8 text-muted-foreground/40 mb-2" />
+                  <h3 className="text-base font-semibold text-foreground mb-1">Nenhum universo encontrado</h3>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    {searchQuery.trim()
+                      ? `Nenhum universo corresponde à pesquisa "${searchQuery}".`
+                      : "Nenhum universo no status selecionado."}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      handleUniversesFilterChange('all');
+                      setSearchQuery('');
+                      setUniversesSort('recent');
+                    }}
+                    className="cursor-pointer"
+                  >
+                    Redefinir Filtros
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                  {displayedUniverses.map((univ) => (
+                    <FollowedUniverseCard
+                      key={univ.id}
+                      universe={univ}
+                      onUnfollow={handleUnfollowUniverse}
+                      onSyncComplete={loadUniverses}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1126,7 +1316,7 @@ function MyListContent() {
                 <div className="flex items-center gap-1 overflow-x-auto no-scrollbar p-0.5 bg-background/80 rounded-xl border border-border/60">
                   <button
                     type="button"
-                    onClick={() => setCollectionsFilter('all')}
+                    onClick={() => handleCollectionsFilterChange('all')}
                     className={cn(
                       "px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
                       collectionsFilter === 'all'
@@ -1142,7 +1332,7 @@ function MyListContent() {
 
                   <button
                     type="button"
-                    onClick={() => setCollectionsFilter('in_progress')}
+                    onClick={() => handleCollectionsFilterChange('in_progress')}
                     className={cn(
                       "px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
                       collectionsFilter === 'in_progress'
@@ -1159,7 +1349,7 @@ function MyListContent() {
 
                   <button
                     type="button"
-                    onClick={() => setCollectionsFilter('completed')}
+                    onClick={() => handleCollectionsFilterChange('completed')}
                     className={cn(
                       "px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
                       collectionsFilter === 'completed'
