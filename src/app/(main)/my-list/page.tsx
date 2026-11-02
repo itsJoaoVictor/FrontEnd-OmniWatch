@@ -1013,7 +1013,78 @@ function MyListContent() {
           )}
         </div>
       ) : mediaTab === 'collections' ? (
-        <div className="space-y-8">
+        <div className="space-y-6">
+          {/* Seção de Sugestões de Franquias (No Topo com Gaveta Inteligente Integrada) */}
+          {filteredSuggestions.length > 0 && (
+            <div
+              className={cn(
+                "border border-amber-500/25 rounded-2xl transition-all duration-300 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent",
+                isSuggestionsCollapsed ? "p-3.5 sm:p-4 hover:border-amber-500/40" : "p-5 sm:p-6"
+              )}
+            >
+              <div
+                className={cn(
+                  "flex justify-between gap-3 sm:gap-4",
+                  isSuggestionsCollapsed ? "items-center cursor-pointer select-none" : "flex-col sm:flex-row items-start mb-5"
+                )}
+                onClick={isSuggestionsCollapsed ? toggleSuggestionsCollapsed : undefined}
+                role={isSuggestionsCollapsed ? "button" : undefined}
+                tabIndex={isSuggestionsCollapsed ? 0 : undefined}
+                onKeyDown={isSuggestionsCollapsed ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSuggestionsCollapsed(); } } : undefined}
+              >
+                <div className={cn("flex gap-3", isSuggestionsCollapsed ? "items-center" : "items-start")}>
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                    <Sparkles className="w-5 h-5" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-foreground flex flex-wrap items-center gap-2">
+                      Sugestões de Franquias
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30">
+                        {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'identificada' : 'identificadas'}
+                      </span>
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                      {isSuggestionsCollapsed
+                        ? "Identificamos sagas completas baseadas nos seus filmes assistidos e salvos."
+                        : "Baseado nos filmes da sua biblioteca, identificamos sagas completas. Siga para acompanhar todos os filmes automaticamente!"}
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSuggestionsCollapsed();
+                  }}
+                  className="bg-card hover:bg-accent text-foreground border border-border shadow-xs text-xs shrink-0 cursor-pointer font-semibold gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-xl transition-all"
+                  aria-controls="collection-suggestions-content"
+                >
+                  <span>{isSuggestionsCollapsed ? 'Ver Sugestões' : 'Ocultar Sugestões'}</span>
+                  {isSuggestionsCollapsed ? (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+
+              {!isSuggestionsCollapsed && (
+                <div id="collection-suggestions-content" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in duration-200">
+                  {filteredSuggestions.map((suggestion) => (
+                    <CollectionSuggestionCard
+                      key={suggestion.id}
+                      suggestion={suggestion}
+                      onFollow={handleFollowSuggestion}
+                      onDismiss={handleDismissSuggestion}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Seção de Coleções Seguidas (Prioridade Principal) */}
           {isLoadingCollections ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
@@ -1025,7 +1096,7 @@ function MyListContent() {
             suggestions.length > 0 ? (
               <div className="text-center py-10 bg-card/60 border border-border/60 rounded-2xl p-6">
                 <p className="text-sm text-muted-foreground">
-                  Você ainda não possui coleções fixas na sua lista. Comece seguindo uma das sagas sugeridas abaixo!
+                  Você ainda não possui coleções fixas na sua lista. Comece seguindo uma das sagas sugeridas acima!
                 </p>
               </div>
             ) : (
@@ -1151,77 +1222,6 @@ function MyListContent() {
                       collection={col}
                       onUnfollow={handleUnfollowCollection}
                       onSyncComplete={loadCollections}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Seção de Sugestões de Franquias (Gaveta Inteligente Integrada) */}
-          {filteredSuggestions.length > 0 && (
-            <div
-              className={cn(
-                "border border-amber-500/25 rounded-2xl transition-all duration-300 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent",
-                isSuggestionsCollapsed ? "p-4 sm:p-5 hover:border-amber-500/40" : "p-5 sm:p-6"
-              )}
-            >
-              <div
-                className={cn(
-                  "flex justify-between gap-3 sm:gap-4",
-                  isSuggestionsCollapsed ? "items-center cursor-pointer select-none" : "flex-col sm:flex-row items-start mb-5"
-                )}
-                onClick={isSuggestionsCollapsed ? toggleSuggestionsCollapsed : undefined}
-                role={isSuggestionsCollapsed ? "button" : undefined}
-                tabIndex={isSuggestionsCollapsed ? 0 : undefined}
-                onKeyDown={isSuggestionsCollapsed ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSuggestionsCollapsed(); } } : undefined}
-              >
-                <div className={cn("flex gap-3", isSuggestionsCollapsed ? "items-center" : "items-start")}>
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
-                    <Sparkles className="w-5 h-5" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-foreground flex flex-wrap items-center gap-2">
-                      Sugestões de Franquias
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30">
-                        {filteredSuggestions.length} {filteredSuggestions.length === 1 ? 'identificada' : 'identificadas'}
-                      </span>
-                    </h3>
-                    {!isSuggestionsCollapsed && (
-                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                        Baseado nos filmes da sua biblioteca, identificamos sagas completas. Siga para acompanhar todos os filmes automaticamente!
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSuggestionsCollapsed();
-                  }}
-                  className="bg-card hover:bg-accent text-foreground border border-border shadow-xs text-xs shrink-0 cursor-pointer font-semibold gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-xl transition-all"
-                  aria-controls="collection-suggestions-content"
-                >
-                  <span>{isSuggestionsCollapsed ? 'Mostrar Sugestões' : 'Ocultar Sugestões'}</span>
-                  {isSuggestionsCollapsed ? (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-
-              {!isSuggestionsCollapsed && (
-                <div id="collection-suggestions-content" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in duration-200">
-                  {filteredSuggestions.map((suggestion) => (
-                    <CollectionSuggestionCard
-                      key={suggestion.id}
-                      suggestion={suggestion}
-                      onFollow={handleFollowSuggestion}
-                      onDismiss={handleDismissSuggestion}
                     />
                   ))}
                 </div>
