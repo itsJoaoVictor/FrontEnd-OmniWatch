@@ -63,7 +63,9 @@ export default function UniversePage() {
   const fetchMyList = useMyListStore((s) => s.fetchMyList);
 
   useEffect(() => {
-    fetchMyList();
+    if (Object.keys(useMyListStore.getState().items).length === 0) {
+      fetchMyList();
+    }
   }, [fetchMyList]);
 
   const load = useCallback(async () => {
