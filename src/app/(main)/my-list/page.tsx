@@ -21,7 +21,7 @@ import {
 import { UserFollowedUniverse, UniverseSuggestion } from '@/types/universes';
 import { FollowedUniverseCard } from '@/components/universes/FollowedUniverseCard';
 import { UniverseSuggestionCard } from '@/components/universes/UniverseSuggestionCard';
-import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff, ArrowUpDown } from 'lucide-react';
+import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff, ArrowUpDown, LayoutGrid, Film, Tv } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
 
@@ -480,45 +480,49 @@ function MyListContent() {
         className="w-full mb-8"
       >
         <TabsList
-          className="mb-6 bg-secondary/50 flex-wrap h-auto p-1.5 gap-1.5"
+          variant="line"
+          className="mb-6 flex flex-nowrap overflow-x-auto no-scrollbar w-full border-b border-border/60 justify-start gap-1 sm:gap-4 px-1"
           aria-label="Categorias de mídia da lista"
         >
           <TabsTrigger
             value="all"
-            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium"
+            className="min-h-[44px] text-xs sm:text-sm font-medium cursor-pointer"
             role="tab"
             aria-label="Ver todos os itens da lista"
             aria-selected={mediaTab === 'all'}
             aria-controls="panel-all"
             id="tab-all"
           >
-            Todos
+            <LayoutGrid className="w-4 h-4" />
+            <span>Todos</span>
           </TabsTrigger>
           <TabsTrigger
             value="movie"
-            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium"
+            className="min-h-[44px] text-xs sm:text-sm font-medium cursor-pointer"
             role="tab"
             aria-label="Filtrar apenas filmes"
             aria-selected={mediaTab === 'movie'}
             aria-controls="panel-movie"
             id="tab-movie"
           >
-            Filmes
+            <Film className="w-4 h-4" />
+            <span>Filmes</span>
           </TabsTrigger>
           <TabsTrigger
             value="tv"
-            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium"
+            className="min-h-[44px] text-xs sm:text-sm font-medium cursor-pointer"
             role="tab"
             aria-label="Filtrar apenas séries"
             aria-selected={mediaTab === 'tv'}
             aria-controls="panel-tv"
             id="tab-tv"
           >
-            Séries
+            <Tv className="w-4 h-4" />
+            <span>Séries</span>
           </TabsTrigger>
           <TabsTrigger
             value="collections"
-            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium flex items-center gap-1.5"
+            className="min-h-[44px] text-xs sm:text-sm font-medium cursor-pointer flex items-center gap-1.5"
             role="tab"
             aria-label="Ver coleções seguidas e sugestões"
             aria-selected={mediaTab === 'collections'}
@@ -528,14 +532,17 @@ function MyListContent() {
             <Layers className="w-4 h-4" />
             <span>Coleções</span>
             {suggestions.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 text-[11px] bg-amber-500/20 text-amber-500 dark:text-amber-400 font-semibold rounded-full border border-amber-500/30">
+              <span
+                title={`${suggestions.length} sugestões de coleções`}
+                className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30"
+              >
                 {suggestions.length}
               </span>
             )}
           </TabsTrigger>
           <TabsTrigger
             value="universes"
-            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium flex items-center gap-1.5"
+            className="min-h-[44px] text-xs sm:text-sm font-medium cursor-pointer flex items-center gap-1.5"
             role="tab"
             aria-label="Ver universos seguidos e sugestões"
             aria-selected={mediaTab === 'universes'}
@@ -545,7 +552,10 @@ function MyListContent() {
             <Globe className="w-4 h-4" />
             <span>Universos</span>
             {universeSuggestions.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 text-[11px] bg-purple-500/20 text-purple-500 dark:text-purple-400 font-semibold rounded-full border border-purple-500/30">
+              <span
+                title={`${universeSuggestions.length} sugestões de universos`}
+                className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-purple-500/15 text-purple-500 dark:text-purple-400 border border-purple-500/30"
+              >
                 {universeSuggestions.length}
               </span>
             )}
