@@ -7,7 +7,7 @@ import Link from "next/link";
 import { ArrowLeft, Film, RotateCw, Star, Trash2, BookmarkPlus, Search, X } from "lucide-react";
 import { UserFollowedCollection } from "@/types/collections";
 import {
-  getFollowedCollections,
+  getCollectionStatus,
   getCollectionDetails,
   followCollection,
   syncCollection,
@@ -46,55 +46,58 @@ export default function CollectionPage() {
   }, [fetchMyList]);
 
   const load = useCallback(async () => {
+    if (!tmdbId || isNaN(tmdbId)) return;
     try {
-      const all = await getFollowedCollections();
-      const existing = all.find((c) => c.tmdb_id === tmdbId);
-      if (existing) {
-        setCollection(existing);
-        setIsFollowing(true);
-      } else {
-        // Busca dados públicos da coleção no TMDB/Backend se ainda não for seguida
-        const tmdbData = await getCollectionDetails(tmdbId);
-        if (tmdbData) {
-          const parts = tmdbData.parts || [];
-          const total = parts.length;
-          const watched = parts.filter(
-            (p: any) => listItems[p.id]?.status === "completed"
-          ).length;
-          const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
-          setCollection({
-            id: String(tmdbData.id),
-            tmdb_id: tmdbData.id,
-            name: tmdbData.name,
-            overview: tmdbData.overview,
-            poster_path: tmdbData.poster_path,
-            backdrop_path: tmdbData.backdrop_path,
-            total_movies: total,
-            watched_movies: watched,
-            completion_percentage: pct,
-            items: parts.map((p: any) => ({
-              id: String(p.id),
-              tmdb_id: p.id,
-              title: p.title,
-              release_date: p.release_date,
-              poster_path: p.poster_path,
-              backdrop_path: p.backdrop_path,
-              status: listItems[p.id]?.status ?? null,
-              rating: listItems[p.id]?.rating ?? null,
-            })),
-            created_at: new Date().toISOString(),
-          });
-          setIsFollowing(false);
-        } else {
-          setCollection(null);
-        }
+      // Busca status do usuário e detalhes públicos da franquia em paralelo (apenas ~2.7 KB no total)
+      const [statusRes, tmdbData] = await Promise.all([
+        getCollectionStatus(tmdbId).catch(() => null),
+        getCollectionDetails(tmdbId).catch(() => null),
+      ]);
+
+      if (!tmdbData) {
+        setCollection(null);
+        return;
       }
+
+      const parts = tmdbData.parts || [];
+      const total = parts.length;
+      const following = statusRes?.is_following ?? false;
+      setIsFollowing(following);
+
+      const currentList = useMyListStore.getState().items;
+      const watched = parts.filter(
+        (p: any) => currentList[p.id]?.status === "completed"
+      ).length;
+      const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
+
+      setCollection({
+        id: String(statusRes?.collection_id || tmdbData.id),
+        tmdb_id: tmdbData.id,
+        name: tmdbData.name,
+        overview: tmdbData.overview,
+        poster_path: tmdbData.poster_path,
+        backdrop_path: tmdbData.backdrop_path,
+        total_movies: total,
+        watched_movies: statusRes ? statusRes.watched_movies : watched,
+        completion_percentage: pct,
+        items: parts.map((p: any) => ({
+          id: String(p.id),
+          tmdb_id: p.id,
+          title: p.title,
+          release_date: p.release_date,
+          poster_path: p.poster_path,
+          backdrop_path: p.backdrop_path,
+          status: currentList[p.id]?.status ?? null,
+          rating: currentList[p.id]?.rating ?? null,
+        })),
+        created_at: new Date().toISOString(),
+      });
     } catch {
       setCollection(null);
     } finally {
       setLoading(false);
     }
-  }, [tmdbId, listItems]);
+  }, [tmdbId]);
 
   useEffect(() => {
     load();
