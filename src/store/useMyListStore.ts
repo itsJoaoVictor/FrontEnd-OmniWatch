@@ -136,8 +136,6 @@ export const useMyListStore = create<MyListStore>()(
                   next_episode: item.next_episode || null,
                 };
                 itemsMap[tmdbId] = savedItem;
-                // Chave composta polimórfica: previne colisão entre filmes e séries com o mesmo tmdb_id
-                itemsMap[`${mediaType}_${tmdbId}`] = savedItem;
 
                 // Sincroniza o cache local com a resposta oficial do backend
                 if (item.is_up_to_date === true) {

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMyListStore, ListStatus } from '@/store/useMyListStore';
+import { useMyListStore, ListStatus, SavedItem } from '@/store/useMyListStore';
 import { MediaCard } from '@/components/home/MediaCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -319,8 +319,20 @@ function MyListContent() {
     router.replace(`/my-list${query}`, { scroll: false });
   };
 
-  // Convert dictionary to array for mapping
-  const itemsArray = Object.values(items);
+  // Convert dictionary to array for mapping and guarantee unique items
+  const itemsArray = useMemo(() => {
+    const seen = new Set<string>();
+    const list: SavedItem[] = [];
+    for (const item of Object.values(items)) {
+      if (!item || (!item.tmdb_id && !item.id)) continue;
+      const key = `${item.media_type || 'movie'}_${item.tmdb_id || item.id}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push(item);
+      }
+    }
+    return list;
+  }, [items]);
 
   // Base filtered by mediaTab, statusFilter, and searchQuery (for counts)
   const baseItems = itemsArray.filter((item) => {
