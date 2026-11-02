@@ -8,6 +8,7 @@ import { followCollection, dismissCollectionSuggestion } from "@/services/collec
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { Sparkles, BookmarkPlus, X, Film, Check, Eye } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CollectionSuggestionCardProps {
   suggestion: CollectionSuggestion;
@@ -78,7 +79,7 @@ export function CollectionSuggestionCard({
   }
 
   return (
-    <div className="relative group rounded-xl border border-amber-500/30 bg-gradient-to-b from-card to-card/90 overflow-hidden shadow-sm hover:shadow-md hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between">
+    <div className="relative group rounded-2xl border border-amber-500/30 hover:border-amber-500/50 bg-card overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between">
       {/* Top Banner Image with Gradient */}
       <div className="relative h-36 sm:h-40 w-full overflow-hidden bg-muted">
         {backdropUrl ? (
@@ -94,19 +95,19 @@ export function CollectionSuggestionCard({
             <Film className="w-10 h-10 text-muted-foreground/30" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent pointer-events-none" />
 
         {/* Suggestion Badge */}
-        <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/90 text-zinc-950 font-semibold text-xs shadow-md backdrop-blur-sm">
+        <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500 text-zinc-950 font-bold text-xs shadow-md">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Sugestão</span>
+          <span>Saga Detectada</span>
         </div>
 
         {/* Dismiss Button */}
         <button
           onClick={handleDismiss}
           disabled={isDismissing}
-          className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full bg-background/80 hover:bg-background text-muted-foreground hover:text-foreground flex items-center justify-center backdrop-blur-md transition-colors cursor-pointer"
+          className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full bg-background/80 hover:bg-background text-muted-foreground hover:text-foreground flex items-center justify-center backdrop-blur-md transition-colors cursor-pointer border border-border/50"
           title="Dispensar sugestão"
           aria-label="Dispensar sugestão"
         >
@@ -122,31 +123,31 @@ export function CollectionSuggestionCard({
       </div>
 
       {/* Content Body */}
-      <div className="p-4 flex-1 flex flex-col justify-between">
+      <div className="p-4 flex-1 flex flex-col justify-between gap-3">
         <div>
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <Link
               href={`/collection/${suggestion.tmdb_id}`}
-              className="text-base font-semibold hover:text-primary transition-colors line-clamp-1"
+              className="text-base font-bold text-foreground hover:text-primary transition-colors line-clamp-1"
             >
               {suggestion.name}
             </Link>
           </div>
 
           <div className="flex items-center gap-2 mb-3">
-            <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30">
               Você tem {suggestion.movies_in_list} de {suggestion.total_movies} filmes
             </span>
           </div>
 
           {suggestion.matched_movie_titles && suggestion.matched_movie_titles.length > 0 && (
-            <div className="mb-4">
-              <p className="text-[11px] text-muted-foreground mb-1 font-medium">Já na sua lista:</p>
+            <div className="mb-2">
+              <p className="text-[11px] text-muted-foreground mb-1 font-medium">Já na sua biblioteca:</p>
               <div className="flex flex-wrap gap-1">
                 {suggestion.matched_movie_titles.slice(0, 3).map((title, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 text-[11px] bg-secondary/70 text-secondary-foreground px-2 py-0.5 rounded-md line-clamp-1 max-w-[200px]"
+                    className="inline-flex items-center gap-1 text-[11px] bg-secondary text-secondary-foreground border border-border/50 px-2 py-0.5 rounded-md line-clamp-1 max-w-[200px]"
                   >
                     <Check className="w-3 h-3 text-emerald-500 shrink-0" />
                     <span className="truncate">{title}</span>
@@ -163,15 +164,15 @@ export function CollectionSuggestionCard({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+        <div className="flex items-center gap-2 pt-2 border-t border-border/50">
           <Button
             size="sm"
             onClick={handleFollow}
             disabled={isFollowing}
-            className="flex-1 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer"
+            className="flex-1 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold cursor-pointer"
           >
             <BookmarkPlus className="w-3.5 h-3.5" />
-            {isFollowing ? "Seguindo..." : "Seguir Franquia"}
+            <span>{isFollowing ? "Seguindo..." : "Seguir Franquia"}</span>
           </Button>
 
           <Link href={`/collection/${suggestion.tmdb_id}`} className="shrink-0">

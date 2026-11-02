@@ -78,6 +78,8 @@ function MyListContent() {
   const [suggestions, setSuggestions] = useState<CollectionSuggestion[]>([]);
   const [, setIsLoadingSuggestions] = useState(false);
   const [isSuggestionsCollapsed, setIsSuggestionsCollapsed] = useState(false);
+  const [collectionsFilter, setCollectionsFilter] = useState<'all' | 'in_progress' | 'completed'>('all');
+  const [collectionsSort, setCollectionsSort] = useState<'recent' | 'progress_desc' | 'name_asc'>('recent');
 
   // Universes & Suggestions state
   const [universes, setUniverses] = useState<UserFollowedUniverse[]>([]);
@@ -515,11 +517,39 @@ function MyListContent() {
     });
   }, [baseItems, favoriteFilter, ratingFilter, watchProgressFilter]);
 
-  // Filter collections and suggestions by search query
-  const filteredCollections = collections.filter((c) => {
-    if (!searchQuery.trim()) return true;
-    return c.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
-  });
+  // Filter collections and suggestions by search query, status and sorting
+  const filteredCollections = useMemo(() => {
+    return collections.filter((c) => {
+      if (!searchQuery.trim()) return true;
+      return c.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+    });
+  }, [collections, searchQuery]);
+
+  const completedCollectionsCount = useMemo(() => {
+    return filteredCollections.filter((c) => c.total_movies > 0 && c.watched_movies === c.total_movies).length;
+  }, [filteredCollections]);
+
+  const inProgressCollectionsCount = useMemo(() => {
+    return filteredCollections.filter((c) => c.total_movies > 0 && c.watched_movies < c.total_movies).length;
+  }, [filteredCollections]);
+
+  const displayedCollections = useMemo(() => {
+    let list = [...filteredCollections];
+
+    if (collectionsFilter === 'completed') {
+      list = list.filter((c) => c.total_movies > 0 && c.watched_movies === c.total_movies);
+    } else if (collectionsFilter === 'in_progress') {
+      list = list.filter((c) => c.total_movies > 0 && c.watched_movies < c.total_movies);
+    }
+
+    if (collectionsSort === 'progress_desc') {
+      list.sort((a, b) => b.completion_percentage - a.completion_percentage);
+    } else if (collectionsSort === 'name_asc') {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return list;
+  }, [filteredCollections, collectionsFilter, collectionsSort]);
 
   const filteredSuggestions = suggestions.filter((s) => {
     if (!searchQuery.trim()) return true;
@@ -984,11 +1014,155 @@ function MyListContent() {
         </div>
       ) : mediaTab === 'collections' ? (
         <div className="space-y-8">
-          {/* Seção de Alertas e Sugestões de Coleções */}
+          {/* Seção de Coleções Seguidas (Prioridade Principal) */}
+          {isLoadingCollections ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-72 bg-muted rounded-2xl" />
+              ))}
+            </div>
+          ) : collections.length === 0 ? (
+            suggestions.length > 0 ? (
+              <div className="text-center py-10 bg-card/60 border border-border/60 rounded-2xl p-6">
+                <p className="text-sm text-muted-foreground">
+                  Você ainda não possui coleções fixas na sua lista. Comece seguindo uma das sagas sugeridas abaixo!
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
+                <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center mb-4 text-muted-foreground">
+                  <Layers className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-foreground">Nenhuma coleção seguida</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Ao navegar pelos filmes de sagas como O Poderoso Chefão, John Wick ou Harry Potter, clique em{' '}
+                  <strong className="text-foreground">&ldquo;Seguir Coleção&rdquo;</strong> para adicionar e acompanhar
+                  todos os filmes automaticamente.
+                </p>
+                <Link href="/explore">
+                  <Button className="gap-2 cursor-pointer font-semibold">
+                    <Compass className="w-4 h-4" />
+                    Explorar Títulos
+                  </Button>
+                </Link>
+              </div>
+            )
+          ) : (
+            <div>
+              {/* Barra de Ferramentas das Coleções Seguidas (Filtros & Ordenação) */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card/70 border border-border/80 p-2 sm:p-2.5 rounded-2xl shadow-sm mb-6">
+                {/* Segmented Control */}
+                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar p-0.5 bg-background/80 rounded-xl border border-border/60">
+                  <button
+                    type="button"
+                    onClick={() => setCollectionsFilter('all')}
+                    className={cn(
+                      "px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                      collectionsFilter === 'all'
+                        ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                    )}
+                  >
+                    <span>Todas</span>
+                    <span className={cn("text-[10px] px-1.5 py-0.2 rounded-full", collectionsFilter === 'all' ? "bg-black/20 text-white font-bold" : "bg-muted text-muted-foreground")}>
+                      {collections.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCollectionsFilter('in_progress')}
+                    className={cn(
+                      "px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                      collectionsFilter === 'in_progress'
+                        ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                    )}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Em Andamento</span>
+                    <span className={cn("text-[10px] px-1.5 py-0.2 rounded-full", collectionsFilter === 'in_progress' ? "bg-black/20 text-white font-bold" : "bg-muted text-muted-foreground")}>
+                      {inProgressCollectionsCount}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCollectionsFilter('completed')}
+                    className={cn(
+                      "px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                      collectionsFilter === 'completed'
+                        ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                    )}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Concluídas</span>
+                    <span className={cn("text-[10px] px-1.5 py-0.2 rounded-full", collectionsFilter === 'completed' ? "bg-black/20 text-white font-bold" : "bg-muted text-muted-foreground")}>
+                      {completedCollectionsCount}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Ordenação */}
+                <div className="flex items-center gap-1.5 bg-background/80 border border-border/80 px-3 py-1.5 min-h-[36px] rounded-xl text-xs text-muted-foreground self-start md:self-auto shrink-0">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="hidden sm:inline">Ordenar:</span>
+                  <select
+                    value={collectionsSort}
+                    onChange={(e) => setCollectionsSort(e.target.value as any)}
+                    className="bg-transparent text-xs text-foreground font-semibold focus:outline-none cursor-pointer"
+                    aria-label="Critério de ordenação das coleções"
+                  >
+                    <option value="recent" className="bg-popover text-popover-foreground">Recém Adicionadas</option>
+                    <option value="progress_desc" className="bg-popover text-popover-foreground">Maior Progresso (%)</option>
+                    <option value="name_asc" className="bg-popover text-popover-foreground">Nome (A → Z)</option>
+                  </select>
+                </div>
+              </div>
+
+              {displayedCollections.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center max-w-md mx-auto bg-card/40 border border-border/60 rounded-2xl p-6">
+                  <Search className="w-8 h-8 text-muted-foreground/40 mb-2" />
+                  <h3 className="text-base font-semibold text-foreground mb-1">Nenhuma coleção encontrada</h3>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    {searchQuery.trim()
+                      ? `Nenhuma coleção corresponde à pesquisa "${searchQuery}".`
+                      : "Nenhuma coleção no status selecionado."}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCollectionsFilter('all');
+                      setSearchQuery('');
+                      setCollectionsSort('recent');
+                    }}
+                    className="cursor-pointer"
+                  >
+                    Redefinir Filtros
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {displayedCollections.map((col) => (
+                    <FollowedCollectionCard
+                      key={col.id}
+                      collection={col}
+                      onUnfollow={handleUnfollowCollection}
+                      onSyncComplete={loadCollections}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Seção de Sugestões de Franquias (Gaveta Inteligente Integrada) */}
           {filteredSuggestions.length > 0 && (
             <div
               className={cn(
-                "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-2xl transition-all duration-300",
+                "border border-amber-500/25 rounded-2xl transition-all duration-300 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent",
                 isSuggestionsCollapsed ? "p-4 sm:p-5 hover:border-amber-500/40" : "p-5 sm:p-6"
               )}
             >
@@ -1015,7 +1189,7 @@ function MyListContent() {
                     </h3>
                     {!isSuggestionsCollapsed && (
                       <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                        Você já tem filmes dessas franquias na sua lista. Siga a coleção para acompanhar tudo e adicionar os próximos filmes automaticamente!
+                        Baseado nos filmes da sua biblioteca, identificamos sagas completas. Siga para acompanhar todos os filmes automaticamente!
                       </p>
                     )}
                   </div>
@@ -1028,14 +1202,14 @@ function MyListContent() {
                     e.stopPropagation();
                     toggleSuggestionsCollapsed();
                   }}
-                  className="bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-zinc-700 hover:border-zinc-600 shadow-sm text-xs shrink-0 cursor-pointer font-medium gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-lg transition-all"
+                  className="bg-card hover:bg-accent text-foreground border border-border shadow-xs text-xs shrink-0 cursor-pointer font-semibold gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-xl transition-all"
                   aria-controls="collection-suggestions-content"
                 >
-                  <span className="font-semibold text-zinc-100">{isSuggestionsCollapsed ? 'Mostrar Sugestões' : 'Ocultar Sugestões'}</span>
+                  <span>{isSuggestionsCollapsed ? 'Mostrar Sugestões' : 'Ocultar Sugestões'}</span>
                   {isSuggestionsCollapsed ? (
-                    <ChevronDown className="w-4 h-4 text-zinc-300" />
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   ) : (
-                    <ChevronUp className="w-4 h-4 text-zinc-300" />
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
                   )}
                 </Button>
               </div>
@@ -1052,73 +1226,6 @@ function MyListContent() {
                   ))}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Seção de Coleções Seguidas */}
-          {isLoadingCollections ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-72 bg-muted rounded-xl" />
-              ))}
-            </div>
-          ) : collections.length === 0 ? (
-            suggestions.length > 0 ? (
-              <div className="text-center py-10 bg-card/40 border border-border/40 rounded-xl p-6">
-                <p className="text-sm text-muted-foreground">
-                  Você ainda não possui coleções fixas na sua lista. Comece seguindo uma das sugestões acima!
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
-                <div className="w-14 h-14 rounded-full bg-secondary/60 flex items-center justify-center mb-4 text-muted-foreground">
-                  <Layers className="w-7 h-7" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Nenhuma coleção seguida</h3>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Ao navegar pelos filmes de sagas como Demon Slayer, John Wick ou Harry Potter, clique em{' '}
-                  <strong className="text-foreground">&ldquo;Seguir Coleção&rdquo;</strong> para adicionar e acompanhar
-                  todos os filmes automaticamente.
-                </p>
-                <Link href="/explore">
-                  <Button className="gap-2 cursor-pointer">
-                    <Compass className="w-4 h-4" />
-                    Explorar Títulos
-                  </Button>
-                </Link>
-              </div>
-            )
-          ) : filteredCollections.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center max-w-md mx-auto">
-              <div className="w-12 h-12 rounded-full bg-secondary/60 flex items-center justify-center mb-3 text-muted-foreground">
-                <Search className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-semibold mb-1">Nenhuma coleção encontrada</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Nenhuma coleção corresponde à pesquisa &ldquo;{searchQuery}&rdquo;.
-              </p>
-              <Button variant="outline" size="sm" onClick={() => setSearchQuery('')} className="cursor-pointer">
-                Limpar busca
-              </Button>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">
-                  Coleções Seguidas ({filteredCollections.length}
-                  {searchQuery.trim() ? ` de ${collections.length}` : ''})
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCollections.map((col) => (
-                  <FollowedCollectionCard
-                    key={col.id}
-                    collection={col}
-                    onUnfollow={handleUnfollowCollection}
-                    onSyncComplete={loadCollections}
-                  />
-                ))}
-              </div>
             </div>
           )}
         </div>
