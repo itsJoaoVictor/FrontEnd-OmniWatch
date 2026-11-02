@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMyListStore, ListStatus, SavedItem } from '@/store/useMyListStore';
-import { MediaCard } from '@/components/home/MediaCard';
+import { LibraryCard } from '@/components/library/LibraryCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { FilterSearchInput } from '@/components/shared/FilterSearchInput';
@@ -1433,51 +1433,17 @@ function MyListContent() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 gap-y-7">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4.5">
               {sortedItems.map((item, index) => {
-                const mediaId = (item.tmdb_id ?? item.id)?.toString();
-                if (!mediaId) return null;
-
-                const releaseYear = item.release_date ? String(item.release_date).substring(0, 4) : null;
+                if (!item || (!item.tmdb_id && !item.id)) return null;
+                const key = item.id || `${item.media_type}_${item.tmdb_id}`;
 
                 return (
-                  <div key={item.id || mediaId} className="flex flex-col group min-w-0">
-                    <MediaCard
-                      item={{
-                        id: mediaId,
-                        title: item.title || 'Título Desconhecido',
-                        type: item.media_type || 'movie',
-                        coverVertical: item.poster_path || '',
-                        coverHorizontal: item.backdrop_path || '',
-                        release_date: item.release_date,
-                        isUpToDate: item.is_up_to_date === true,
-                        nextEpisodeToWatch: item.next_episode
-                          ? { season: item.next_episode.season_number, episode: item.next_episode.episode_number }
-                          : undefined,
-                      }}
-                      layout="poster"
-                      priority={index < 12}
-                    />
-                    {/* Legenda Textual de Identificação Rápida (Opção A) */}
-                    <div className="mt-2 px-1">
-                      <h4
-                        className="text-xs sm:text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors"
-                        title={item.title}
-                      >
-                        {item.title}
-                      </h4>
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-0.5">
-                        <span>
-                          {releaseYear ? releaseYear : (item.media_type === 'tv' ? 'Série' : 'Filme')}
-                        </span>
-                        {item.rating && item.rating > 0 ? (
-                          <span className="text-amber-400 font-bold flex items-center gap-0.5">
-                            ★ {item.rating}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
+                  <LibraryCard
+                    key={key}
+                    item={item}
+                    priority={index < 12}
+                  />
                 );
               })}
             </div>
