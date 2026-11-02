@@ -21,7 +21,7 @@ import {
 import { UserFollowedUniverse, UniverseSuggestion } from '@/types/universes';
 import { FollowedUniverseCard } from '@/components/universes/FollowedUniverseCard';
 import { UniverseSuggestionCard } from '@/components/universes/UniverseSuggestionCard';
-import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff, ArrowUpDown, LayoutGrid, Film, Tv } from 'lucide-react';
+import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff, ArrowUpDown, LayoutGrid, Film, Tv, Bookmark, Check } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
 
@@ -333,6 +333,40 @@ function MyListContent() {
     }
     return list;
   }, [items]);
+
+  // Base items for the active mediaTab (all, movie, tv) and search (used to calculate status counts)
+  const mediaFilteredItems = useMemo(() => {
+    return itemsArray.filter((item) => {
+      if (!item || (!item.tmdb_id && !item.id)) return false;
+      if (mediaTab !== 'all' && item.media_type !== mediaTab) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        if (!(item.title || '').toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [itemsArray, mediaTab, searchQuery]);
+
+  const statusCounts = useMemo(() => {
+    const counts = {
+      all: mediaFilteredItems.length,
+      plan_to_watch: 0,
+      upcoming: 0,
+      watching: 0,
+      completed: 0,
+      dropped: 0,
+      favorites: 0,
+    };
+    for (const item of mediaFilteredItems) {
+      if (item.status && counts[item.status as keyof typeof counts] !== undefined) {
+        counts[item.status as keyof typeof counts]++;
+      }
+      if (item.is_favorite) {
+        counts.favorites++;
+      }
+    }
+    return counts;
+  }, [mediaFilteredItems]);
 
   // Base filtered by mediaTab, statusFilter, and searchQuery (for counts)
   const baseItems = useMemo(() => {
@@ -982,104 +1016,218 @@ function MyListContent() {
         </div>
       ) : (
         <>
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-            <div className="flex gap-2.5 overflow-x-auto pb-2 lg:pb-0 no-scrollbar items-center">
-              <Button
-                variant={statusFilter === 'all' ? 'default' : 'outline'}
-                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
+          {/* Barra de Controle de Status e Ferramentas (Segmented Toolbar Integrada - Opção 2) */}
+          <div className="mb-6 bg-zinc-900/90 border border-zinc-800/90 p-1.5 sm:p-2 rounded-2xl shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            {/* Segmented Control Scrollável para os Status */}
+            <div
+              className="flex items-center gap-1 overflow-x-auto no-scrollbar p-0.5 bg-zinc-950/70 rounded-xl border border-zinc-800/60"
+              role="tablist"
+              aria-label="Filtros de status da lista"
+            >
+              {/* Todos */}
+              <button
+                type="button"
                 onClick={() => handleStatusChange('all')}
-              >
-                Todos os Status
-              </Button>
-              <Button
-                variant={statusFilter === 'plan_to_watch' ? 'default' : 'outline'}
-                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-                onClick={() => handleStatusChange('plan_to_watch')}
-              >
-                Quero Ver
-              </Button>
-              <Button
-                variant={statusFilter === 'upcoming' ? 'default' : 'outline'}
-                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-                onClick={() => handleStatusChange('upcoming')}
-              >
-                Aguardando Estreia
-              </Button>
-              <Button
-                variant={statusFilter === 'watching' ? 'default' : 'outline'}
-                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-                onClick={() => handleStatusChange('watching')}
-              >
-                Assistindo
-              </Button>
-              <Button
-                variant={statusFilter === 'completed' ? 'default' : 'outline'}
-                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-                onClick={() => handleStatusChange('completed')}
-              >
-                Concluídos
-              </Button>
-              <Button
-                variant={statusFilter === 'dropped' ? 'default' : 'outline'}
-                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-                onClick={() => handleStatusChange('dropped')}
-              >
-                Abandonados
-              </Button>
-
-              <div className="h-6 w-px bg-border/60 self-center mx-1 shrink-0" />
-
-              <Button
-                variant={favoriteFilter ? 'default' : 'outline'}
                 className={cn(
-                  "rounded-full cursor-pointer transition-all flex items-center gap-1.5 shrink-0 min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm font-medium",
-                  favoriteFilter
-                    ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-500/25"
-                    : "border-border hover:border-rose-500/50 hover:text-rose-400"
+                  "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                  statusFilter === 'all' && !favoriteFilter
+                    ? "bg-zinc-800 text-white shadow-sm font-bold"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
                 )}
-                onClick={() => setFavoriteFilter(!favoriteFilter)}
-                title={favoriteFilter ? "Remover filtro de favoritos" : "Mostrar apenas favoritos"}
+                role="tab"
+                aria-selected={statusFilter === 'all' && !favoriteFilter}
               >
-                <Heart className={cn("w-3.5 h-3.5", favoriteFilter ? "fill-white text-white" : "fill-rose-500 text-rose-500")} />
-                <span>Favoritos</span>
-                <span className={cn(
-                  "px-1.5 py-0.2 rounded-full text-[10px]",
-                  favoriteFilter ? "bg-white/20 text-white font-bold" : "bg-muted text-muted-foreground"
-                )}>
-                  {favoriteCount}
+                <span>Todos</span>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.2 rounded-full",
+                    statusFilter === 'all' && !favoriteFilter ? "bg-zinc-700 text-zinc-100 font-bold" : "bg-zinc-900 text-zinc-500"
+                  )}
+                >
+                  {statusCounts.all}
                 </span>
-              </Button>
+              </button>
+
+              {/* Quero Ver */}
+              <button
+                type="button"
+                onClick={() => handleStatusChange('plan_to_watch')}
+                className={cn(
+                  "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                  statusFilter === 'plan_to_watch'
+                    ? "bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
+                )}
+                role="tab"
+                aria-selected={statusFilter === 'plan_to_watch'}
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+                <span>Quero Ver</span>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.2 rounded-full",
+                    statusFilter === 'plan_to_watch' ? "bg-white/20 text-white font-bold" : "bg-zinc-900 text-zinc-500"
+                  )}
+                >
+                  {statusCounts.plan_to_watch}
+                </span>
+              </button>
+
+              {/* Aguardando Estreia */}
+              <button
+                type="button"
+                onClick={() => handleStatusChange('upcoming')}
+                className={cn(
+                  "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                  statusFilter === 'upcoming'
+                    ? "bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
+                )}
+                role="tab"
+                aria-selected={statusFilter === 'upcoming'}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Aguardando</span>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.2 rounded-full",
+                    statusFilter === 'upcoming' ? "bg-white/20 text-white font-bold" : "bg-zinc-900 text-zinc-500"
+                  )}
+                >
+                  {statusCounts.upcoming}
+                </span>
+              </button>
+
+              {/* Assistindo */}
+              <button
+                type="button"
+                onClick={() => handleStatusChange('watching')}
+                className={cn(
+                  "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                  statusFilter === 'watching'
+                    ? "bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
+                )}
+                role="tab"
+                aria-selected={statusFilter === 'watching'}
+              >
+                <span className={cn("w-2 h-2 rounded-full", statusFilter === 'watching' ? "bg-white animate-pulse" : "bg-emerald-500")} />
+                <span>Assistindo</span>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.2 rounded-full",
+                    statusFilter === 'watching' ? "bg-white/20 text-white font-bold" : "bg-zinc-900 text-zinc-500"
+                  )}
+                >
+                  {statusCounts.watching}
+                </span>
+              </button>
+
+              {/* Concluídos */}
+              <button
+                type="button"
+                onClick={() => handleStatusChange('completed')}
+                className={cn(
+                  "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                  statusFilter === 'completed'
+                    ? "bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
+                )}
+                role="tab"
+                aria-selected={statusFilter === 'completed'}
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Concluídos</span>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.2 rounded-full",
+                    statusFilter === 'completed' ? "bg-white/20 text-white font-bold" : "bg-zinc-900 text-zinc-500"
+                  )}
+                >
+                  {statusCounts.completed}
+                </span>
+              </button>
+
+              {/* Abandonados */}
+              <button
+                type="button"
+                onClick={() => handleStatusChange('dropped')}
+                className={cn(
+                  "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer select-none",
+                  statusFilter === 'dropped'
+                    ? "bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
+                )}
+                role="tab"
+                aria-selected={statusFilter === 'dropped'}
+              >
+                <span>Abandonados</span>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.2 rounded-full",
+                    statusFilter === 'dropped' ? "bg-white/20 text-white font-bold" : "bg-zinc-900 text-zinc-500"
+                  )}
+                >
+                  {statusCounts.dropped}
+                </span>
+              </button>
             </div>
 
-            {/* Dropdown de Ordenação (Opção A) */}
-            <div className="flex items-center gap-2 self-start lg:self-auto shrink-0 bg-secondary/40 hover:bg-secondary/60 border border-border/80 px-3 py-1.5 rounded-xl transition-colors">
-              <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 select-none">
-                <ArrowUpDown className="w-3.5 h-3.5 text-primary" />
-                <span className="hidden sm:inline">Ordenar:</span>
-              </span>
-              <select
-                value={sortBy}
-                onChange={(e) => handleSortChange(e.target.value)}
-                className="bg-transparent text-xs text-foreground font-semibold focus:outline-none cursor-pointer"
-                aria-label="Critério de ordenação da biblioteca"
+            {/* Controles Laterais (Favoritos + Ordenação integrados na mesma régua) */}
+            <div className="flex items-center gap-2 justify-between md:justify-end shrink-0">
+              {/* Favoritos Pill */}
+              <button
+                type="button"
+                onClick={() => setFavoriteFilter(!favoriteFilter)}
+                className={cn(
+                  "px-3 py-1.5 min-h-[36px] rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none shrink-0",
+                  favoriteFilter
+                    ? "bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-sm"
+                    : "bg-zinc-950/60 hover:bg-zinc-800 text-zinc-400 border border-zinc-800"
+                )}
+                title={favoriteFilter ? "Remover filtro de favoritos" : "Mostrar apenas favoritos"}
+                aria-pressed={favoriteFilter}
               >
-                <option value="recent" className="bg-zinc-950 text-white">Recém Adicionados</option>
-                <option value="rating_desc" className="bg-zinc-950 text-white">Maior Nota (★ 5 → 1)</option>
-                <option value="rating_asc" className="bg-zinc-950 text-white">Menor Nota (★ 1 → 5)</option>
-                <option value="release_date_desc" className="bg-zinc-950 text-white">Lançamento (Mais recentes)</option>
-                <option value="release_date_asc" className="bg-zinc-950 text-white">Lançamento (Mais antigos)</option>
-                <option value="title_asc" className="bg-zinc-950 text-white">Título (A → Z)</option>
-                <option value="title_desc" className="bg-zinc-950 text-white">Título (Z → A)</option>
-              </select>
+                <Heart className={cn("w-3.5 h-3.5", favoriteFilter ? "fill-rose-400 text-rose-400" : "text-zinc-500")} />
+                <span>Favoritos</span>
+                <span
+                  className={cn(
+                    "text-[10px] font-bold px-1.5 py-0.2 rounded",
+                    favoriteFilter ? "bg-rose-500/30 text-rose-300" : "bg-zinc-800 text-zinc-400"
+                  )}
+                >
+                  {statusCounts.favorites}
+                </span>
+              </button>
+
+              {/* Seletor de Ordenação Integrado */}
+              <div className="flex items-center gap-1.5 bg-zinc-950/60 border border-zinc-800 px-3 py-1.5 min-h-[36px] rounded-xl text-xs text-zinc-300">
+                <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <span className="hidden xl:inline text-zinc-400">Ordenar:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => handleSortChange(e.target.value)}
+                  className="bg-transparent text-xs text-zinc-200 font-medium focus:outline-none cursor-pointer"
+                  aria-label="Critério de ordenação da biblioteca"
+                >
+                  <option value="recent" className="bg-zinc-950 text-white">Recém Adicionados</option>
+                  <option value="rating_desc" className="bg-zinc-950 text-white">Maior Nota (★ 5 → 1)</option>
+                  <option value="rating_asc" className="bg-zinc-950 text-white">Menor Nota (★ 1 → 5)</option>
+                  <option value="release_date_desc" className="bg-zinc-950 text-white">Lançamento (Mais recentes)</option>
+                  <option value="release_date_asc" className="bg-zinc-950 text-white">Lançamento (Mais antigos)</option>
+                  <option value="title_asc" className="bg-zinc-950 text-white">Título (A → Z)</option>
+                  <option value="title_desc" className="bg-zinc-950 text-white">Título (Z → A)</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Sub-filtros contextuais elegantes e organizados */}
+          {/* Sub-filtros contextuais elegantes e organizados (Opção 2) */}
           {(statusFilter === 'completed' || statusFilter === 'watching') && (
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-3 px-4 mb-8 bg-zinc-900/80 border border-zinc-800 rounded-2xl backdrop-blur-md shadow-lg shadow-black/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 px-4 mb-6 bg-gradient-to-r from-zinc-900/90 via-zinc-900/50 to-zinc-950 border border-zinc-800/80 rounded-2xl animate-in fade-in duration-200">
               {/* Indicador de contexto à esquerda */}
               <div className="flex items-center gap-2.5 text-xs text-zinc-400 font-medium">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <span className={cn("w-2 h-2 rounded-full animate-pulse", statusFilter === 'completed' ? "bg-emerald-500" : "bg-rose-500")} />
                 <span className="text-zinc-200 font-semibold">
                   {statusFilter === 'completed'
                     ? `${baseItems.length} concluídos`
@@ -1093,10 +1241,10 @@ function MyListContent() {
               </div>
 
               {/* Controles de Filtro agrupados à direita */}
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
                 {/* Grupo: Avaliação */}
-                <div className="flex items-center gap-1.5 bg-zinc-950/90 p-1 rounded-xl border border-zinc-800/80 shadow-inner">
-                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider px-2 flex items-center gap-1 select-none">
+                <div className="flex items-center bg-zinc-950/90 p-1 rounded-xl border border-zinc-800/80 shadow-inner">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider px-2 flex items-center gap-1 select-none">
                     <Star className="w-3 h-3 text-amber-400/90" />
                     <span className="hidden sm:inline">Nota:</span>
                   </span>
@@ -1105,17 +1253,19 @@ function MyListContent() {
                     type="button"
                     onClick={() => setRatingFilter('all')}
                     className={cn(
-                      "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5",
+                      "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5",
                       ratingFilter === 'all'
-                        ? "bg-zinc-100 text-zinc-950 font-bold shadow-sm"
-                        : "text-zinc-300 hover:text-white hover:bg-zinc-850"
+                        ? "bg-zinc-800 text-white font-bold shadow-sm"
+                        : "text-zinc-400 hover:text-zinc-200"
                     )}
                   >
                     <span>Todas</span>
-                    <span className={cn(
-                      "px-1.5 py-0.2 rounded-full text-[10px]",
-                      ratingFilter === 'all' ? "bg-black/15 text-zinc-950 font-bold" : "bg-zinc-800 text-zinc-400"
-                    )}>
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.2 rounded-full text-[10px]",
+                        ratingFilter === 'all' ? "bg-zinc-700 text-zinc-100 font-bold" : "bg-zinc-900 text-zinc-500"
+                      )}
+                    >
                       {baseItems.length}
                     </span>
                   </button>
@@ -1124,7 +1274,7 @@ function MyListContent() {
                     type="button"
                     onClick={() => setRatingFilter('unrated')}
                     className={cn(
-                      "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+                      "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                       ratingFilter === 'unrated'
                         ? "bg-amber-400 text-zinc-950 font-bold shadow-md shadow-amber-400/20"
                         : "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
@@ -1148,18 +1298,20 @@ function MyListContent() {
                     type="button"
                     onClick={() => setRatingFilter('rated')}
                     className={cn(
-                      "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+                      "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                       ratingFilter === 'rated'
-                        ? "bg-zinc-100 text-zinc-950 font-bold shadow-sm"
-                        : "text-zinc-300 hover:text-white hover:bg-zinc-850"
+                        ? "bg-zinc-800 text-white font-bold shadow-sm"
+                        : "text-zinc-400 hover:text-zinc-200"
                     )}
                   >
                     <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
                     <span>Avaliados</span>
-                    <span className={cn(
-                      "px-1.5 py-0.2 rounded-full text-[10px]",
-                      ratingFilter === 'rated' ? "bg-black/15 text-zinc-950 font-bold" : "bg-zinc-800 text-zinc-400"
-                    )}>
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.2 rounded-full text-[10px]",
+                        ratingFilter === 'rated' ? "bg-zinc-700 text-zinc-100 font-bold" : "bg-zinc-900 text-zinc-500"
+                      )}
+                    >
                       {ratedCount}
                     </span>
                   </button>
@@ -1167,8 +1319,8 @@ function MyListContent() {
 
                 {/* Grupo: Progresso de Séries (Apenas em 'Assistindo' se houver séries) */}
                 {statusFilter === 'watching' && hasSeries && (
-                  <div className="flex items-center gap-1.5 bg-zinc-950/90 p-1 rounded-xl border border-zinc-800/80 shadow-inner">
-                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider px-2 flex items-center gap-1 select-none">
+                  <div className="flex items-center bg-zinc-950/90 p-1 rounded-xl border border-zinc-800/80 shadow-inner">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider px-2 flex items-center gap-1 select-none">
                       <Clock className="w-3 h-3 text-sky-400" />
                       <span className="hidden sm:inline">Progresso:</span>
                     </span>
@@ -1177,10 +1329,10 @@ function MyListContent() {
                       type="button"
                       onClick={() => setWatchProgressFilter('all')}
                       className={cn(
-                        "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+                        "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap",
                         watchProgressFilter === 'all'
-                          ? "bg-zinc-100 text-zinc-950 font-bold shadow-sm"
-                          : "text-zinc-300 hover:text-white hover:bg-zinc-850"
+                          ? "bg-zinc-800 text-white font-bold shadow-sm"
+                          : "text-zinc-400 hover:text-zinc-200"
                       )}
                     >
                       Todas as séries
@@ -1190,7 +1342,7 @@ function MyListContent() {
                       type="button"
                       onClick={() => setWatchProgressFilter('pending')}
                       className={cn(
-                        "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+                        "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                         watchProgressFilter === 'pending'
                           ? "bg-sky-400 text-zinc-950 font-bold shadow-md shadow-sky-400/20"
                           : "text-sky-300 hover:text-sky-200 hover:bg-sky-500/10"
@@ -1214,7 +1366,7 @@ function MyListContent() {
                       type="button"
                       onClick={() => setWatchProgressFilter('up_to_date')}
                       className={cn(
-                        "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+                        "px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                         watchProgressFilter === 'up_to_date'
                           ? "bg-emerald-500 text-white font-bold shadow-md shadow-emerald-500/20"
                           : "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
