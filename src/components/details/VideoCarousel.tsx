@@ -24,7 +24,7 @@ export function VideoCarousel({ videos }: VideoCarouselProps) {
   if (!videos || videos.length === 0) return null;
 
   return (
-    <div className="my-8">
+    <div id="trailers-section" className="my-8 scroll-mt-24">
       <h3 className="text-2xl font-semibold mb-4">Trailers e Vídeos</h3>
       <Carousel
         opts={{

@@ -6,7 +6,7 @@ import { VideoCarousel } from "@/components/details/VideoCarousel";
 import { SimilarCarousel } from "@/components/details/SimilarCarousel";
 import { TechnicalDetailsSidebar } from "@/components/details/TechnicalDetailsSidebar";
 import { CollectionCarousel } from "@/components/details/CollectionCarousel";
-import { DirectorSection } from "@/components/details/DirectorSection";
+import { CreativeCrewSection } from "@/components/details/CreativeCrewSection";
 import { CollectionResponse } from "@/types/details";
 
 async function getMovieData(id: string): Promise<MovieDetailsResponse | null> {
@@ -79,13 +79,14 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
         watchProviders={movie.watch_providers}
         releaseDate={movie.release_date}
         universe={movie.universe}
+        hasVideos={Boolean(movie.videos && movie.videos.length > 0)}
       />
 
-      <div className="container mx-auto px-4 pb-12 mt-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-16 mt-10">
         <div className="lg:grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8 overflow-hidden">
+            <CreativeCrewSection crew={movie.credits.crew} />
             <CastCarousel cast={movie.credits.cast} />
-            <DirectorSection crew={movie.credits.crew} />
             <VideoCarousel videos={movie.videos} />
             {collectionData && <CollectionCarousel collection={collectionData} />}
             <SimilarCarousel items={movie.similar} type="movie" />
@@ -96,6 +97,8 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
               originalLanguage={movie.original_language}
               status={movie.status}
               productionCompanies={movie.production_companies}
+              budget={movie.budget}
+              revenue={movie.revenue}
             />
           </div>
         </div>

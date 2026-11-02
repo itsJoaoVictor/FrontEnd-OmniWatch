@@ -135,6 +135,8 @@ export interface MovieDetailsResponse {
   status: string;
   runtime: number;
   vote_average: number;
+  budget?: number;
+  revenue?: number;
   genres: GenreItem[];
   production_companies: ProductionCompanyItem[];
   belongs_to_collection: CollectionItem | null;
