@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMyListStore, ListStatus } from '@/store/useMyListStore';
 import { MediaCard } from '@/components/home/MediaCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,9 +25,18 @@ import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
 
-export default function MyListPage() {
+const VALID_TABS = ['all', 'movie', 'tv', 'collections', 'universes'] as const;
+type MediaTabType = (typeof VALID_TABS)[number];
+
+function MyListContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
   const { items, isLoading, fetchMyList } = useMyListStore();
-  const [mediaTab, setMediaTab] = useState<'all' | 'movie' | 'tv' | 'collections' | 'universes'>('all');
+  const [mediaTab, setMediaTab] = useState<MediaTabType>(() => {
+    return VALID_TABS.includes(tabParam as any) ? (tabParam as MediaTabType) : 'all';
+  });
   const [statusFilter, setStatusFilter] = useState<ListStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -236,10 +246,29 @@ export default function MyListPage() {
     setWatchProgressFilter('all');
   };
 
+  // Sync tab with URL search params when user navigates (e.g. back/forward)
+  useEffect(() => {
+    const currentTabParam = searchParams.get('tab');
+    const resolvedTab = VALID_TABS.includes(currentTabParam as any) ? (currentTabParam as MediaTabType) : 'all';
+    if (resolvedTab !== mediaTab) {
+      setMediaTab(resolvedTab);
+    }
+  }, [searchParams, mediaTab]);
+
   const handleMediaTabChange = (val: string) => {
-    setMediaTab(val as 'all' | 'movie' | 'tv' | 'collections' | 'universes');
+    const nextTab = VALID_TABS.includes(val as any) ? (val as MediaTabType) : 'all';
+    setMediaTab(nextTab);
     setRatingFilter('all');
     setWatchProgressFilter('all');
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextTab === 'all') {
+      params.delete('tab');
+    } else {
+      params.set('tab', nextTab);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
   };
 
   // Convert dictionary to array for mapping
@@ -356,11 +385,52 @@ export default function MyListPage() {
         onValueChange={handleMediaTabChange}
         className="w-full mb-8"
       >
-        <TabsList className="mb-6 bg-secondary/50 flex-wrap h-auto">
-          <TabsTrigger value="all" className="px-6">Todos</TabsTrigger>
-          <TabsTrigger value="movie" className="px-6">Filmes</TabsTrigger>
-          <TabsTrigger value="tv" className="px-6">Séries</TabsTrigger>
-          <TabsTrigger value="collections" className="px-6 flex items-center gap-1.5">
+        <TabsList
+          className="mb-6 bg-secondary/50 flex-wrap h-auto p-1.5 gap-1.5"
+          aria-label="Categorias de mídia da lista"
+        >
+          <TabsTrigger
+            value="all"
+            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium"
+            role="tab"
+            aria-label="Ver todos os itens da lista"
+            aria-selected={mediaTab === 'all'}
+            aria-controls="panel-all"
+            id="tab-all"
+          >
+            Todos
+          </TabsTrigger>
+          <TabsTrigger
+            value="movie"
+            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium"
+            role="tab"
+            aria-label="Filtrar apenas filmes"
+            aria-selected={mediaTab === 'movie'}
+            aria-controls="panel-movie"
+            id="tab-movie"
+          >
+            Filmes
+          </TabsTrigger>
+          <TabsTrigger
+            value="tv"
+            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium"
+            role="tab"
+            aria-label="Filtrar apenas séries"
+            aria-selected={mediaTab === 'tv'}
+            aria-controls="panel-tv"
+            id="tab-tv"
+          >
+            Séries
+          </TabsTrigger>
+          <TabsTrigger
+            value="collections"
+            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium flex items-center gap-1.5"
+            role="tab"
+            aria-label="Ver coleções seguidas e sugestões"
+            aria-selected={mediaTab === 'collections'}
+            aria-controls="panel-collections"
+            id="tab-collections"
+          >
             <Layers className="w-4 h-4" />
             <span>Coleções</span>
             {suggestions.length > 0 && (
@@ -369,7 +439,15 @@ export default function MyListPage() {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="universes" className="px-6 flex items-center gap-1.5">
+          <TabsTrigger
+            value="universes"
+            className="min-h-[38px] sm:min-h-[36px] px-4 sm:px-6 py-2 sm:py-1.5 text-xs sm:text-sm font-medium flex items-center gap-1.5"
+            role="tab"
+            aria-label="Ver universos seguidos e sugestões"
+            aria-selected={mediaTab === 'universes'}
+            aria-controls="panel-universes"
+            id="tab-universes"
+          >
             <Globe className="w-4 h-4" />
             <span>Universos</span>
             {universeSuggestions.length > 0 && (
@@ -780,45 +858,45 @@ export default function MyListPage() {
         </div>
       ) : (
         <>
-          <div className="flex gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
+          <div className="flex gap-2.5 overflow-x-auto pb-4 mb-8 no-scrollbar items-center">
             <Button
               variant={statusFilter === 'all' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer"
+              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
               onClick={() => handleStatusChange('all')}
             >
               Todos os Status
             </Button>
             <Button
               variant={statusFilter === 'plan_to_watch' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer"
+              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
               onClick={() => handleStatusChange('plan_to_watch')}
             >
               Quero Ver
             </Button>
             <Button
               variant={statusFilter === 'upcoming' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer"
+              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
               onClick={() => handleStatusChange('upcoming')}
             >
               Aguardando Estreia
             </Button>
             <Button
               variant={statusFilter === 'watching' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer"
+              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
               onClick={() => handleStatusChange('watching')}
             >
               Assistindo
             </Button>
             <Button
               variant={statusFilter === 'completed' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer"
+              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
               onClick={() => handleStatusChange('completed')}
             >
               Concluídos
             </Button>
             <Button
               variant={statusFilter === 'dropped' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer"
+              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
               onClick={() => handleStatusChange('dropped')}
             >
               Abandonados
@@ -829,7 +907,7 @@ export default function MyListPage() {
             <Button
               variant={favoriteFilter ? 'default' : 'outline'}
               className={cn(
-                "rounded-full cursor-pointer transition-all flex items-center gap-1.5 shrink-0",
+                "rounded-full cursor-pointer transition-all flex items-center gap-1.5 shrink-0 min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm font-medium",
                 favoriteFilter
                   ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-500/25"
                   : "border-border hover:border-rose-500/50 hover:text-rose-400"
@@ -879,7 +957,7 @@ export default function MyListPage() {
                     type="button"
                     onClick={() => setRatingFilter('all')}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5",
+                      "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5",
                       ratingFilter === 'all'
                         ? "bg-zinc-100 text-zinc-950 font-bold shadow-sm"
                         : "text-zinc-300 hover:text-white hover:bg-zinc-850"
@@ -898,7 +976,7 @@ export default function MyListPage() {
                     type="button"
                     onClick={() => setRatingFilter('unrated')}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+                      "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                       ratingFilter === 'unrated'
                         ? "bg-amber-400 text-zinc-950 font-bold shadow-md shadow-amber-400/20"
                         : "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
@@ -922,7 +1000,7 @@ export default function MyListPage() {
                     type="button"
                     onClick={() => setRatingFilter('rated')}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+                      "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                       ratingFilter === 'rated'
                         ? "bg-zinc-100 text-zinc-950 font-bold shadow-sm"
                         : "text-zinc-300 hover:text-white hover:bg-zinc-850"
@@ -951,7 +1029,7 @@ export default function MyListPage() {
                       type="button"
                       onClick={() => setWatchProgressFilter('all')}
                       className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+                        "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
                         watchProgressFilter === 'all'
                           ? "bg-zinc-100 text-zinc-950 font-bold shadow-sm"
                           : "text-zinc-300 hover:text-white hover:bg-zinc-850"
@@ -964,7 +1042,7 @@ export default function MyListPage() {
                       type="button"
                       onClick={() => setWatchProgressFilter('pending')}
                       className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+                        "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                         watchProgressFilter === 'pending'
                           ? "bg-sky-400 text-zinc-950 font-bold shadow-md shadow-sky-400/20"
                           : "text-sky-300 hover:text-sky-200 hover:bg-sky-500/10"
@@ -988,7 +1066,7 @@ export default function MyListPage() {
                       type="button"
                       onClick={() => setWatchProgressFilter('up_to_date')}
                       className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+                        "px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                         watchProgressFilter === 'up_to_date'
                           ? "bg-emerald-500 text-white font-bold shadow-md shadow-emerald-500/20"
                           : "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
@@ -1085,5 +1163,33 @@ export default function MyListPage() {
         </>
       )}
     </div>
+  );
+}
+
+function MyListSkeleton() {
+  return (
+    <div className="min-h-screen pt-24 px-4 md:px-8 max-w-[1600px] mx-auto pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <div className="h-9 w-48 bg-muted animate-pulse rounded-lg" />
+          <div className="h-4 w-72 bg-muted/60 animate-pulse rounded mt-2" />
+        </div>
+        <div className="w-full sm:w-80 md:w-96 h-10 bg-muted animate-pulse rounded-lg" />
+      </div>
+      <div className="h-10 w-96 bg-muted/80 animate-pulse rounded-lg mb-8" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 gap-y-8">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div key={i} className="aspect-[2/3] bg-muted animate-pulse rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function MyListPage() {
+  return (
+    <Suspense fallback={<MyListSkeleton />}>
+      <MyListContent />
+    </Suspense>
   );
 }

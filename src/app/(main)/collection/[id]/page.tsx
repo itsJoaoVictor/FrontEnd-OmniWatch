@@ -161,7 +161,7 @@ export default function CollectionPage() {
     try {
       await unfollowCollection(collection.tmdb_id);
       toast.add({ title: "Coleção removida", description: `Você deixou de seguir "${collection.name}".`, type: "info" });
-      router.push("/my-list");
+      router.push("/my-list?tab=collections");
     } catch {
       toast.add({ title: "Erro", description: "Não foi possível deixar de seguir a coleção.", type: "error" });
       setBusy(false);
@@ -176,7 +176,7 @@ export default function CollectionPage() {
     return (
       <div className="p-8 space-y-4">
         <p className="text-muted-foreground">Coleção não encontrada ou indisponível.</p>
-        <Link href="/my-list" className="underline">Voltar para minha lista</Link>
+        <Link href="/my-list?tab=collections" className="underline">Voltar para minha lista</Link>
       </div>
     );
   }
@@ -210,7 +210,7 @@ export default function CollectionPage() {
 
   return (
     <div className="max-w-6xl mx-auto pb-12">
-      <div className="relative h-56 sm:h-80 w-full overflow-hidden bg-muted">
+      <div className="relative h-60 sm:h-80 min-h-[240px] w-full overflow-hidden bg-muted">
         {backdrop ? (
           <Image src={backdrop} alt={collection.name} fill priority className="object-cover" sizes="100vw" />
         ) : (
@@ -218,9 +218,9 @@ export default function CollectionPage() {
             <Film className="w-14 h-14 text-muted-foreground/40" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
         <Link
-          href="/my-list"
+          href="/my-list?tab=collections"
           className="absolute top-4 left-4 inline-flex items-center gap-1 text-sm bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full"
         >
           <ArrowLeft className="w-4 h-4" /> Minha lista
@@ -252,9 +252,11 @@ export default function CollectionPage() {
             </Button>
           )}
         </div>
-        <h1 className="absolute bottom-4 left-6 right-6 text-2xl sm:text-4xl font-bold drop-shadow">
-          {collection.name}
-        </h1>
+        <div className="absolute bottom-4 left-6 right-6">
+          <h1 className="text-2xl sm:text-4xl font-bold drop-shadow-md text-foreground">
+            {collection.name}
+          </h1>
+        </div>
       </div>
 
       <div className="px-4 sm:px-6 mt-6 space-y-6">

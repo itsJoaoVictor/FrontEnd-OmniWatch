@@ -212,7 +212,7 @@ export default function UniversePage() {
         description: `Você deixou de seguir "${universe.name}".`,
         type: "info",
       });
-      router.push("/my-list");
+      router.push("/my-list?tab=universes");
     } catch {
       toast.add({
         title: "Erro",
@@ -231,7 +231,7 @@ export default function UniversePage() {
     return (
       <div className="p-8 pt-24 space-y-4">
         <p className="text-muted-foreground">Universo não encontrado ou indisponível.</p>
-        <Link href="/my-list" className="underline">
+        <Link href="/my-list?tab=universes" className="underline">
           Voltar para minha lista
         </Link>
       </div>
@@ -296,7 +296,7 @@ export default function UniversePage() {
 
   return (
     <div className="max-w-6xl mx-auto pb-12">
-      <div className="relative h-56 sm:h-80 w-full overflow-hidden bg-muted">
+      <div className="relative h-60 sm:h-80 min-h-[240px] w-full overflow-hidden bg-muted">
         {backdrop ? (
           <Image
             src={backdrop}
@@ -311,9 +311,9 @@ export default function UniversePage() {
             <Globe className="w-14 h-14 text-muted-foreground/40" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
         <Link
-          href="/my-list"
+          href="/my-list?tab=universes"
           className="absolute top-4 left-4 inline-flex items-center gap-1 text-sm bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full"
         >
           <ArrowLeft className="w-4 h-4" /> Minha lista
@@ -383,7 +383,7 @@ export default function UniversePage() {
 
         <div className="absolute bottom-4 left-6 right-6">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-600/90 text-white">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-600/90 text-white shadow-sm">
               <Globe className="w-3.5 h-3.5" /> Universo Expandido
             </span>
             {universe.movies_count > 0 && (
@@ -402,7 +402,7 @@ export default function UniversePage() {
               </span>
             )}
           </div>
-          <h1 className="text-2xl sm:text-4xl font-bold drop-shadow">
+          <h1 className="text-2xl sm:text-4xl font-bold drop-shadow-md text-foreground">
             {universe.name}
           </h1>
         </div>
