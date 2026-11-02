@@ -43,11 +43,14 @@ function MyListContent() {
   });
   const [statusFilter, setStatusFilter] = useState<ListStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const sortBy: SortByType = VALID_SORTS.includes(sortParam as any) ? (sortParam as SortByType) : 'recent';
+  const [sortBy, setSortBy] = useState<SortByType>(() => {
+    return VALID_SORTS.includes(sortParam as any) ? (sortParam as SortByType) : 'recent';
+  });
   const [isSuggestionsBannerDismissed, setIsSuggestionsBannerDismissed] = useState(false);
 
   const handleSortChange = (newSort: string) => {
     const nextSort = VALID_SORTS.includes(newSort as any) ? (newSort as SortByType) : 'recent';
+    setSortBy(nextSort);
     const params = new URLSearchParams(searchParams.toString());
     if (nextSort === 'recent') {
       params.delete('sort');
@@ -290,6 +293,15 @@ function MyListContent() {
       setMediaTab(resolvedTab);
     }
   }, [searchParams, mediaTab]);
+
+  // Sync sort with URL search params when user navigates (e.g. back/forward)
+  useEffect(() => {
+    const currentSortParam = searchParams.get('sort');
+    const resolvedSort = VALID_SORTS.includes(currentSortParam as any) ? (currentSortParam as SortByType) : 'recent';
+    if (resolvedSort !== sortBy) {
+      setSortBy(resolvedSort);
+    }
+  }, [searchParams, sortBy]);
 
   const handleMediaTabChange = (val: string) => {
     const nextTab = VALID_TABS.includes(val as any) ? (val as MediaTabType) : 'all';
