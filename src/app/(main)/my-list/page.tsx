@@ -335,16 +335,18 @@ function MyListContent() {
   }, [items]);
 
   // Base filtered by mediaTab, statusFilter, and searchQuery (for counts)
-  const baseItems = itemsArray.filter((item) => {
-    if (!item || (!item.tmdb_id && !item.id)) return false;
-    if (mediaTab !== 'all' && item.media_type !== mediaTab) return false;
-    if (statusFilter !== 'all' && item.status !== statusFilter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      if (!(item.title || '').toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
+  const baseItems = useMemo(() => {
+    return itemsArray.filter((item) => {
+      if (!item || (!item.tmdb_id && !item.id)) return false;
+      if (mediaTab !== 'all' && item.media_type !== mediaTab) return false;
+      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        if (!(item.title || '').toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [itemsArray, mediaTab, statusFilter, searchQuery]);
 
   const unratedCount = baseItems.filter((i) => !i.rating || i.rating === 0).length;
   const ratedCount = baseItems.filter((i) => typeof i.rating === 'number' && i.rating > 0).length;
@@ -354,20 +356,22 @@ function MyListContent() {
   const hasSeries = baseItems.some((i) => i.media_type === 'tv');
 
   // Filter items
-  const filteredItems = baseItems.filter((item) => {
-    // 1. Filter by favorites
-    if (favoriteFilter && !item.is_favorite) return false;
+  const filteredItems = useMemo(() => {
+    return baseItems.filter((item) => {
+      // 1. Filter by favorites
+      if (favoriteFilter && !item.is_favorite) return false;
 
-    // 2. Filter by rating
-    if (ratingFilter === 'unrated' && (item.rating && item.rating > 0)) return false;
-    if (ratingFilter === 'rated' && (!item.rating || item.rating === 0)) return false;
+      // 2. Filter by rating
+      if (ratingFilter === 'unrated' && (item.rating && item.rating > 0)) return false;
+      if (ratingFilter === 'rated' && (!item.rating || item.rating === 0)) return false;
 
-    // 3. Filter by watch progress (for watching series)
-    if (watchProgressFilter === 'up_to_date' && (!item.is_up_to_date || item.media_type !== 'tv')) return false;
-    if (watchProgressFilter === 'pending' && (item.is_up_to_date || item.media_type !== 'tv')) return false;
+      // 3. Filter by watch progress (for watching series)
+      if (watchProgressFilter === 'up_to_date' && (!item.is_up_to_date || item.media_type !== 'tv')) return false;
+      if (watchProgressFilter === 'pending' && (item.is_up_to_date || item.media_type !== 'tv')) return false;
 
-    return true;
-  });
+      return true;
+    });
+  }, [baseItems, favoriteFilter, ratingFilter, watchProgressFilter]);
 
   // Filter collections and suggestions by search query
   const filteredCollections = collections.filter((c) => {
@@ -1282,7 +1286,7 @@ function MyListContent() {
                 const mediaId = (item.tmdb_id ?? item.id)?.toString();
                 if (!mediaId) return null;
 
-                const releaseYear = item.release_date ? item.release_date.substring(0, 4) : null;
+                const releaseYear = item.release_date ? String(item.release_date).substring(0, 4) : null;
 
                 return (
                   <div key={item.id || mediaId} className="flex flex-col group min-w-0">
