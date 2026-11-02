@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, Bookmark, Rss, Menu } from "lucide-react";
+import { Home, Compass, Library, Rss, Menu } from "lucide-react";
 import { useFriendsStore } from "@/store/useFriendsStore";
 import { MobileDrawerMenu } from "./MobileDrawerMenu";
 
@@ -14,7 +14,7 @@ export function BottomNav() {
     { href: "/dashboard", icon: Home, label: "Início" },
     { href: "/explore", icon: Compass, label: "Explorar" },
     { href: "/feed", icon: Rss, label: "Feed" },
-    { href: "/my-list", icon: Bookmark, label: "Minha Lista" },
+    { href: "/my-list", icon: Library, label: "Biblioteca" },
   ];
 
   return (

@@ -200,7 +200,7 @@ export function AddFromMyListModal({
           <div className="flex items-center gap-2">
             <Bookmark className="w-5 h-5 text-primary" />
             <DialogTitle className="text-xl font-bold">
-              Escolher da Minha Lista
+              Escolher da Biblioteca
             </DialogTitle>
           </div>
           <p className="text-xs text-zinc-400 mt-1">

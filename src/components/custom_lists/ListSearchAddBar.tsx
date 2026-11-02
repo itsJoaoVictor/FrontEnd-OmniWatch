@@ -151,13 +151,13 @@ export function ListSearchAddBar({
           {/* Dropdown de resultados */}
           {isOpen && (results.length > 0 || myMatches.length > 0) && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto divide-y divide-zinc-900">
-              {/* Seção 1: Itens que já estão na "Minha Lista" do usuário */}
+              {/* Seção 1: Itens que já estão na "Biblioteca" do usuário */}
               {myMatches.length > 0 && (
                 <div>
                   <div className="px-3 py-1.5 bg-primary/10 border-b border-primary/20 flex items-center justify-between text-[11px] font-bold text-primary uppercase tracking-wider">
                     <span className="flex items-center gap-1.5">
                       <Bookmark className="w-3.5 h-3.5 fill-primary" />
-                      Dos seus títulos salvos (Minha Lista)
+                      Dos seus títulos salvos (Biblioteca)
                     </span>
                     <span className="text-[10px] lowercase font-normal opacity-80">
                       {myMatches.length} {myMatches.length === 1 ? 'encontrado' : 'encontrados'}
@@ -319,7 +319,7 @@ export function ListSearchAddBar({
           )}
         </div>
 
-        {/* Botão de Destaque: Escolher da Minha Lista */}
+        {/* Botão de Destaque: Escolher da Biblioteca */}
         <Button
           type="button"
           onClick={() => setMyListModalOpen(true)}
@@ -327,7 +327,7 @@ export function ListSearchAddBar({
           className="bg-zinc-900/90 border-zinc-700/80 hover:bg-zinc-800 hover:border-primary/50 text-white text-xs h-10 px-4 shadow-sm flex items-center justify-center gap-2 flex-shrink-0 transition-all font-semibold"
         >
           <Bookmark className="w-4 h-4 text-primary fill-primary/20" />
-          <span>Escolher da Minha Lista</span>
+          <span>Escolher da Biblioteca</span>
         </Button>
       </div>
 

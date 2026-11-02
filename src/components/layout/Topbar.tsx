@@ -55,7 +55,7 @@ export function Topbar() {
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
             <Link href="/dashboard" className="text-foreground/80 hover:text-primary transition-colors">Início</Link>
             <Link href="/explore" className="text-foreground/80 hover:text-primary transition-colors">Explorar</Link>
-            <Link href="/my-list" className="text-foreground/80 hover:text-primary transition-colors">Minha Lista</Link>
+            <Link href="/my-list" className="text-foreground/80 hover:text-primary transition-colors">Biblioteca</Link>
             <Link href="/lists" className="text-foreground/80 hover:text-primary transition-colors">Listas</Link>
             <Link href="/friends" className="text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
               <span>Amigos</span>

@@ -186,7 +186,7 @@ export function FeedCard({ item }: FeedCardProps) {
               {isInMyList ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-500" />
-                  Na Minha Lista
+                  Na Biblioteca
                 </>
               ) : (
                 <>

@@ -232,7 +232,7 @@ export default function UniversePage() {
       <div className="p-8 pt-24 space-y-4">
         <p className="text-muted-foreground">Universo não encontrado ou indisponível.</p>
         <Link href="/my-list?tab=universes" className="underline">
-          Voltar para minha lista
+          Voltar para a biblioteca
         </Link>
       </div>
     );
@@ -316,7 +316,7 @@ export default function UniversePage() {
           href="/my-list?tab=universes"
           className="absolute top-4 left-4 inline-flex items-center gap-1 text-sm bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full"
         >
-          <ArrowLeft className="w-4 h-4" /> Minha lista
+          <ArrowLeft className="w-4 h-4" /> Biblioteca
         </Link>
         <div className="absolute top-4 right-4 flex flex-wrap gap-2 items-center">
           {averageRating && (

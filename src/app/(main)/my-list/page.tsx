@@ -339,7 +339,7 @@ function MyListContent() {
     <div className="min-h-screen pt-24 px-4 md:px-8 max-w-[1600px] mx-auto pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Minha Lista</h1>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Biblioteca</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Gerencie seus filmes, séries, coleções e universos acompanhados
           </p>
@@ -356,10 +356,10 @@ function MyListContent() {
                 : mediaTab === 'universes'
                 ? "Buscar universos..."
                 : mediaTab === 'movie'
-                ? "Buscar filmes na lista..."
+                ? "Buscar filmes na biblioteca..."
                 : mediaTab === 'tv'
-                ? "Buscar séries na lista..."
-                : "Buscar em minha lista..."
+                ? "Buscar séries na biblioteca..."
+                : "Buscar na biblioteca..."
             }
             showCount={Boolean(searchQuery.trim())}
             resultCount={
