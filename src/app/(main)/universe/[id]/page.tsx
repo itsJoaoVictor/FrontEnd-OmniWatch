@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { UserFollowedUniverse, UniverseFollowedItem } from "@/types/universes";
 import {
-  getFollowedUniverses,
   getUniverseDetails,
   getUniverseStatus,
   syncUniverse,
@@ -70,18 +69,16 @@ export default function UniversePage() {
   const load = useCallback(async () => {
     if (!universeKey) return;
     try {
-      const [followedList, statusData] = await Promise.all([
-        getFollowedUniverses().catch(() => []),
+      // Carrega os detalhes completos do universo e status de acompanhamento em paralelo
+      const [detail, statusData] = await Promise.all([
+        getUniverseDetails(universeKey).catch(() => null),
         getUniverseStatus(universeKey).catch(() => null),
       ]);
-      const existing = followedList.find((u) => u.universe_key === universeKey);
-      if (existing) {
-        setUniverse(existing);
-        setIsFollowing(true);
-      } else {
-        const detail = await getUniverseDetails(universeKey);
+      if (detail) {
         setUniverse(detail);
         setIsFollowing(Boolean(statusData?.is_following));
+      } else {
+        setUniverse(null);
       }
     } catch {
       setUniverse(null);
