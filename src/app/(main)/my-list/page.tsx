@@ -28,12 +28,14 @@ import { cn } from '@/lib/utils';
 const VALID_TABS = ['all', 'movie', 'tv', 'collections', 'universes'] as const;
 type MediaTabType = (typeof VALID_TABS)[number];
 
-export type SortByType = 'recent' | 'rating_desc' | 'rating_asc' | 'release_date_desc' | 'release_date_asc' | 'title_asc' | 'title_desc';
+const VALID_SORTS = ['recent', 'rating_desc', 'rating_asc', 'release_date_desc', 'release_date_asc', 'title_asc', 'title_desc'] as const;
+export type SortByType = (typeof VALID_SORTS)[number];
 
 function MyListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
+  const sortParam = searchParams.get('sort');
 
   const { items, isLoading, fetchMyList } = useMyListStore();
   const [mediaTab, setMediaTab] = useState<MediaTabType>(() => {
@@ -41,8 +43,20 @@ function MyListContent() {
   });
   const [statusFilter, setStatusFilter] = useState<ListStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortByType>('recent');
+  const sortBy: SortByType = VALID_SORTS.includes(sortParam as any) ? (sortParam as SortByType) : 'recent';
   const [isSuggestionsBannerDismissed, setIsSuggestionsBannerDismissed] = useState(false);
+
+  const handleSortChange = (newSort: string) => {
+    const nextSort = VALID_SORTS.includes(newSort as any) ? (newSort as SortByType) : 'recent';
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextSort === 'recent') {
+      params.delete('sort');
+    } else {
+      params.set('sort', nextSort);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    router.replace(`/my-list${query}`, { scroll: false });
+  };
 
   // Sub-filters for rating & progress & favorites
   const [ratingFilter, setRatingFilter] = useState<'all' | 'unrated' | 'rated'>('all');
@@ -995,7 +1009,7 @@ function MyListContent() {
               </span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => handleSortChange(e.target.value)}
                 className="bg-transparent text-xs text-foreground font-semibold focus:outline-none cursor-pointer"
                 aria-label="Critério de ordenação da biblioteca"
               >
@@ -1210,7 +1224,7 @@ function MyListContent() {
                   handleMediaTabChange('all');
                   handleStatusChange('all');
                   setSearchQuery('');
-                  setSortBy('recent');
+                  handleSortChange('recent');
                 }}
               >
                 Limpar Filtros
