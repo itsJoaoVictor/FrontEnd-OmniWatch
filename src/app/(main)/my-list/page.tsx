@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMyListStore, ListStatus } from '@/store/useMyListStore';
@@ -21,12 +21,14 @@ import {
 import { UserFollowedUniverse, UniverseSuggestion } from '@/types/universes';
 import { FollowedUniverseCard } from '@/components/universes/FollowedUniverseCard';
 import { UniverseSuggestionCard } from '@/components/universes/UniverseSuggestionCard';
-import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff } from 'lucide-react';
+import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff, ArrowUpDown } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
 
 const VALID_TABS = ['all', 'movie', 'tv', 'collections', 'universes'] as const;
 type MediaTabType = (typeof VALID_TABS)[number];
+
+export type SortByType = 'recent' | 'rating_desc' | 'rating_asc' | 'release_date_desc' | 'release_date_asc' | 'title_asc' | 'title_desc';
 
 function MyListContent() {
   const router = useRouter();
@@ -39,6 +41,8 @@ function MyListContent() {
   });
   const [statusFilter, setStatusFilter] = useState<ListStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortByType>('recent');
+  const [isSuggestionsBannerDismissed, setIsSuggestionsBannerDismissed] = useState(false);
 
   // Sub-filters for rating & progress & favorites
   const [ratingFilter, setRatingFilter] = useState<'all' | 'unrated' | 'rated'>('all');
@@ -75,6 +79,12 @@ function MyListContent() {
           setIsUniverseSuggestionsCollapsed(savedUniv === 'true');
         });
       }
+      const savedBannerDismissed = localStorage.getItem('omniwatch_suggestions_banner_dismissed');
+      if (savedBannerDismissed === 'true') {
+        queueMicrotask(() => {
+          setIsSuggestionsBannerDismissed(true);
+        });
+      }
     } catch (e) {
       console.error('Failed to read suggestions collapsed state from localStorage', e);
     }
@@ -86,6 +96,9 @@ function MyListContent() {
       if (e.key === 'omniwatch_universe_suggestions_collapsed' && e.newValue !== null) {
         setIsUniverseSuggestionsCollapsed(e.newValue === 'true');
       }
+      if (e.key === 'omniwatch_suggestions_banner_dismissed' && e.newValue !== null) {
+        setIsSuggestionsBannerDismissed(e.newValue === 'true');
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -93,6 +106,15 @@ function MyListContent() {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  const handleDismissSuggestionsBanner = () => {
+    setIsSuggestionsBannerDismissed(true);
+    try {
+      localStorage.setItem('omniwatch_suggestions_banner_dismissed', 'true');
+    } catch (e) {
+      console.error('Failed to save suggestions banner dismissed state to localStorage', e);
+    }
+  };
 
   const toggleSuggestionsCollapsed = () => {
     setIsSuggestionsCollapsed((prev) => {
@@ -331,8 +353,42 @@ function MyListContent() {
     return s.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
   });
 
+  // Sort items according to selected sortBy
+  const sortedItems = useMemo(() => {
+    if (sortBy === 'recent') return filteredItems;
+    return [...filteredItems].sort((a, b) => {
+      if (sortBy === 'rating_desc') {
+        const rA = a.rating || 0;
+        const rB = b.rating || 0;
+        return rB - rA;
+      }
+      if (sortBy === 'rating_asc') {
+        const rA = a.rating || 0;
+        const rB = b.rating || 0;
+        return rA - rB;
+      }
+      if (sortBy === 'release_date_desc') {
+        const dA = a.release_date ? new Date(a.release_date).getTime() : 0;
+        const dB = b.release_date ? new Date(b.release_date).getTime() : 0;
+        return dB - dA;
+      }
+      if (sortBy === 'release_date_asc') {
+        const dA = a.release_date ? new Date(a.release_date).getTime() : 0;
+        const dB = b.release_date ? new Date(b.release_date).getTime() : 0;
+        return dA - dB;
+      }
+      if (sortBy === 'title_asc') {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      if (sortBy === 'title_desc') {
+        return (b.title || '').localeCompare(a.title || '');
+      }
+      return 0;
+    });
+  }, [filteredItems, sortBy]);
+
   // Pré-carrega em segundo plano os pôsteres dos itens não visíveis (a partir do 13º card)
-  const posterPathsToPreload = filteredItems.map((item) => item.poster_path);
+  const posterPathsToPreload = sortedItems.map((item) => item.poster_path);
   useImagePreloader(posterPathsToPreload, { initialSkip: 12, batchSize: 4 });
 
   return (
@@ -459,65 +515,69 @@ function MyListContent() {
         </TabsList>
       </Tabs>
 
-      {/* Banner de Alerta de Franquias nas outras abas */}
-      {suggestions.length > 0 && mediaTab !== 'collections' && mediaTab !== 'universes' && (
-        <div className="mb-4 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
-              <Sparkles className="w-5 h-5" />
+      {/* Banner Compacto e Descartável de Sagas e Universos Detectados (Opção A) */}
+      {!isSuggestionsBannerDismissed &&
+        mediaTab !== 'collections' &&
+        mediaTab !== 'universes' &&
+        (suggestions.length > 0 || universeSuggestions.length > 0) && (
+          <div className="mb-6 p-3 sm:p-3.5 bg-gradient-to-r from-amber-500/10 via-purple-500/5 to-transparent border border-amber-500/25 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-in fade-in duration-300">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
+                  <span>Sagas e Universos Detectados:</span>
+                  {suggestions.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                      {suggestions.length} {suggestions.length === 1 ? 'Coleção' : 'Coleções'}
+                    </span>
+                  )}
+                  {universeSuggestions.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                      {universeSuggestions.length} {universeSuggestions.length === 1 ? 'Universo' : 'Universos'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                  Identificamos franquias completas conectadas às obras da sua biblioteca.
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                {suggestions.length === 1 ? '1 Franquia Sugerida' : `${suggestions.length} Franquias Sugeridas`}
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30">
-                  {suggestions.length}
-                </span>
-              </h4>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Identificamos filmes de uma mesma coleção na sua lista ({suggestions.map(s => s.name).slice(0, 2).join(', ')}). Deseja acompanhar a saga completa?
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-amber-500/40 text-xs shrink-0 cursor-pointer self-start sm:self-auto font-medium px-3.5 py-1.5 transition-all shadow-sm"
-            onClick={() => handleMediaTabChange('collections')}
-          >
-            Ver Sugestões na aba Coleções →
-          </Button>
-        </div>
-      )}
 
-      {/* Banner de Alerta de Universos nas outras abas */}
-      {universeSuggestions.length > 0 && mediaTab !== 'universes' && mediaTab !== 'collections' && (
-        <div className="mb-8 p-4 rounded-2xl border border-purple-500/30 bg-purple-500/10 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
-              <Globe className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                {universeSuggestions.length === 1 ? '1 Universo Sugerido' : `${universeSuggestions.length} Universos Sugeridos`}
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                  {universeSuggestions.length}
-                </span>
-              </h4>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Identificamos universos compartilhados na sua lista ({universeSuggestions.map(s => s.name).slice(0, 3).join(', ')}). Acompanhe todos os filmes, séries e spin-offs!
-              </p>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              {suggestions.length > 0 && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 text-xs px-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-amber-500/40 cursor-pointer font-medium shadow-sm"
+                  onClick={() => handleMediaTabChange('collections')}
+                >
+                  Ver Coleções →
+                </Button>
+              )}
+              {universeSuggestions.length > 0 && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 text-xs px-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-purple-500/40 cursor-pointer font-medium shadow-sm"
+                  onClick={() => handleMediaTabChange('universes')}
+                >
+                  Ver Universos →
+                </Button>
+              )}
+              <button
+                type="button"
+                onClick={handleDismissSuggestionsBanner}
+                className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-zinc-800/60 transition-colors cursor-pointer"
+                title="Dispensar aviso"
+                aria-label="Dispensar aviso de sugestões"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="bg-zinc-900 hover:bg-zinc-800 text-zinc-100 hover:text-white border border-purple-500/40 text-xs shrink-0 cursor-pointer self-start sm:self-auto font-medium px-3.5 py-1.5 transition-all shadow-sm"
-            onClick={() => handleMediaTabChange('universes')}
-          >
-            Ver Sugestões na aba Universos →
-          </Button>
-        </div>
-      )}
+        )}
 
       {mediaTab === 'universes' ? (
         <div className="space-y-8">
@@ -858,72 +918,96 @@ function MyListContent() {
         </div>
       ) : (
         <>
-          <div className="flex gap-2.5 overflow-x-auto pb-4 mb-8 no-scrollbar items-center">
-            <Button
-              variant={statusFilter === 'all' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-              onClick={() => handleStatusChange('all')}
-            >
-              Todos os Status
-            </Button>
-            <Button
-              variant={statusFilter === 'plan_to_watch' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-              onClick={() => handleStatusChange('plan_to_watch')}
-            >
-              Quero Ver
-            </Button>
-            <Button
-              variant={statusFilter === 'upcoming' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-              onClick={() => handleStatusChange('upcoming')}
-            >
-              Aguardando Estreia
-            </Button>
-            <Button
-              variant={statusFilter === 'watching' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-              onClick={() => handleStatusChange('watching')}
-            >
-              Assistindo
-            </Button>
-            <Button
-              variant={statusFilter === 'completed' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-              onClick={() => handleStatusChange('completed')}
-            >
-              Concluídos
-            </Button>
-            <Button
-              variant={statusFilter === 'dropped' ? 'default' : 'outline'}
-              className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
-              onClick={() => handleStatusChange('dropped')}
-            >
-              Abandonados
-            </Button>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <div className="flex gap-2.5 overflow-x-auto pb-2 lg:pb-0 no-scrollbar items-center">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
+                onClick={() => handleStatusChange('all')}
+              >
+                Todos os Status
+              </Button>
+              <Button
+                variant={statusFilter === 'plan_to_watch' ? 'default' : 'outline'}
+                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
+                onClick={() => handleStatusChange('plan_to_watch')}
+              >
+                Quero Ver
+              </Button>
+              <Button
+                variant={statusFilter === 'upcoming' ? 'default' : 'outline'}
+                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
+                onClick={() => handleStatusChange('upcoming')}
+              >
+                Aguardando Estreia
+              </Button>
+              <Button
+                variant={statusFilter === 'watching' ? 'default' : 'outline'}
+                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
+                onClick={() => handleStatusChange('watching')}
+              >
+                Assistindo
+              </Button>
+              <Button
+                variant={statusFilter === 'completed' ? 'default' : 'outline'}
+                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
+                onClick={() => handleStatusChange('completed')}
+              >
+                Concluídos
+              </Button>
+              <Button
+                variant={statusFilter === 'dropped' ? 'default' : 'outline'}
+                className="rounded-full cursor-pointer min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm shrink-0 font-medium"
+                onClick={() => handleStatusChange('dropped')}
+              >
+                Abandonados
+              </Button>
 
-            <div className="h-6 w-px bg-border/60 self-center mx-1 shrink-0" />
+              <div className="h-6 w-px bg-border/60 self-center mx-1 shrink-0" />
 
-            <Button
-              variant={favoriteFilter ? 'default' : 'outline'}
-              className={cn(
-                "rounded-full cursor-pointer transition-all flex items-center gap-1.5 shrink-0 min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm font-medium",
-                favoriteFilter
-                  ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-500/25"
-                  : "border-border hover:border-rose-500/50 hover:text-rose-400"
-              )}
-              onClick={() => setFavoriteFilter(!favoriteFilter)}
-              title={favoriteFilter ? "Remover filtro de favoritos" : "Mostrar apenas favoritos"}
-            >
-              <Heart className={cn("w-3.5 h-3.5", favoriteFilter ? "fill-white text-white" : "fill-rose-500 text-rose-500")} />
-              <span>Favoritos</span>
-              <span className={cn(
-                "px-1.5 py-0.2 rounded-full text-[10px]",
-                favoriteFilter ? "bg-white/20 text-white font-bold" : "bg-muted text-muted-foreground"
-              )}>
-                {favoriteCount}
+              <Button
+                variant={favoriteFilter ? 'default' : 'outline'}
+                className={cn(
+                  "rounded-full cursor-pointer transition-all flex items-center gap-1.5 shrink-0 min-h-[38px] sm:min-h-[36px] px-4 py-2 sm:py-1.5 text-xs sm:text-sm font-medium",
+                  favoriteFilter
+                    ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-500/25"
+                    : "border-border hover:border-rose-500/50 hover:text-rose-400"
+                )}
+                onClick={() => setFavoriteFilter(!favoriteFilter)}
+                title={favoriteFilter ? "Remover filtro de favoritos" : "Mostrar apenas favoritos"}
+              >
+                <Heart className={cn("w-3.5 h-3.5", favoriteFilter ? "fill-white text-white" : "fill-rose-500 text-rose-500")} />
+                <span>Favoritos</span>
+                <span className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px]",
+                  favoriteFilter ? "bg-white/20 text-white font-bold" : "bg-muted text-muted-foreground"
+                )}>
+                  {favoriteCount}
+                </span>
+              </Button>
+            </div>
+
+            {/* Dropdown de Ordenação (Opção A) */}
+            <div className="flex items-center gap-2 self-start lg:self-auto shrink-0 bg-secondary/40 hover:bg-secondary/60 border border-border/80 px-3 py-1.5 rounded-xl transition-colors">
+              <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 select-none">
+                <ArrowUpDown className="w-3.5 h-3.5 text-primary" />
+                <span className="hidden sm:inline">Ordenar:</span>
               </span>
-            </Button>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-transparent text-xs text-foreground font-semibold focus:outline-none cursor-pointer"
+                aria-label="Critério de ordenação da biblioteca"
+              >
+                <option value="recent" className="bg-zinc-950 text-white">Recém Adicionados</option>
+                <option value="rating_desc" className="bg-zinc-950 text-white">Maior Nota (★ 5 → 1)</option>
+                <option value="rating_asc" className="bg-zinc-950 text-white">Menor Nota (★ 1 → 5)</option>
+                <option value="release_date_desc" className="bg-zinc-950 text-white">Lançamento (Mais recentes)</option>
+                <option value="release_date_asc" className="bg-zinc-950 text-white">Lançamento (Mais antigos)</option>
+                <option value="title_asc" className="bg-zinc-950 text-white">Título (A → Z)</option>
+                <option value="title_desc" className="bg-zinc-950 text-white">Título (Z → A)</option>
+              </select>
+            </div>
           </div>
 
           {/* Sub-filtros contextuais elegantes e organizados */}
@@ -1113,7 +1197,7 @@ function MyListContent() {
                 <div key={i} className="aspect-[2/3] bg-muted rounded-md" />
               ))}
             </div>
-          ) : filteredItems.length === 0 ? (
+          ) : sortedItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <p className="text-xl text-muted-foreground mb-4">
                 {searchQuery.trim()
@@ -1126,19 +1210,22 @@ function MyListContent() {
                   handleMediaTabChange('all');
                   handleStatusChange('all');
                   setSearchQuery('');
+                  setSortBy('recent');
                 }}
               >
                 Limpar Filtros
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 gap-y-8">
-              {filteredItems.map((item, index) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 gap-y-7">
+              {sortedItems.map((item, index) => {
                 const mediaId = (item.tmdb_id ?? item.id)?.toString();
                 if (!mediaId) return null;
 
+                const releaseYear = item.release_date ? item.release_date.substring(0, 4) : null;
+
                 return (
-                  <div key={item.id || mediaId} className="relative group">
+                  <div key={item.id || mediaId} className="flex flex-col group min-w-0">
                     <MediaCard
                       item={{
                         id: mediaId,
@@ -1155,6 +1242,25 @@ function MyListContent() {
                       layout="poster"
                       priority={index < 12}
                     />
+                    {/* Legenda Textual de Identificação Rápida (Opção A) */}
+                    <div className="mt-2 px-1">
+                      <h4
+                        className="text-xs sm:text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors"
+                        title={item.title}
+                      >
+                        {item.title}
+                      </h4>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-0.5">
+                        <span>
+                          {releaseYear ? releaseYear : (item.media_type === 'tv' ? 'Série' : 'Filme')}
+                        </span>
+                        {item.rating && item.rating > 0 ? (
+                          <span className="text-amber-400 font-bold flex items-center gap-0.5">
+                            ★ {item.rating}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
                 );
               })}
