@@ -173,7 +173,7 @@ export const useMyListStore = create<MyListStore>()(
 
   fetchProgress: async (tmdb_id) => {
     const item = get().items[tmdb_id];
-    if (!item) return;
+    if (!item || item.id.startsWith('temp-')) return;
     try {
       const data = await resilientFetch<EpisodeProgress[]>(`/api/my-list/${item.id}/progress`);
       set((state) => ({
