@@ -374,22 +374,34 @@ function MyListContent() {
       if (sortBy === 'rating_desc') {
         const rA = a.rating || 0;
         const rB = b.rating || 0;
-        return rB - rA;
+        if (rA === 0 && rB > 0) return 1;
+        if (rB === 0 && rA > 0) return -1;
+        if (rB !== rA) return rB - rA;
+        return (a.title || '').localeCompare(b.title || '');
       }
       if (sortBy === 'rating_asc') {
         const rA = a.rating || 0;
         const rB = b.rating || 0;
-        return rA - rB;
+        if (rA === 0 && rB > 0) return 1;
+        if (rB === 0 && rA > 0) return -1;
+        if (rA !== rB) return rA - rB;
+        return (a.title || '').localeCompare(b.title || '');
       }
       if (sortBy === 'release_date_desc') {
         const dA = a.release_date ? new Date(a.release_date).getTime() : 0;
         const dB = b.release_date ? new Date(b.release_date).getTime() : 0;
-        return dB - dA;
+        if (dA === 0 && dB > 0) return 1;
+        if (dB === 0 && dA > 0) return -1;
+        if (dB !== dA) return dB - dA;
+        return (a.title || '').localeCompare(b.title || '');
       }
       if (sortBy === 'release_date_asc') {
         const dA = a.release_date ? new Date(a.release_date).getTime() : 0;
         const dB = b.release_date ? new Date(b.release_date).getTime() : 0;
-        return dA - dB;
+        if (dA === 0 && dB > 0) return 1;
+        if (dB === 0 && dA > 0) return -1;
+        if (dA !== dB) return dA - dB;
+        return (a.title || '').localeCompare(b.title || '');
       }
       if (sortBy === 'title_asc') {
         return (a.title || '').localeCompare(b.title || '');
