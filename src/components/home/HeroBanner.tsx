@@ -94,10 +94,11 @@ export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
   useEffect(() => {
     if (!canAutoRotate) return;
 
+    // Se o sistema solicitar redução de movimento e o usuário não alterou manualmente, pausamos inicialmente
     const prefersReducedMotion =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion && !hasManualSelection) return;
 
     let rafId: number;
 
@@ -233,11 +234,7 @@ export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
 
       {/* Main Content Area */}
       <div className="relative z-10 container mx-auto px-4 lg:px-8 pb-10 sm:pb-14 w-full flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-        <div
-          className="max-w-2xl space-y-4"
-          onMouseEnter={() => setIsHoveringControls(true)}
-          onMouseLeave={() => setIsHoveringControls(false)}
-        >
+        <div className="max-w-2xl space-y-4">
           {/* Metadata Chips */}
           <div className="flex flex-wrap items-center gap-2.5 text-xs font-medium">
             {getReasonBadge()}
@@ -365,8 +362,16 @@ export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
         {canAutoRotate && (
           <div
             className="hidden lg:flex flex-col gap-2 p-3 rounded-2xl bg-card/60 backdrop-blur-xl border border-border/80 max-w-xs w-72 shrink-0 shadow-2xl"
-            onMouseEnter={() => setIsHoveringControls(true)}
-            onMouseLeave={() => setIsHoveringControls(false)}
+            onMouseEnter={() => {
+              if (typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches) {
+                setIsHoveringControls(true);
+              }
+            }}
+            onMouseLeave={() => {
+              if (typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches) {
+                setIsHoveringControls(false);
+              }
+            }}
           >
             <div className="flex items-center justify-between px-2">
               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
