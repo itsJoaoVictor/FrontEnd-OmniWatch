@@ -17,17 +17,20 @@ import {
 } from '@/lib/seriesCache';
 import { parseReleaseDate } from '@/lib/dateUtils';
 
+// Cache em memória para trending no Dashboard para evitar refetch redundante
+let cachedTrendingResults: any[] | null = null;
+let inFlightTrendingPromise: Promise<any[]> | null = null;
+
 export default function HomePage() {
   const { items, isLoading, fetchMyList, episodeProgress, fetchProgress } = useMyListStore();
-  const { pendingCount, fetchPendingCount } = useFriendsStore();
+  const pendingCount = useFriendsStore((state) => state.pendingCount);
   const [isMounted, setIsMounted] = useState(false);
   const fetchedProgressRef = useRef(new Set<number>());
 
   useEffect(() => {
     setIsMounted(true);
-    fetchMyList();
-    fetchPendingCount();
-  }, [fetchMyList, fetchPendingCount]);
+    fetchMyList('watching,plan_to_watch,upcoming');
+  }, [fetchMyList]);
 
   useEffect(() => {
     const tvWatching = Object.values(items).filter(i => i && i.status === 'watching' && i.media_type === 'tv' && i.tmdb_id);
@@ -182,16 +185,28 @@ export default function HomePage() {
       if (planToWatchItems.length === 0) return;
 
       try {
-        const { api } = await import('@/lib/axios');
-        const res = await api.get('/api/trending');
-        const trendingItems = res.data.results || [];
-        
-        for (const trending of trendingItems) {
-           const match = planToWatchItems.find(i => i.tmdb_id === trending.id);
-           if (match) {
-               setTrendingPlanToWatchId(match.tmdb_id);
-               break;
-           }
+        let trendingItems = cachedTrendingResults;
+        if (!trendingItems) {
+          if (!inFlightTrendingPromise) {
+            inFlightTrendingPromise = (async () => {
+              const { api } = await import('@/lib/axios');
+              const res = await api.get('/api/trending');
+              const results = res.data.results || [];
+              cachedTrendingResults = results;
+              return results;
+            })().finally(() => {
+              inFlightTrendingPromise = null;
+            });
+          }
+          trendingItems = await inFlightTrendingPromise;
+        }
+
+        for (const trending of (trendingItems || [])) {
+          const match = planToWatchItems.find(i => i.tmdb_id === trending.id);
+          if (match) {
+            setTrendingPlanToWatchId(match.tmdb_id);
+            break;
+          }
         }
       } catch (e) {
         // Ignore

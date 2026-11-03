@@ -47,7 +47,7 @@ interface MyListStore {
   items: Record<string | number, SavedItem>;
   episodeProgress: Record<number, EpisodeProgress[]>;
   isLoading: boolean;
-  fetchMyList: () => Promise<void>;
+  fetchMyList: (statusFilter?: string) => Promise<void>;
   fetchProgress: (tmdb_id: number) => Promise<void>;
   toggleEpisode: (tmdb_id: number, season: number, episode: number, isWatched: boolean) => Promise<void>;
   addToList: (
@@ -83,7 +83,7 @@ export const useMyListStore = create<MyListStore>()(
       episodeProgress: {},
       isLoading: false,
       
-      fetchMyList: async () => {
+      fetchMyList: async (statusFilter?: string) => {
         if (inFlightFetchMyList) {
           return inFlightFetchMyList;
         }
@@ -94,7 +94,8 @@ export const useMyListStore = create<MyListStore>()(
             set({ isLoading: true });
           }
           try {
-            const res = await api.get('/api/my-list');
+            const endpoint = statusFilter ? `/api/my-list?status=${encodeURIComponent(statusFilter)}` : '/api/my-list';
+            const res = await api.get(endpoint);
             const rawList = Array.isArray(res?.data)
               ? res.data
               : (Array.isArray(res)
@@ -157,7 +158,9 @@ export const useMyListStore = create<MyListStore>()(
               saveCorrectedEpisodesToCache(newCorrections);
             }
 
-            set({ items: itemsMap });
+            set((state) => ({
+              items: statusFilter ? { ...state.items, ...itemsMap } : itemsMap,
+            }));
           } catch (error) {
             console.error('Failed to fetch my list', error);
           } finally {

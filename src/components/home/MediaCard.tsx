@@ -45,6 +45,7 @@ export const MediaCard = memo(function MediaCard({ item, layout = "poster", prio
       <div className="group relative flex gap-4 bg-card hover:bg-accent border border-border hover:border-primary/50 rounded-xl p-3 transition-all duration-300">
         <Link 
           href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`} 
+          prefetch={false}
           className="flex-1 flex gap-4 cursor-pointer overflow-hidden min-w-0"
         >
           <div className="relative w-32 md:w-40 aspect-video rounded-lg overflow-hidden shrink-0 shadow-md bg-muted">
@@ -144,7 +145,11 @@ export const MediaCard = memo(function MediaCard({ item, layout = "poster", prio
 
   // Layout Poster Clássico (Descobrir/Em Alta)
   return (
-    <Link href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`} className="relative group cursor-pointer w-full transition-all duration-300 hover:-translate-y-2 block">
+    <Link 
+      href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`} 
+      prefetch={false}
+      className="relative group cursor-pointer w-full transition-all duration-300 hover:-translate-y-2 block"
+    >
       <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden bg-muted shadow-lg border border-border group-hover:border-primary/50 transition-colors">
         <PosterImage
           src={item.coverVertical}
