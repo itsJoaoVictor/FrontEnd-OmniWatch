@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { TvSeriesDetailsResponse } from "@/types/details";
 import { HeroSection } from "@/components/details/HeroSection";
 import { CastCarousel } from "@/components/details/CastCarousel";
-import { DirectorSection } from "@/components/details/DirectorSection";
+import { CreativeCrewSection } from "@/components/details/CreativeCrewSection";
 import { VideoCarousel } from "@/components/details/VideoCarousel";
 import { SeasonsList } from "@/components/details/SeasonsList";
 import { SimilarCarousel } from "@/components/details/SimilarCarousel";
@@ -33,9 +33,29 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
     notFound();
   }
 
+  // Calcula o período de exibição da série (ex: 2005 – 2014)
+  const startYear = tv.first_air_date ? tv.first_air_date.split("-")[0] : "";
+  const endYear = tv.last_episode_to_air?.air_date
+    ? tv.last_episode_to_air.air_date.split("-")[0]
+    : "";
+
+  let yearsRange = startYear;
+  if (startYear) {
+    if (tv.status === "Ended" || tv.status === "Canceled") {
+      yearsRange = endYear && endYear !== startYear ? `${startYear} – ${endYear}` : startYear;
+    } else {
+      yearsRange = `${startYear} – Presente`;
+    }
+  }
+
   const metaInfo = [
-    tv.first_air_date ? tv.first_air_date.split("-")[0] : "",
-    tv.number_of_seasons ? `${tv.number_of_seasons} Temporada${tv.number_of_seasons > 1 ? "s" : ""}` : ""
+    yearsRange,
+    tv.number_of_seasons
+      ? `${tv.number_of_seasons} Temporada${tv.number_of_seasons > 1 ? "s" : ""}`
+      : "",
+    tv.number_of_episodes
+      ? `${tv.number_of_episodes} Episódios`
+      : "",
   ].filter(Boolean);
 
   return (
@@ -55,19 +75,20 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
         metaInfo={metaInfo}
         watchProviders={tv.watch_providers}
         universe={tv.universe}
+        hasVideos={Boolean(tv.videos && tv.videos.length > 0)}
       />
 
-      <div className="container mx-auto px-4 pb-12 mt-8">
-        <div className="lg:grid lg:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-16 mt-10">
+        <div className="lg:grid lg:grid-cols-3 gap-8 items-start">
           <div className="lg:col-span-2 space-y-8 overflow-hidden">
+            <CreativeCrewSection crew={tv.credits.crew} />
             <CastCarousel cast={tv.credits.cast} />
-            <DirectorSection crew={tv.credits.crew} title="Criador(es)" />
             <SeasonsList seasons={tv.seasons} fallbackPosterPath={tv.poster_path} seriesId={tv.id} />
-            <VideoCarousel videos={tv.videos} />
-            <SimilarCarousel items={tv.similar} type="tv" />
+            {tv.videos && tv.videos.length > 0 && <VideoCarousel videos={tv.videos} />}
           </div>
-          <div className="lg:col-span-1 mt-8 lg:mt-0">
+          <div className="lg:col-span-1 mt-8 lg:mt-0 space-y-6 lg:sticky lg:top-24">
             <TvTechnicalDetailsSidebar
+              seriesId={tv.id}
               status={tv.status}
               networks={tv.networks}
               nextEpisodeToAir={tv.next_episode_to_air}
@@ -77,6 +98,13 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
             />
           </div>
         </div>
+
+        {/* Séries Similares em Largura Total */}
+        {tv.similar && tv.similar.length > 0 && (
+          <div className="w-full mt-14 pt-8 border-t border-border">
+            <SimilarCarousel items={tv.similar} type="tv" />
+          </div>
+        )}
       </div>
     </main>
   );

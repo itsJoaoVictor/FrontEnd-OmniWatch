@@ -8,7 +8,7 @@ import { SeasonItem, EpisodeItem, SeasonDetailsResponse } from "@/types/details"
 import { api } from "@/lib/axios";
 import { useMyListStore } from "@/store/useMyListStore";
 
-import { hasMissingPreviousEpisodes } from "@/lib/utils";
+import { hasMissingPreviousEpisodes, cn } from "@/lib/utils";
 import { toast } from '@/components/ui/toast';
 import { formatReleaseDate, isFutureDate, parseReleaseDate } from "@/lib/dateUtils";
 
@@ -37,18 +37,31 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
   const imagePath = season.poster_path ?? fallbackPosterPath ?? null;
   const isUpcoming = !season.air_date || isFutureDate(season.air_date);
 
-  const seasonProgressList = (episodeProgress || []).filter(
-    p => p.season_number === season.season_number
+  // Deduplica registros de progresso por episode_number para evitar bugs matemáticos
+  const watchedEpisodeNumbers = new Set(
+    (episodeProgress || [])
+      .filter(p => p.season_number === season.season_number)
+      .map(p => p.episode_number)
   );
-  const watchedInSeason = seasonProgressList.length;
+  const watchedInSeason = watchedEpisodeNumbers.size;
 
   const releasedEpisodesCount = episodes.length > 0
     ? episodes.filter(ep => ep.air_date && !isFutureDate(ep.air_date)).length
     : season.episode_count;
 
   const isSeasonWatched = releasedEpisodesCount > 0 && watchedInSeason >= releasedEpisodesCount;
-  const seasonRewatchCount = isSeasonWatched && seasonProgressList.length > 0
-    ? Math.min(...seasonProgressList.map(p => p.rewatch_count || 0))
+
+  // Calcula rewatch por episódio deduplicado
+  const episodeRewatchMap = new Map<number, number>();
+  (episodeProgress || [])
+    .filter(p => p.season_number === season.season_number)
+    .forEach(p => {
+      const current = episodeRewatchMap.get(p.episode_number) || 0;
+      episodeRewatchMap.set(p.episode_number, Math.max(current, p.rewatch_count || 0));
+    });
+
+  const seasonRewatchCount = isSeasonWatched && episodeRewatchMap.size >= releasedEpisodesCount
+    ? Math.min(...Array.from(episodeRewatchMap.values()))
     : 0;
 
   const progressPercent = season.episode_count > 0
@@ -113,149 +126,162 @@ export function SeasonCard({ season, seriesId, fallbackPosterPath }: SeasonCardP
   };
 
   return (
-    <div className="bg-muted/30 rounded-lg overflow-hidden flex flex-col">
+    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xs transition-all">
       {/* Header / Season Info */}
       <div 
-        className="flex flex-col md:flex-row gap-4 p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+        className="flex flex-col sm:flex-row gap-4 p-4 sm:p-5 cursor-pointer hover:bg-muted/30 transition-colors items-start sm:items-center justify-between"
         onClick={toggleExpand}
       >
-        <div className="flex-shrink-0 w-[120px] aspect-[2/3] relative rounded-md overflow-hidden bg-muted">
-          {imagePath ? (
-            <Image
-              src={`${posterUrl}${imagePath}`}
-              alt={season.name}
-              fill
-              className="object-cover"
-              sizes="120px"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs text-center px-2">
-              Sem Foto
-            </div>
-          )}
-          {isUpcoming && !season.poster_path && (
-            <div className="absolute inset-0 flex items-end justify-center pb-2">
-              <span className="px-2 py-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full">
-                Em Breve
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 flex flex-col justify-center">
-          <div className="flex justify-between items-start gap-3">
-            <div>
-              <h4 className="text-xl font-bold mb-1">{season.name}</h4>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400 mb-2">
-                {season.air_date ? (
-                  <>
-                    <span>{parseReleaseDate(season.air_date).getFullYear()}</span>
-                    <span>•</span>
-                  </>
-                ) : (
-                  <span className="text-primary font-medium">Data a confirmar</span>
-                )}
-                <span>{season.episode_count} episódios</span>
-                {watchedInSeason > 0 && (
-                  <>
-                    <span>•</span>
-                    <span className="text-primary font-medium">
-                      {watchedInSeason}/{season.episode_count} assistidos
-                    </span>
-                  </>
-                )}
-                {seasonRewatchCount > 0 && (
-                  <>
-                    <span>•</span>
-                    <span className="text-emerald-400 font-semibold inline-flex items-center gap-1">
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      Reassistida {seasonRewatchCount}x
-                    </span>
-                  </>
-                )}
+        <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 w-full sm:w-auto">
+          <div className="flex-shrink-0 w-14 h-20 sm:w-16 sm:h-24 aspect-[2/3] relative rounded-xl overflow-hidden bg-muted border border-border/60 shadow-2xs">
+            {imagePath ? (
+              <Image
+                src={`${posterUrl}${imagePath}`}
+                alt={season.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 640px) 56px, 64px"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-[10px] text-center px-1">
+                Sem Foto
               </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
-              {!isUpcoming && season.episode_count > 0 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleToggleSeason}
-                    disabled={markingSeason}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${
-                      isSeasonWatched
-                        ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
-                        : "bg-background/60 text-muted-foreground border-muted hover:text-foreground hover:bg-background"
-                    } disabled:opacity-50`}
-                    title={isSeasonWatched ? "Desmarcar temporada como assistida" : "Marcar temporada toda como assistida"}
-                  >
-                    {markingSeason ? (
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    ) : isSeasonWatched ? (
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                    ) : (
-                      <Circle className="w-4 h-4" />
-                    )}
-                    <span className="hidden sm:inline">
-                      {isSeasonWatched ? "Temporada assistida" : "Marcar temporada"}
-                    </span>
-                  </button>
-
-                  {isSeasonWatched && (
-                    seasonRewatchCount === 0 ? (
-                      <button
-                        type="button"
-                        onClick={(e) => handleSeasonRewatch(e, 1)}
-                        disabled={rewatchingSeason}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-50"
-                        title="Marcar todos os episódios desta temporada como reassistidos"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Reassistir temporada</span>
-                      </button>
-                    ) : (
-                      <div
-                        className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 mr-0.5" />
-                        <span>{seasonRewatchCount}x</span>
-                        <button
-                          type="button"
-                          disabled={rewatchingSeason}
-                          onClick={(e) => handleSeasonRewatch(e, seasonRewatchCount - 1)}
-                          className="w-5 h-5 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/70 text-emerald-300 transition-colors"
-                          title="Diminuir revisão da temporada"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={rewatchingSeason}
-                          onClick={(e) => handleSeasonRewatch(e, seasonRewatchCount + 1)}
-                          className="w-5 h-5 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/70 text-emerald-300 transition-colors"
-                          title="Reassistir temporada novamente (+1)"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )
-                  )}
-                </>
-              )}
-              {expanded ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
-            </div>
+            )}
+            {isUpcoming && !season.poster_path && (
+              <div className="absolute inset-0 flex items-end justify-center pb-1">
+                <span className="px-1.5 py-0.2 bg-primary text-primary-foreground text-[9px] font-bold rounded-full">
+                  Em Breve
+                </span>
+              </div>
+            )}
           </div>
 
-          {watchedInSeason > 0 && season.episode_count > 0 && (
-            <div className="w-full max-w-xs h-1.5 bg-muted rounded-full overflow-hidden mt-1">
-              <div
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${progressPercent}%` }}
-              />
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-0.5">
+              <h4 className="text-base sm:text-lg font-bold text-foreground truncate">{season.name}</h4>
+              {isSeasonWatched && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                  Completa
+                </span>
+              )}
             </div>
+            
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
+              {season.air_date ? (
+                <>
+                  <span>{parseReleaseDate(season.air_date).getFullYear()}</span>
+                  <span>•</span>
+                </>
+              ) : (
+                <span className="text-primary font-medium">Data a confirmar</span>
+              )}
+              <span>{season.episode_count} episódios</span>
+              {watchedInSeason > 0 && (
+                <>
+                  <span>•</span>
+                  <span className={cn("font-semibold", isSeasonWatched ? "text-emerald-500" : "text-primary")}>
+                    {watchedInSeason}/{season.episode_count} assistidos ({progressPercent}%)
+                  </span>
+                </>
+              )}
+              {seasonRewatchCount > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="text-emerald-400 font-semibold inline-flex items-center gap-1">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    {seasonRewatchCount}x
+                  </span>
+                </>
+              )}
+            </div>
+
+            {watchedInSeason > 0 && season.episode_count > 0 && (
+              <div className="w-full max-w-xs h-1.5 bg-secondary rounded-full overflow-hidden border border-border/40">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-300",
+                    isSeasonWatched ? "bg-emerald-500" : "bg-primary"
+                  )}
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-center shrink-0 mt-2 sm:mt-0">
+          {!isUpcoming && season.episode_count > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={handleToggleSeason}
+                disabled={markingSeason}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer disabled:opacity-50 shadow-2xs",
+                  isSeasonWatched
+                    ? "bg-primary/15 text-primary border-primary/30 hover:bg-primary/25"
+                    : "bg-card hover:bg-accent text-muted-foreground hover:text-foreground border-border"
+                )}
+                title={isSeasonWatched ? "Desmarcar temporada como assistida" : "Marcar temporada toda como assistida"}
+              >
+                {markingSeason ? (
+                  <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : isSeasonWatched ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                ) : (
+                  <Circle className="w-3.5 h-3.5" />
+                )}
+                <span>
+                  {isSeasonWatched ? "Concluída" : "Marcar"}
+                </span>
+              </button>
+
+              {isSeasonWatched && (
+                seasonRewatchCount === 0 ? (
+                  <button
+                    type="button"
+                    onClick={(e) => handleSeasonRewatch(e, 1)}
+                    disabled={rewatchingSeason}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold border bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-50 cursor-pointer"
+                    title="Marcar todos os episódios desta temporada como reassistidos"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span className="hidden md:inline">Reassistir</span>
+                  </button>
+                ) : (
+                  <div
+                    className="flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-semibold border bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-0.5" />
+                    <span>{seasonRewatchCount}x</span>
+                    <button
+                      type="button"
+                      disabled={rewatchingSeason}
+                      onClick={(e) => handleSeasonRewatch(e, seasonRewatchCount - 1)}
+                      className="w-4 h-4 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/70 text-emerald-300 transition-colors"
+                      title="Diminuir revisão da temporada"
+                    >
+                      <Minus className="w-2.5 h-2.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={rewatchingSeason}
+                      onClick={(e) => handleSeasonRewatch(e, seasonRewatchCount + 1)}
+                      className="w-4 h-4 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/70 text-emerald-300 transition-colors"
+                      title="Reassistir temporada novamente (+1)"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                )
+              )}
+            </>
           )}
+
+          <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center text-muted-foreground">
+            <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", expanded ? "rotate-180" : "")} />
+          </div>
         </div>
       </div>
 
