@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle, Info, Star, Sparkles, Tv, Film } from "lucide-react";
+import { CheckCircle, Info, Star, Sparkles, Tv, Film, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMyListStore } from "@/store/useMyListStore";
 import { cn } from "@/lib/utils";
@@ -26,17 +26,129 @@ interface HeroBannerProps {
   spotlights?: HeroFeatureItem[];
 }
 
+const AUTO_ADVANCE_MS = 7000;
+
 export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
   const [selectedId, setSelectedId] = useState<string>(data.id);
+  const [hasManualSelection, setHasManualSelection] = useState(false);
+  const [isUserPaused, setIsUserPaused] = useState(false);
+  const [isHoveringControls, setIsHoveringControls] = useState(false);
   const [markedIds, setMarkedIds] = useState<Set<string>>(new Set());
   const [isMarking, setIsMarking] = useState(false);
+
+  const desktopProgressRef = useRef<HTMLSpanElement | null>(null);
+  const mobileProgressRef = useRef<HTMLSpanElement | null>(null);
+  const elapsedMsRef = useRef<number>(0);
+  const lastFrameTimeRef = useRef<number | null>(null);
 
   const toggleEpisode = useMyListStore((state) => state.toggleEpisode);
   const updateStatus = useMyListStore((state) => state.updateStatus);
 
   // Combina o item principal e os spotlights sem duplicatas
-  const allSpotlights = [data, ...spotlights.filter((item) => item.id !== data.id)].slice(0, 4);
-  const activeItem = allSpotlights.find((item) => item.id === selectedId) || data;
+  const allSpotlights = useMemo(
+    () => [data, ...spotlights.filter((item) => item.id !== data.id)].slice(0, 4),
+    [data, spotlights]
+  );
+
+  // Sincroniza o destaque inicial caso data.id atualize assincronamente logo após o carregamento
+  useEffect(() => {
+    if (!hasManualSelection) {
+      setSelectedId(data.id);
+    }
+  }, [data.id, hasManualSelection]);
+
+  const activeIndex = useMemo(() => {
+    const idx = allSpotlights.findIndex((item) => item.id === selectedId);
+    return idx >= 0 ? idx : 0;
+  }, [allSpotlights, selectedId]);
+
+  const activeItem = allSpotlights[activeIndex] || data;
+  const canAutoRotate = allSpotlights.length > 1;
+
+  const resetProgressBars = useCallback(() => {
+    elapsedMsRef.current = 0;
+    lastFrameTimeRef.current = null;
+    if (desktopProgressRef.current) {
+      desktopProgressRef.current.style.transform = "scaleX(0)";
+    }
+    if (mobileProgressRef.current) {
+      mobileProgressRef.current.style.transform = "scaleX(0)";
+    }
+  }, []);
+
+  const handleSelectSpotlight = useCallback(
+    (id: string) => {
+      setHasManualSelection(true);
+      setSelectedId(id);
+      resetProgressBars();
+    },
+    [resetProgressBars]
+  );
+
+  // Reseta a barra sempre que o item ativo muda
+  useEffect(() => {
+    resetProgressBars();
+  }, [activeItem.id, resetProgressBars]);
+
+  // Rotação automática quando há múltiplos destaques disponíveis
+  useEffect(() => {
+    if (!canAutoRotate) return;
+
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
+    let rafId: number;
+
+    const tick = (now: number) => {
+      const isDocumentHidden =
+        typeof document !== "undefined" && document.visibilityState === "hidden";
+      const paused = isUserPaused || isHoveringControls || isMarking || isDocumentHidden;
+
+      if (paused) {
+        lastFrameTimeRef.current = null;
+      } else {
+        if (lastFrameTimeRef.current !== null) {
+          elapsedMsRef.current += now - lastFrameTimeRef.current;
+        }
+        lastFrameTimeRef.current = now;
+
+        const ratio = Math.min(elapsedMsRef.current / AUTO_ADVANCE_MS, 1);
+        const transformValue = `scaleX(${ratio.toFixed(4)})`;
+
+        if (desktopProgressRef.current) {
+          desktopProgressRef.current.style.transform = transformValue;
+        }
+        if (mobileProgressRef.current) {
+          mobileProgressRef.current.style.transform = transformValue;
+        }
+
+        if (elapsedMsRef.current >= AUTO_ADVANCE_MS) {
+          elapsedMsRef.current = 0;
+          lastFrameTimeRef.current = now;
+          const nextIdx = (activeIndex + 1) % allSpotlights.length;
+          const nextItem = allSpotlights[nextIdx];
+          if (nextItem) {
+            setHasManualSelection(true);
+            setSelectedId(nextItem.id);
+          }
+        }
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [
+    canAutoRotate,
+    isUserPaused,
+    isHoveringControls,
+    isMarking,
+    activeIndex,
+    allSpotlights,
+  ]);
 
   const hasImage = Boolean(activeItem.coverHorizontal && activeItem.coverHorizontal.trim() !== "");
   const isMarked = markedIds.has(activeItem.id);
@@ -103,10 +215,11 @@ export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
         {hasImage ? (
           <div className="relative w-full h-full">
             <Image
+              key={activeItem.coverHorizontal || activeItem.id}
               src={activeItem.coverHorizontal}
               alt={activeItem.title}
               fill
-              className="object-cover object-[center_20%] scale-[1.02] transition-all duration-700 ease-out filter brightness-[0.80]"
+              className="object-cover object-[center_20%] scale-[1.02] transition-all duration-700 ease-out filter brightness-[0.80] animate-in fade-in duration-500"
               priority
             />
             {/* Layered cinematic gradients to blend into app background */}
@@ -120,7 +233,11 @@ export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
 
       {/* Main Content Area */}
       <div className="relative z-10 container mx-auto px-4 lg:px-8 pb-10 sm:pb-14 w-full flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-        <div className="max-w-2xl space-y-4">
+        <div
+          className="max-w-2xl space-y-4"
+          onMouseEnter={() => setIsHoveringControls(true)}
+          onMouseLeave={() => setIsHoveringControls(false)}
+        >
           {/* Metadata Chips */}
           <div className="flex flex-wrap items-center gap-2.5 text-xs font-medium">
             {getReasonBadge()}
@@ -181,7 +298,10 @@ export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
                 : "Marcar como Visto"}
             </Button>
 
-            <Link href={`/${activeItem.type === "movie" ? "movie" : "tv"}/${activeItem.id}`}>
+            <Link
+              href={`/${activeItem.type === "movie" ? "movie" : "tv"}/${activeItem.id}`}
+              prefetch={false}
+            >
               <Button
                 size="lg"
                 variant="secondary"
@@ -192,26 +312,103 @@ export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
               </Button>
             </Link>
           </div>
+
+          {/* Indicador de Rotação Automática no Mobile / Tablet (< lg) */}
+          {canAutoRotate && (
+            <div className="flex lg:hidden items-center gap-2 pt-2">
+              {allSpotlights.map((spotlight) => {
+                const isSelected = spotlight.id === activeItem.id;
+                return (
+                  <button
+                    key={spotlight.id}
+                    type="button"
+                    onClick={() => handleSelectSpotlight(spotlight.id)}
+                    aria-label={`Destaque: ${spotlight.title}`}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      "relative h-1.5 rounded-full overflow-hidden transition-all cursor-pointer",
+                      isSelected ? "w-10 bg-foreground/25" : "w-3 bg-foreground/20 hover:bg-foreground/40"
+                    )}
+                  >
+                    {isSelected && (
+                      <span
+                        ref={mobileProgressRef}
+                        className="absolute inset-0 bg-primary origin-left"
+                        style={{ transform: "scaleX(0)" }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setIsUserPaused((p) => !p)}
+                aria-label={
+                  isUserPaused
+                    ? "Retomar rotação automática dos destaques"
+                    : "Pausar rotação automática dos destaques"
+                }
+                className="ml-1 h-6 w-6 rounded-full bg-secondary/70 border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                {isUserPaused ? (
+                  <Play className="w-3 h-3 fill-current" />
+                ) : (
+                  <Pause className="w-3 h-3" />
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Multi-spotlight switcher (Desktop right rail) */}
-        {allSpotlights.length > 1 && (
-          <div className="hidden lg:flex flex-col gap-2 p-3 rounded-2xl bg-card/60 backdrop-blur-xl border border-border/80 max-w-xs shrink-0 shadow-2xl">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider px-2">
-              Destaques na sua Lista
-            </p>
+        {/* Multi-spotlight switcher (Desktop right rail com barra de tempo automática) */}
+        {canAutoRotate && (
+          <div
+            className="hidden lg:flex flex-col gap-2 p-3 rounded-2xl bg-card/60 backdrop-blur-xl border border-border/80 max-w-xs w-72 shrink-0 shadow-2xl"
+            onMouseEnter={() => setIsHoveringControls(true)}
+            onMouseLeave={() => setIsHoveringControls(false)}
+          >
+            <div className="flex items-center justify-between px-2">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                Destaques na sua Lista
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsUserPaused((p) => !p)}
+                title={
+                  isUserPaused
+                    ? "Retomar rotação automática"
+                    : "Pausar rotação automática"
+                }
+                aria-label={
+                  isUserPaused
+                    ? "Retomar rotação automática dos destaques"
+                    : "Pausar rotação automática dos destaques"
+                }
+                className="h-6 w-6 rounded-full hover:bg-secondary/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                {isUserPaused ? (
+                  <Play className="w-3 h-3 fill-current" />
+                ) : (
+                  <Pause className="w-3 h-3" />
+                )}
+              </button>
+            </div>
+
             <div className="flex flex-col gap-1.5">
               {allSpotlights.map((spotlight) => {
                 const isSelected = spotlight.id === activeItem.id;
                 return (
                   <button
                     key={spotlight.id}
-                    onClick={() => setSelectedId(spotlight.id)}
+                    type="button"
+                    onClick={() => handleSelectSpotlight(spotlight.id)}
+                    aria-pressed={isSelected}
                     className={cn(
-                      "p-2 rounded-xl flex items-center gap-3 transition-all text-left",
+                      "relative overflow-hidden p-2 rounded-xl flex items-center gap-3 transition-all text-left cursor-pointer",
                       isSelected
                         ? "bg-secondary/90 border border-primary/50 shadow-sm"
-                        : "hover:bg-secondary/40 opacity-70 hover:opacity-100"
+                        : "hover:bg-secondary/40 opacity-70 hover:opacity-100 border border-transparent"
                     )}
                   >
                     <div className="relative w-12 h-14 rounded-lg overflow-hidden bg-muted shrink-0">
@@ -227,9 +424,21 @@ export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
                         {spotlight.title}
                       </p>
                       <p className="text-[11px] text-muted-foreground truncate">
-                        {spotlight.currentEpisode || (spotlight.type === "movie" ? "Filme" : "Série")}
+                        {spotlight.currentEpisode ||
+                          (spotlight.type === "movie" ? "Filme" : "Série")}
                       </p>
                     </div>
+
+                    {/* Barra de tempo preenchendo suavemente no item ativo */}
+                    {isSelected && !isUserPaused && (
+                      <span className="absolute inset-x-0 bottom-0 h-[2.5px] bg-primary/20 pointer-events-none">
+                        <span
+                          ref={desktopProgressRef}
+                          className="block h-full w-full bg-primary origin-left"
+                          style={{ transform: "scaleX(0)" }}
+                        />
+                      </span>
+                    )}
                   </button>
                 );
               })}

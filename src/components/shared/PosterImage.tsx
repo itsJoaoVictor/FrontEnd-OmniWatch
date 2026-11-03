@@ -15,6 +15,7 @@ interface PosterImageProps {
   height?: number;
   priority?: boolean;
   sizes?: string;
+  tmdbSize?: TmdbSize;
   className?: string;
   containerClassName?: string;
   showTitleInFallback?: boolean;
@@ -69,7 +70,10 @@ export function PosterImage({
   alt,
   title,
   type = "movie",
+  width,
+  height,
   priority = false,
+  tmdbSize = "w342",
   className,
   containerClassName,
   showTitleInFallback = true,
@@ -86,23 +90,26 @@ export function PosterImage({
   const imgRef = useRef<HTMLImageElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Reseta o ciclo quando o src ou fallbackSrc mudam externamente
+  // Reseta o ciclo quando o src, fallbackSrc ou tmdbSize mudam externamente
   useEffect(() => {
     setStage(getInitialStage());
     setIsLoaded(false);
-  }, [src, fallbackSrc]);
+  }, [src, fallbackSrc, tmdbSize]);
+
+  const fallbackSize: TmdbSize =
+    tmdbSize === "w1280" || tmdbSize === "original" ? tmdbSize : "w780";
 
   // Calcula a URL atual dependendo do estágio
   const getCurrentUrl = (): string | null => {
     switch (stage) {
       case "primary-direct":
-        return buildTmdbUrl(src, "w342");
+        return buildTmdbUrl(src, tmdbSize);
       case "primary-proxy":
-        return buildProxyUrl(src, "w342");
+        return buildProxyUrl(src, tmdbSize);
       case "fallback-direct":
-        return buildTmdbUrl(fallbackSrc, "w780");
+        return buildTmdbUrl(fallbackSrc, fallbackSize);
       case "fallback-proxy":
-        return buildProxyUrl(fallbackSrc, "w780");
+        return buildProxyUrl(fallbackSrc, fallbackSize);
       case "exhausted":
       default:
         return null;
@@ -257,8 +264,8 @@ export function PosterImage({
         key={currentUrl}
         src={currentUrl}
         alt={alt}
-        width={342}
-        height={513}
+        width={width || (tmdbSize === "w1280" ? 1280 : tmdbSize === "w780" ? 780 : 342)}
+        height={height || (tmdbSize === "w1280" ? 720 : tmdbSize === "w780" ? 439 : 513)}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         fetchPriority={priority ? "high" : "auto"}

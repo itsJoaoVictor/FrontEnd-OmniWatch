@@ -520,7 +520,8 @@ export const TvQueueAccordion = memo(function TvQueueAccordion({
                           title={series.title}
                           type="tv"
                           fill
-                          priority={idx < 2}
+                          tmdbSize="w1280"
+                          priority={idx === 0}
                           sizes={isActive ? "55vw" : "18vw"}
                           showTitleInFallback={false}
                           className={cn(
@@ -692,6 +693,7 @@ export const TvQueueAccordion = memo(function TvQueueAccordion({
                             title={activeSlice.title}
                             type="tv"
                             fill
+                            tmdbSize="w780"
                             sizes="95vw"
                             showTitleInFallback={false}
                             className="object-cover"

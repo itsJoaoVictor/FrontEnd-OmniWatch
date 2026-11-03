@@ -643,6 +643,7 @@ export const MoviesQueueInspector = memo(function MoviesQueueInspector({
                       title={selectedMovie.title}
                       type="movie"
                       fill
+                      tmdbSize="w1280"
                       sizes="(max-width: 1024px) 95vw, 55vw"
                       showTitleInFallback={false}
                       className="object-cover object-[center_25%] opacity-45 transition-all duration-500"
