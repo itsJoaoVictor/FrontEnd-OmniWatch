@@ -209,7 +209,7 @@ export function PosterImage({
     return (
       <div
         className={cn(
-          "w-full h-full flex flex-col justify-between p-4 text-center bg-gradient-to-b from-zinc-800/95 via-zinc-900 to-zinc-950 border border-zinc-700/40 select-none overflow-hidden relative",
+          "isolate w-full h-full flex flex-col justify-between p-4 text-center bg-gradient-to-b from-zinc-800/95 via-zinc-900 to-zinc-950 border border-zinc-700/40 select-none overflow-hidden relative",
           containerClassName
         )}
       >
@@ -240,7 +240,7 @@ export function PosterImage({
   return (
     <div
       className={cn(
-        "relative w-full h-full overflow-hidden bg-zinc-900 select-none",
+        "isolate relative w-full h-full overflow-hidden bg-zinc-900 select-none",
         containerClassName
       )}
     >

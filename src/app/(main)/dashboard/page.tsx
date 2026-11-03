@@ -222,7 +222,16 @@ export default function HomePage() {
 
   // Derived state from store
     const { heroFeature, spotlights, continueWatching, moviesInQueue, tvInQueue, upcomingMedia } = useMemo(() => {
-    const itemsArray = Object.values(items).filter(i => i && (i.tmdb_id || i.id));
+    const dedupedMap = new Map<string, typeof items[string]>();
+    for (const [key, item] of Object.entries(items)) {
+      if (!item || (!item.tmdb_id && !item.id)) continue;
+      const canonicalKey = String(item.tmdb_id || item.id);
+      // Prioriza sempre a entrada sob chave numérica canônica caso ainda exista chave legada
+      if (!dedupedMap.has(canonicalKey) || key === canonicalKey) {
+        dedupedMap.set(canonicalKey, item);
+      }
+    }
+    const itemsArray = Array.from(dedupedMap.values());
     
     let watchingItems = itemsArray.filter(i => i.status === 'watching');
     watchingItems.sort((a, b) => {

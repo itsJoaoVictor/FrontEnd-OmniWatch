@@ -78,7 +78,37 @@ interface MyListStore {
   toggleSeason: (tmdb_id: number, season: number, episodeCount: number, isWatched: boolean) => Promise<void>;
 }
 
+function sanitizeItemsMap(
+  raw: Record<string | number, SavedItem> | undefined | null
+): Record<string | number, SavedItem> {
+  if (!raw || typeof raw !== 'object') return {};
+  const sanitized: Record<string | number, SavedItem> = {};
+
+  // Passada 1: chaves numéricas canônicas ("95479") têm prioridade
+  for (const [key, item] of Object.entries(raw)) {
+    if (!item || typeof item !== 'object') continue;
+    const tmdbId = Number(item.tmdb_id);
+    if (!Number.isInteger(tmdbId) || tmdbId <= 0) continue;
+    if (key === String(tmdbId)) {
+      sanitized[tmdbId] = item;
+    }
+  }
+
+  // Passada 2: recupera chaves polimórficas legadas ("tv_95479", "movie_95479") somente se a canônica não existir
+  for (const [, item] of Object.entries(raw)) {
+    if (!item || typeof item !== 'object') continue;
+    const tmdbId = Number(item.tmdb_id);
+    if (!Number.isInteger(tmdbId) || tmdbId <= 0) continue;
+    if (!sanitized[tmdbId]) {
+      sanitized[tmdbId] = item;
+    }
+  }
+
+  return sanitized;
+}
+
 let inFlightFetchMyList: Promise<void> | null = null;
+let inFlightFilterKey: string | null = null;
 
 export const useMyListStore = create<MyListStore>()(
   persist(
@@ -88,11 +118,14 @@ export const useMyListStore = create<MyListStore>()(
       isLoading: false,
       
       fetchMyList: async (statusFilter?: string) => {
-        if (inFlightFetchMyList) {
+        const filterKey = statusFilter || '';
+        if (inFlightFetchMyList && inFlightFilterKey === filterKey) {
           return inFlightFetchMyList;
         }
 
-        inFlightFetchMyList = (async () => {
+        inFlightFilterKey = filterKey;
+        let currentFetch: Promise<void> | null = null;
+        currentFetch = (async () => {
           // Apenas ativa isLoading se ainda não tiver itens carregados (padrão SWR)
           if (Object.keys(get().items).length === 0) {
             set({ isLoading: true });
@@ -162,18 +195,45 @@ export const useMyListStore = create<MyListStore>()(
               saveCorrectedEpisodesToCache(newCorrections);
             }
 
-            set((state) => ({
-              items: statusFilter ? { ...state.items, ...itemsMap } : itemsMap,
-            }));
+            set((state) => {
+              if (!statusFilter) {
+                return { items: itemsMap };
+              }
+              const cleanPrev = sanitizeItemsMap(state.items);
+              const requestedStatuses = new Set(
+                statusFilter
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+              );
+              const nextItems: Record<string | number, SavedItem> = {};
+              for (const [key, existing] of Object.entries(cleanPrev)) {
+                // Preserva apenas itens cujo status NÃO foi solicitado neste filtro (ex.: completed, dropped)
+                // ou itens otimistas em criação (temp-), removendo itens fantasmas do cache local
+                if (
+                  existing?.id?.startsWith('temp-') ||
+                  !requestedStatuses.has(existing.status)
+                ) {
+                  nextItems[key] = existing;
+                }
+              }
+              return {
+                items: { ...nextItems, ...itemsMap },
+              };
+            });
           } catch (error) {
             console.error('Failed to fetch my list', error);
           } finally {
             set({ isLoading: false });
-            inFlightFetchMyList = null;
+            if (inFlightFetchMyList === currentFetch) {
+              inFlightFetchMyList = null;
+              inFlightFilterKey = null;
+            }
           }
         })();
 
-        return inFlightFetchMyList;
+        inFlightFetchMyList = currentFetch;
+        return currentFetch;
       },
 
   fetchProgress: async (tmdb_id) => {
@@ -1220,7 +1280,26 @@ export const useMyListStore = create<MyListStore>()(
 }),
 {
   name: 'omniwatch_my_list',
-  partialize: (state) => ({ items: state.items }),
+  version: 2,
+  migrate: (persistedState: any) => {
+    if (persistedState && typeof persistedState === 'object' && persistedState.items) {
+      return {
+        ...persistedState,
+        items: sanitizeItemsMap(persistedState.items),
+      };
+    }
+    return persistedState;
+  },
+  merge: (persistedState: any, currentState) => {
+    const persistedObj =
+      persistedState && typeof persistedState === 'object' ? persistedState : {};
+    return {
+      ...currentState,
+      ...persistedObj,
+      items: sanitizeItemsMap(persistedObj.items ?? currentState.items),
+    };
+  },
+  partialize: (state) => ({ items: sanitizeItemsMap(state.items) }),
 }
 )
 );

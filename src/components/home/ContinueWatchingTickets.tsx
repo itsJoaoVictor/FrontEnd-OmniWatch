@@ -120,6 +120,7 @@ export const ContinueWatchingTickets = memo(function ContinueWatchingTickets({
     for (const item of items) {
       const tmdbId = parseInt(item.id, 10);
       if (isNaN(tmdbId)) continue;
+      if (seenIds.has(tmdbId)) continue;
 
       const saved = storeItems[tmdbId];
 
@@ -688,7 +689,7 @@ export const ContinueWatchingTickets = memo(function ContinueWatchingTickets({
                     <Link
                       href={`/${item.type === "movie" ? "movie" : "tv"}/${item.id}`}
                       prefetch={false}
-                      className="w-28 sm:w-36 relative shrink-0 bg-muted overflow-hidden block cursor-pointer"
+                      className="w-24 min-[380px]:w-28 sm:w-36 relative shrink-0 bg-muted overflow-hidden block cursor-pointer"
                     >
                       <PosterImage
                         src={item.coverHorizontal || item.coverVertical}
@@ -700,25 +701,25 @@ export const ContinueWatchingTickets = memo(function ContinueWatchingTickets({
                         sizes="(max-width: 640px) 112px, 144px"
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-card/90" />
+                      <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-r from-transparent via-black/20 to-card/90" />
 
                       {isExiting ? (
-                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-emerald-500 text-zinc-950 text-[9px] font-extrabold uppercase shadow-xs">
+                        <span className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 z-10 px-2 py-0.5 rounded bg-emerald-500 text-zinc-950 text-[9px] font-extrabold uppercase shadow-xs">
                           Em dia!
                         </span>
                       ) : item.hasNew ? (
-                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-emerald-500 text-zinc-950 text-[9px] font-extrabold uppercase shadow-xs">
+                        <span className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 z-10 px-1.5 py-0.5 rounded bg-emerald-500 text-zinc-950 text-[9px] font-extrabold uppercase shadow-xs">
                           Novo
                         </span>
                       ) : null}
 
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/85 text-white text-[10px] font-extrabold border border-white/15 backdrop-blur-xs">
+                      <span className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 z-10 px-2 py-0.5 rounded bg-black/85 text-white text-[10px] font-extrabold border border-white/15 backdrop-blur-xs shadow-xs">
                         S{item.currentSeason} E{item.currentEp}
                       </span>
                     </Link>
 
                     {/* Centro: Dados e Barra Segmentada de Temporada */}
-                    <div className="flex-1 p-3 sm:p-3.5 min-w-0 flex flex-col justify-between">
+                    <div className="flex-1 p-2.5 min-[380px]:p-3 sm:p-3.5 min-w-0 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center justify-between gap-2">
                           <Link
@@ -739,13 +740,13 @@ export const ContinueWatchingTickets = memo(function ContinueWatchingTickets({
 
                       {/* Barra Segmentada Real da Temporada */}
                       <div className="pt-2 space-y-1">
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-muted-foreground">
+                        <div className="flex items-center justify-between gap-2 text-[10px]">
+                          <span className="text-muted-foreground truncate">
                             {item.currentEp - 1}/{item.releasedEpsInSeason} vistos
                           </span>
                           <span
                             className={cn(
-                              "font-semibold",
+                              "font-semibold shrink-0",
                               isExiting
                                 ? "text-emerald-400 font-bold"
                                 : item.availableRemaining === 1
@@ -789,7 +790,7 @@ export const ContinueWatchingTickets = memo(function ContinueWatchingTickets({
                     </div>
 
                     {/* Canhoto Direito Tátil (+1 Ep + Desfazer) */}
-                    <div className="border-l border-dashed border-border/80 px-2.5 sm:px-3 flex flex-col items-center justify-center gap-1.5 bg-muted/20 shrink-0 min-w-[74px]">
+                    <div className="border-l border-dashed border-border/80 px-2.5 sm:px-3 py-2 flex flex-col items-center justify-center gap-1 bg-muted/20 shrink-0 min-w-[76px]">
                       <button
                         type="button"
                         disabled={isBusy || isExiting}
@@ -824,7 +825,7 @@ export const ContinueWatchingTickets = memo(function ContinueWatchingTickets({
                               item.title
                             )
                           }
-                          className="text-[10px] text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-0.5 font-bold cursor-pointer"
+                          className="px-2 py-1 rounded-md text-[10px] text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors flex items-center gap-0.5 font-bold cursor-pointer"
                           title={`Desfazer S${lastCheckIn.season} E${lastCheckIn.episode}`}
                         >
                           <RotateCcw className="w-2.5 h-2.5" />
@@ -841,7 +842,7 @@ export const ContinueWatchingTickets = memo(function ContinueWatchingTickets({
                               item.title
                             )
                           }
-                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors font-medium cursor-pointer"
+                          className="px-2 py-1 rounded-md text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors font-medium cursor-pointer"
                           title="Voltar 1 episódio"
                         >
                           ↶ -1
