@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { HeroBanner } from "@/components/home/HeroBanner";
-import { ContentCarousel } from "@/components/home/ContentCarousel";
+import { TvQueueAccordion } from "@/components/home/TvQueueAccordion";
+import { ContinueWatchingTickets } from "@/components/home/ContinueWatchingTickets";
+import { ReleaseRadarTimeline } from "@/components/home/ReleaseRadarTimeline";
+import { MoviesQueueInspector } from "@/components/home/MoviesQueueInspector";
 import { useMyListStore } from '@/store/useMyListStore';
 import { MediaItem } from "@/components/home/MediaCard";
 import { Button } from "@/components/ui/button";
@@ -13,9 +16,11 @@ import {
   getUpToDateShowsFromCache,
   saveUpToDateShowsToCache,
   getCorrectedEpisodesFromCache,
-  saveCorrectedEpisodesToCache
+  saveCorrectedEpisodesToCache,
+  fetchAndCacheSeasonEpisodes,
 } from '@/lib/seriesCache';
-import { parseReleaseDate } from '@/lib/dateUtils';
+import { parseReleaseDate, isFutureDate } from '@/lib/dateUtils';
+import { cn } from '@/lib/utils';
 
 // Cache em memória para trending no Dashboard para evitar refetch redundante
 let cachedTrendingResults: any[] | null = null;
@@ -25,6 +30,7 @@ export default function HomePage() {
   const { items, isLoading, fetchMyList, episodeProgress, fetchProgress } = useMyListStore();
   const pendingCount = useFriendsStore((state) => state.pendingCount);
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedSection, setSelectedSection] = useState<'all' | 'watching' | 'movies' | 'tv' | 'upcoming'>('all');
   const fetchedProgressRef = useRef(new Set<number>());
 
   useEffect(() => {
@@ -113,24 +119,20 @@ export default function HomePage() {
         let nextEpNum = maxSeason ? maxEp + 1 : 1;
 
         try {
-          const { api } = await import('@/lib/axios');
-          // Fetch current season details to see if nextEpNum exists
-          let res = await api.get(`/api/tv/${item.tmdb_id}/season/${nextSeason}`);
-          let episodes = res.data.episodes || [];
-          
-          // If the episode number exceeds the season's episode count, roll over to next season
-          if (episodes.length > 0 && nextEpNum > episodes.length) {
+          // Usa cache compartilhado de temporadas (evita chamadas duplicadas e alimenta ContinueWatchingTickets)
+          let episodes = (await fetchAndCacheSeasonEpisodes(item.tmdb_id, nextSeason)) || [];
+          const maxEpInSeason = episodes.reduce(
+            (m, e) => Math.max(m, e.episode_number || 0),
+            episodes.length
+          );
+
+          // Se ultrapassou o último episódio da temporada atual, faz rollover para a próxima temporada
+          if (episodes.length > 0 && nextEpNum > maxEpInSeason) {
             nextSeason += 1;
             nextEpNum = 1;
-            newCorrections[item.tmdb_id] = { season: nextSeason, episode: nextEpNum };
-            
-            // Re-fetch the new season to check for the 48h rule
-            try {
-              res = await api.get(`/api/tv/${item.tmdb_id}/season/${nextSeason}`);
-              episodes = res.data.episodes || [];
-            } catch (e) {
-              // Next season might not exist yet
-              episodes = [];
+            episodes = (await fetchAndCacheSeasonEpisodes(item.tmdb_id, nextSeason)) || [];
+            if (episodes.length > 0) {
+              newCorrections[item.tmdb_id] = { season: nextSeason, episode: nextEpNum };
             }
           }
 
@@ -219,7 +221,7 @@ export default function HomePage() {
   }, [items]);
 
   // Derived state from store
-    const { heroFeature, continueWatching, moviesInQueue, tvInQueue, upcomingMedia } = useMemo(() => {
+    const { heroFeature, spotlights, continueWatching, moviesInQueue, tvInQueue, upcomingMedia } = useMemo(() => {
     const itemsArray = Object.values(items).filter(i => i && (i.tmdb_id || i.id));
     
     let watchingItems = itemsArray.filter(i => i.status === 'watching');
@@ -230,9 +232,13 @@ export default function HomePage() {
     });
 
     const activeWatchingItems = watchingItems.filter(i => {
-      if (i.is_up_to_date === true || upToDateShows.has(i.tmdb_id)) return false;
+      // Regra 1: Nunca exibir séries que estão em dia
+      if (i.is_up_to_date === true) return false;
       if (i.media_type === 'tv') {
+        if (i.next_episode?.is_released === false) return false;
+        if (i.next_episode?.air_date && isFutureDate(i.next_episode.air_date)) return false;
         if (i.is_up_to_date === false) return true;
+        if (upToDateShows.has(i.tmdb_id)) return false;
         return verifiedShows.has(i.tmdb_id);
       }
       return true;
@@ -325,14 +331,35 @@ export default function HomePage() {
       title: heroMapped.title,
       type: heroMapped.type,
       coverHorizontal: hero.backdrop_path ? `https://image.tmdb.org/t/p/w1280${hero.backdrop_path}` : (hero.poster_path ? `https://image.tmdb.org/t/p/w1280${hero.poster_path}` : ''),
+      coverVertical: hero.poster_path ? `https://image.tmdb.org/t/p/w780${hero.poster_path}` : '',
       description: description,
       currentEpisode: heroMapped.currentEpisode,
       nextEpisodeToWatch: heroMapped.nextEpisodeToWatch,
+      release_date: hero.release_date ?? null,
+      heroReason: heroReason,
     } : null;
+
+    const mappedWatching = activeWatchingItems.map(mapToMediaItem);
+    const spotlights = [
+      ...(heroMediaItem ? [heroMediaItem] : []),
+      ...mappedWatching.map(item => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        coverHorizontal: item.coverHorizontal || '',
+        coverVertical: item.coverVertical,
+        description: 'Continue acompanhando a partir de onde você parou.',
+        currentEpisode: item.currentEpisode,
+        nextEpisodeToWatch: item.nextEpisodeToWatch,
+        release_date: item.release_date,
+        heroReason: 'continue_watching',
+      }))
+    ].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i).slice(0, 4);
 
     return {
       heroFeature: heroMediaItem,
-      continueWatching: activeWatchingItems.map(mapToMediaItem),
+      spotlights: spotlights,
+      continueWatching: mappedWatching,
       moviesInQueue: itemsArray.filter(i => i.status === 'plan_to_watch' && i.media_type === 'movie').map(mapToMediaItem),
       tvInQueue: itemsArray.filter(i => i.status === 'plan_to_watch' && i.media_type === 'tv').map(mapToMediaItem),
       upcomingMedia: itemsArray.filter(i => i.status === 'upcoming').map(mapToMediaItem),
@@ -394,7 +421,7 @@ export default function HomePage() {
       )}
 
       {heroFeature ? (
-        <HeroBanner data={heroFeature} />
+        <HeroBanner data={heroFeature} spotlights={spotlights} />
       ) : (
         <div className="w-full h-[55vh] flex flex-col items-center justify-center bg-muted gap-4">
           <h2 className="text-2xl font-bold">Sua lista está vazia</h2>
@@ -406,37 +433,128 @@ export default function HomePage() {
           </Link>
         </div>
       )}
+
+      {/* Category Filter Pills Bar (Estilo Apple TV+ / Netflix 2026) */}
+      <div className="relative z-20 max-w-7xl mx-auto px-4 lg:px-8 mt-6 mb-2">
+        <div className="flex items-center justify-between gap-4 border-b border-border/70 pb-3.5">
+          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+            <button
+              onClick={() => setSelectedSection('all')}
+              className={cn(
+                "px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer",
+                selectedSection === 'all'
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary/60 hover:bg-secondary text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Tudo
+            </button>
+            {continueWatching.length > 0 && (
+              <button
+                onClick={() => setSelectedSection('watching')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5",
+                  selectedSection === 'watching'
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-secondary/60 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span>Séries em Andamento</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-background/40 font-bold">
+                  {continueWatching.length}
+                </span>
+              </button>
+            )}
+            {moviesInQueue.length > 0 && (
+              <button
+                onClick={() => setSelectedSection('movies')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5",
+                  selectedSection === 'movies'
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-secondary/60 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span>Filmes na Fila</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-background/40 font-bold">
+                  {moviesInQueue.length}
+                </span>
+              </button>
+            )}
+            {tvInQueue.length > 0 && (
+              <button
+                onClick={() => setSelectedSection('tv')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5",
+                  selectedSection === 'tv'
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-secondary/60 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span>Séries na Fila</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-background/40 font-bold">
+                  {tvInQueue.length}
+                </span>
+              </button>
+            )}
+            {upcomingMedia.length > 0 && (
+              <button
+                onClick={() => setSelectedSection('upcoming')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5",
+                  selectedSection === 'upcoming'
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-secondary/60 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span>Aguardando Estreia</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-background/40 font-bold">
+                  {upcomingMedia.length}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
       
-      <div className="mt-4 md:mt-8 relative z-20 space-y-8 flex flex-col pb-8">
-        {continueWatching.length > 0 && (
-          <ContentCarousel 
+      <div className="mt-2 md:mt-4 relative z-20 space-y-10 flex flex-col pb-12">
+        {(selectedSection === 'all' || selectedSection === 'watching') && (
+          <ContinueWatchingTickets 
             title="Continuar Assistindo" 
+            subtitle="Episódios prontos para dar play com check-in em 1 clique"
             items={continueWatching} 
-            layout="tracking" 
+            actionHref="/my-list"
+            actionText="Ver na biblioteca"
           />
         )}
         
-        {moviesInQueue.length > 0 && (
-          <ContentCarousel 
+        {(selectedSection === 'all' || selectedSection === 'movies') && (
+          <MoviesQueueInspector 
             title="Filmes na Fila" 
+            subtitle="Inspecione detalhes rápidos ou sorteie sua sessão de hoje em 1 clique"
             items={moviesInQueue} 
-            layout="poster"
+            actionHref="/my-list"
+            actionText="Ver filmes"
           />
         )}
 
-        {tvInQueue.length > 0 && (
-          <ContentCarousel 
+        {(selectedSection === 'all' || selectedSection === 'tv') && (
+          <TvQueueAccordion 
             title="Séries na Fila" 
+            subtitle="Passe o mouse ou toque para expandir em 16:9 e iniciar sua próxima maratona"
             items={tvInQueue} 
-            layout="poster"
+            actionHref="/my-list"
+            actionText="Ver séries"
           />
         )}
 
-        {upcomingMedia.length > 0 && (
-          <ContentCarousel 
+        {upcomingMedia.length > 0 && (selectedSection === 'all' || selectedSection === 'upcoming') && (
+          <ReleaseRadarTimeline 
             title="Aguardando Estreia" 
+            subtitle="Linha do tempo por ordem de chegada • Contagem regressiva dinâmica"
             items={upcomingMedia} 
-            layout="poster"
+            actionHref="/calendar"
+            actionText="Ver calendário"
           />
         )}
       </div>

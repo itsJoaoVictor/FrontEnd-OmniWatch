@@ -6,7 +6,11 @@ import { toast } from '@/components/ui/toast';
 import {
   removeUpToDateShowFromCache,
   addUpToDateShowToCache,
-  saveCorrectedEpisodesToCache
+  saveCorrectedEpisodesToCache,
+  removeCorrectedEpisodeFromCache,
+  getCachedSeasonEpisodes,
+  resolveAfterWatchingEpisodeSync,
+  resolveAfterWatchingEpisodeAsync,
 } from '@/lib/seriesCache';
 
 export type ListStatus = 'plan_to_watch' | 'watching' | 'completed' | 'dropped' | 'upcoming';
@@ -229,19 +233,48 @@ export const useMyListStore = create<MyListStore>()(
     const prevItem = get().items[tmdb_id];
 
     let optimisticNextEpisode: NextEpisodeData | null = prevItem?.next_episode ? { ...prevItem.next_episode } : null;
-    let optimisticIsUpToDate = prevItem?.is_up_to_date ?? false;
+    let optimisticIsUpToDate: boolean | null = prevItem?.is_up_to_date ?? false;
+    let needsAsyncSeasonResolve = false;
 
     if (isWatched) {
       const curS = prevItem?.next_episode?.season_number ?? season;
       const curE = prevItem?.next_episode?.episode_number ?? episode;
       if (season > curS || (season === curS && episode >= curE)) {
-        optimisticNextEpisode = {
-          season_number: season,
-          episode_number: episode + 1,
-          name: `Episódio ${episode + 1}`,
-          is_released: true
-        };
-        saveCorrectedEpisodesToCache({ [tmdb_id]: { season, episode: episode + 1 } });
+        const syncResolved = resolveAfterWatchingEpisodeSync(tmdb_id, season, episode);
+        if (syncResolved !== undefined) {
+          optimisticIsUpToDate = syncResolved.isUpToDate;
+          optimisticNextEpisode = syncResolved.nextEpisode;
+          if (syncResolved.isUpToDate) {
+            addUpToDateShowToCache(tmdb_id);
+            if (syncResolved.nextEpisode) {
+              saveCorrectedEpisodesToCache({
+                [tmdb_id]: {
+                  season: syncResolved.nextEpisode.season_number,
+                  episode: syncResolved.nextEpisode.episode_number,
+                },
+              });
+            } else {
+              removeCorrectedEpisodeFromCache(tmdb_id);
+            }
+          } else if (syncResolved.nextEpisode) {
+            removeUpToDateShowFromCache(tmdb_id);
+            saveCorrectedEpisodesToCache({
+              [tmdb_id]: {
+                season: syncResolved.nextEpisode.season_number,
+                episode: syncResolved.nextEpisode.episode_number,
+              },
+            });
+          }
+        } else {
+          // Temporada ainda não estava em memória: resolvemos em paralelo (~80ms) sem gravar episódio falso em cache
+          needsAsyncSeasonResolve = true;
+          optimisticNextEpisode = {
+            season_number: season,
+            episode_number: episode + 1,
+            name: `Episódio ${episode + 1}`,
+            is_released: true,
+          };
+        }
       }
     } else {
       removeUpToDateShowFromCache(tmdb_id);
@@ -249,11 +282,14 @@ export const useMyListStore = create<MyListStore>()(
       const curS = prevItem?.next_episode?.season_number;
       const curE = prevItem?.next_episode?.episode_number;
       if (!curS || season < curS || (season === curS && curE !== undefined && episode <= curE)) {
+        const cachedSeason = getCachedSeasonEpisodes(tmdb_id, season);
+        const realEpMeta = cachedSeason?.find((e) => e.episode_number === episode);
         optimisticNextEpisode = {
           season_number: season,
           episode_number: episode,
-          name: `Episódio ${episode}`,
-          is_released: true
+          name: realEpMeta?.name || `Episódio ${episode}`,
+          air_date: realEpMeta?.air_date ?? null,
+          is_released: true,
         };
         saveCorrectedEpisodesToCache({ [tmdb_id]: { season, episode } });
       }
@@ -278,18 +314,61 @@ export const useMyListStore = create<MyListStore>()(
       }
     }));
 
+    // Se a temporada ainda não estava em memória, resolve imediatamente em paralelo (troca de temporada ou série em dia)
+    const asyncResolvePromise = needsAsyncSeasonResolve
+      ? resolveAfterWatchingEpisodeAsync(tmdb_id, season, episode).then((resolved) => {
+          if (!resolved) return;
+          if (resolved.isUpToDate) {
+            addUpToDateShowToCache(tmdb_id);
+            if (resolved.nextEpisode) {
+              saveCorrectedEpisodesToCache({
+                [tmdb_id]: {
+                  season: resolved.nextEpisode.season_number,
+                  episode: resolved.nextEpisode.episode_number,
+                },
+              });
+            } else {
+              removeCorrectedEpisodeFromCache(tmdb_id);
+            }
+          } else if (resolved.nextEpisode) {
+            removeUpToDateShowFromCache(tmdb_id);
+            saveCorrectedEpisodesToCache({
+              [tmdb_id]: {
+                season: resolved.nextEpisode.season_number,
+                episode: resolved.nextEpisode.episode_number,
+              },
+            });
+          }
+          set((state) => {
+            const current = state.items[tmdb_id];
+            if (!current) return state;
+            return {
+              items: {
+                ...state.items,
+                [tmdb_id]: {
+                  ...current,
+                  is_up_to_date: resolved.isUpToDate,
+                  next_episode: resolved.nextEpisode,
+                },
+              },
+            };
+          });
+        })
+      : Promise.resolve();
+
     try {
-      if (isWatched) {
-        await resilientFetch(`/api/my-list/${item.id}/progress`, {
-          method: 'POST',
-          body: { season_number: season, episode_number: episode }
-        });
-      } else {
-        await resilientFetch(`/api/my-list/${item.id}/progress/${season}/${episode}`, {
-          method: 'DELETE'
-        });
-      }
-      get().fetchMyList();
+      await Promise.all([
+        isWatched
+          ? resilientFetch(`/api/my-list/${item.id}/progress`, {
+              method: 'POST',
+              body: { season_number: season, episode_number: episode }
+            })
+          : resilientFetch(`/api/my-list/${item.id}/progress/${season}/${episode}`, {
+              method: 'DELETE'
+            }),
+        asyncResolvePromise,
+      ]);
+      get().fetchMyList('watching,plan_to_watch,upcoming');
       if (get().episodeProgress[tmdb_id]) {
         get().fetchProgress(tmdb_id);
       }

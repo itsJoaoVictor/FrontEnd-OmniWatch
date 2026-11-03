@@ -1,8 +1,8 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import Image from "next/image";
-import { Check, Star, StarOff, Play, Clock, Heart } from "lucide-react";
+import { Check, Star, StarOff, Play, Clock, Heart, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { AddToListButton } from "@/components/shared/AddToListButton";
@@ -35,122 +35,150 @@ export const MediaCard = memo(function MediaCard({ item, layout = "poster", prio
   const updateStatus = useMyListStore((state) => state.updateStatus);
   const addToList = useMyListStore((state) => state.addToList);
   const toggleEpisode = useMyListStore((state) => state.toggleEpisode);
-  const tmdbId = parseInt(item.id);
+  const tmdbId = parseInt(item.id, 10);
   const savedItem = useMyListStore((state) => (!isNaN(tmdbId) ? state.items[tmdbId] : undefined));
   const isWatched = savedItem?.status === 'completed';
+  const [isAdvancing, setIsAdvancing] = useState(false);
 
-  // Layout para "Continue Assistindo" (Estilo Tracker/TV Time)
+  const handleQuickAdvance = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (isNaN(tmdbId) || isAdvancing) return;
+
+    setIsAdvancing(true);
+    try {
+      if (item.type === 'tv' && item.nextEpisodeToWatch) {
+        await toggleEpisode(tmdbId, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode, true);
+      } else {
+        if (isWatched) {
+          await updateStatus(tmdbId, 'watching');
+        } else {
+          if (!savedItem) {
+            await addToList(tmdbId, item.type as 'movie' | 'tv', {
+              title: item.title,
+              poster_path: item.coverVertical,
+              backdrop_path: item.coverHorizontal,
+              release_date: item.release_date || undefined,
+              status: 'completed',
+            });
+          } else {
+            await updateStatus(tmdbId, 'completed');
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao avançar episódio:", err);
+    } finally {
+      setTimeout(() => setIsAdvancing(false), 400);
+    }
+  };
+
+  // =========================================================================
+  // Layout Cinemático Widescreen para "Continue Assistindo" (Apple TV+ Style)
+  // =========================================================================
   if (layout === "tracking") {
+    const isUpToDate = item.type === 'tv' && (item.isUpToDate || savedItem?.is_up_to_date);
+
     return (
-      <div className="group relative flex gap-4 bg-card hover:bg-accent border border-border hover:border-primary/50 rounded-xl p-3 transition-all duration-300">
+      <div className="group relative flex flex-col rounded-2xl bg-card/80 hover:bg-card border border-border/80 hover:border-primary/50 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/10">
+        {/* Imagem Widescreen 16:9 com overlay e badge */}
         <Link 
           href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`} 
           prefetch={false}
-          className="flex-1 flex gap-4 cursor-pointer overflow-hidden min-w-0"
+          className="relative w-full aspect-video overflow-hidden bg-muted block cursor-pointer"
         >
-          <div className="relative w-32 md:w-40 aspect-video rounded-lg overflow-hidden shrink-0 shadow-md bg-muted">
-            <PosterImage
-              src={item.coverHorizontal || item.coverVertical}
-              fallbackSrc={item.coverVertical}
-              alt={item.title}
-              title={item.title}
-              type={item.type}
-              fill
-              priority={priority}
-              sizes="(max-width: 768px) 160px, 200px"
-              className="transition-transform duration-500 group-hover:scale-110"
-            />
-            {/* Overlay escuro leve na imagem */}
-            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors pointer-events-none" />
-          </div>
-          
-          <div className="flex-1 flex flex-col justify-center py-1 overflow-hidden">
-            <p className="text-xs text-primary font-medium mb-1 tracking-wider uppercase">
-              {item.currentEpisode ? `Próximo: ${item.currentEpisode}` : "Novo"}
-            </p>
-            <h3 className="text-foreground font-bold text-base md:text-lg truncate mb-2">
-              {item.title}
-            </h3>
-            
-            {item.progress !== undefined && (
-              <div className="mt-auto flex items-center gap-3">
-                <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary rounded-full"
-                    style={{ width: `${item.progress}%` }}
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground font-medium">{item.progress}%</span>
-              </div>
-            )}
-          </div>
+          <PosterImage
+            src={item.coverHorizontal || item.coverVertical}
+            fallbackSrc={item.coverVertical}
+            alt={item.title}
+            title={item.title}
+            type={item.type}
+            fill
+            priority={priority}
+            sizes="(max-width: 768px) 90vw, (max-width: 1200px) 45vw, 25vw"
+            className="transition-transform duration-500 group-hover:scale-105 object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
+
+          {/* Badge do Próximo Episódio ou Status */}
+          {item.currentEpisode && (
+            <span className={cn(
+              "absolute bottom-2.5 left-2.5 text-xs font-bold px-2.5 py-0.5 rounded-md backdrop-blur-md shadow-sm border",
+              isUpToDate
+                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                : "bg-black/80 text-primary border-primary/30"
+            )}>
+              {item.currentEpisode}
+            </span>
+          )}
+
+          {/* Botão de Check-in Rápido flutuante no topo direito */}
+          {!isUpToDate && (
+            <button
+              onClick={handleQuickAdvance}
+              disabled={isAdvancing}
+              className={cn(
+                "absolute top-2.5 right-2.5 p-2 rounded-xl backdrop-blur-md transition-all duration-200 active:scale-90 z-20 shadow-lg",
+                isAdvancing
+                  ? "bg-emerald-600 text-white scale-110"
+                  : "bg-primary/90 hover:bg-primary text-primary-foreground hover:scale-105"
+              )}
+              title="Marcar próximo episódio como visto (+1 Ep)"
+            >
+              <Check className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          )}
         </Link>
 
-        <div className="flex items-center justify-center pr-2 shrink-0 z-10">
-          {item.type === 'tv' && item.isUpToDate ? (
-            <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full whitespace-nowrap shadow-sm select-none" title="Você assistiu a todos os episódios disponíveis até o momento">
-              Em dia
-            </span>
-          ) : (item.type === 'movie' && !Boolean(
-            (item.release_date || savedItem?.release_date) && 
-            typeof (item.release_date || savedItem?.release_date) === 'string' && 
-            (item.release_date || savedItem?.release_date)!.trim() !== '' && 
-            new Date((item.release_date || savedItem?.release_date)!.trim()) <= new Date()
-          )) || savedItem?.status === 'upcoming' ? (
-            <span className="text-xs font-semibold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full whitespace-nowrap shadow-sm select-none" title="Aguardando data de estreia">
-              Aguardando Estreia
-            </span>
-          ) : (
-            <button
-              onClick={async (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                if (isNaN(tmdbId)) return; // Se for dado mockado
-                
-                if (item.type === 'tv' && item.nextEpisodeToWatch) {
-                  await toggleEpisode(tmdbId, item.nextEpisodeToWatch.season, item.nextEpisodeToWatch.episode, true);
-                } else {
-                  if (isWatched) {
-                    await updateStatus(tmdbId, 'watching');
-                  } else {
-                    if (!savedItem) {
-                      await addToList(tmdbId, item.type as 'movie' | 'tv', {
-                        title: item.title,
-                        poster_path: item.coverVertical,
-                        backdrop_path: item.coverHorizontal,
-                        release_date: item.release_date || undefined,
-                        status: 'completed',
-                      });
-                    } else {
-                      await updateStatus(tmdbId, 'completed');
-                    }
-                  }
-                }
-              }}
-              className={cn(
-                "w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 border-2",
-                isWatched 
-                  ? "bg-primary border-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
-                  : "bg-transparent border-muted-foreground/50 text-muted-foreground hover:border-primary hover:text-primary"
-              )}
-              title="Marcar como visto"
+        {/* Informações da Série & Barra de Progresso */}
+        <div className="p-3.5 flex flex-col flex-1 justify-between gap-2.5">
+          <div>
+            <Link 
+              href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`}
+              prefetch={false}
+              className="hover:text-primary transition-colors block"
             >
-              <Check className={cn("w-5 h-5", isWatched && "stroke-[3px]")} />
-            </button>
+              <h3 className="text-sm font-bold text-foreground truncate">
+                {item.title}
+              </h3>
+            </Link>
+            {item.nextEpisodeToWatch && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                Temporada {item.nextEpisodeToWatch.season} • Episódio {item.nextEpisodeToWatch.episode}
+              </p>
+            )}
+          </div>
+
+          {/* Barra de Progresso Estilizada */}
+          {item.progress !== undefined && (
+            <div className="pt-1">
+              <div className="flex justify-between text-[11px] text-muted-foreground font-medium mb-1">
+                <span>Progresso Total</span>
+                <span className="text-primary font-semibold">{item.progress}%</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-primary to-indigo-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, Math.max(0, item.progress))}%` }}
+                />
+              </div>
+            </div>
           )}
         </div>
       </div>
     );
   }
 
-  // Layout Poster Clássico (Descobrir/Em Alta)
+  // =========================================================================
+  // Layout Poster Clássico Cinemático (Filmes & Séries na Fila)
+  // =========================================================================
   return (
     <Link 
       href={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`} 
       prefetch={false}
-      className="relative group cursor-pointer w-full transition-all duration-300 hover:-translate-y-2 block"
+      className="relative group cursor-pointer w-full transition-all duration-300 hover:-translate-y-1.5 block"
     >
-      <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden bg-muted shadow-lg border border-border group-hover:border-primary/50 transition-colors">
+      <div className="relative w-full aspect-[2/3] rounded-2xl overflow-hidden bg-muted shadow-md border border-border group-hover:border-primary/50 group-hover:shadow-xl group-hover:shadow-primary/10 transition-all duration-300">
         <PosterImage
           src={item.coverVertical}
           fallbackSrc={item.coverHorizontal}
@@ -159,14 +187,13 @@ export const MediaCard = memo(function MediaCard({ item, layout = "poster", prio
           type={item.type}
           fill
           priority={priority}
-          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
           className="transition-transform duration-500 group-hover:scale-105"
         />
         
         {/* Status Badge, Avaliação e Progresso */}
         {savedItem && (
           <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start max-w-[calc(100%-48px)]">
-            {/* Linha 1: Status com indicador de progresso para Séries */}
             {savedItem.status === 'watching' && item.type === 'tv' ? (
               <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-md backdrop-blur-md uppercase tracking-wider border border-white/15 bg-black/90 text-amber-400 flex items-center gap-1.5 whitespace-nowrap">
                 <span>Assistindo</span>
@@ -186,22 +213,13 @@ export const MediaCard = memo(function MediaCard({ item, layout = "poster", prio
                     </span>
                   </span>
                 ) : null}
-                {(savedItem.rewatch_count || 0) > 0 && (
-                  <>
-                    <span className="text-white/30 text-[10px]">•</span>
-                    <span className="text-emerald-300 font-semibold normal-case">
-                      {(savedItem.rewatch_count || 0) > 1 ? `Reassistido ${savedItem.rewatch_count}x` : 'Reassistido'}
-                    </span>
-                  </>
-                )}
               </span>
             ) : (
-              <StatusBadge tmdb_id={parseInt(item.id)} />
+              <StatusBadge tmdb_id={parseInt(item.id, 10)} />
             )}
             
-            {/* Linha 2: Avaliação ou Sem Nota */}
             {savedItem.rating ? (
-              <UserRatingBadge tmdb_id={parseInt(item.id)} />
+              <UserRatingBadge tmdb_id={parseInt(item.id, 10)} />
             ) : (savedItem.status === 'completed' || savedItem.status === 'watching') ? (
               <div 
                 className="flex items-center gap-1 bg-black/90 backdrop-blur-md border border-amber-500/60 px-2 py-0.5 rounded-full text-amber-300 text-[11px] font-semibold shadow-md"
@@ -211,26 +229,25 @@ export const MediaCard = memo(function MediaCard({ item, layout = "poster", prio
                 <span>Sem nota</span>
               </div>
             ) : null}
-
           </div>
         )}
 
-        {/* Overlay do Poster - sempre dark para garantir leitura sobre imagem */}
+        {/* Overlay Cinemático com informações no hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3.5">
           <div className="flex flex-col gap-1 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
             <h3 className="text-white font-bold text-sm line-clamp-2 leading-tight">
               {item.title}
             </h3>
-            {savedItem && !savedItem.rating && (savedItem.status === 'completed' || savedItem.status === 'watching') && (
-              <span className="text-[11px] text-amber-400/90 font-medium flex items-center gap-1">
-                <Star className="w-3 h-3 text-amber-400" />
-                Sem avaliação
-              </span>
-            )}
+            <p className="text-[11px] text-zinc-300 flex items-center gap-1">
+              <span>{item.type === 'movie' ? 'Filme' : 'Série'}</span>
+              {item.release_date && (
+                <span>• {new Date(item.release_date).getFullYear()}</span>
+              )}
+            </p>
           </div>
         </div>
 
-        {/* Botões de ação no canto superior direito */}
+        {/* Botões rápidos de favorito e adicionar à lista */}
         {!isNaN(tmdbId) && tmdbId > 0 && (
           <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
             <FavoriteButton
