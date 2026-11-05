@@ -25,6 +25,8 @@ interface ExploreStoreState {
   isLoadingExplore: boolean;
   isLoadingUpcoming: boolean;
   isLoadingPersonas: boolean;
+  isRefreshingMovies: boolean;
+  isRefreshingSeries: boolean;
 
   // Timestamps de última busca
   lastFetchedFeed: number | null;
@@ -40,6 +42,12 @@ interface ExploreStoreState {
   fetchUpcoming: (force?: boolean) => Promise<void>;
   fetchPersonas: (force?: boolean) => Promise<void>;
 
+  // Renovação seletiva de pool ao concluir ciclo de lotes (O(M + K log K) no backend)
+  refreshExploreBatch: (
+    mediaType: "movie" | "tv",
+    excludeIds: number[]
+  ) => Promise<{ refreshed: boolean; count: number }>;
+
   // Ejeção/dispensa otimista instantânea
   dismissItem: (itemId: number) => void;
 
@@ -49,6 +57,7 @@ interface ExploreStoreState {
 
 // Promessa em voo para deduplicação absoluta no frontend (Single-Flight Pattern)
 let inflightFeedPromise: Promise<void> | null = null;
+const inflightRefreshPromises: Record<string, Promise<{ refreshed: boolean; count: number }> | null> = {};
 
 export const useExploreStore = create<ExploreStoreState>((set, get) => ({
   exploreItems: [],
@@ -58,6 +67,8 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
   isLoadingExplore: true,
   isLoadingUpcoming: true,
   isLoadingPersonas: true,
+  isRefreshingMovies: false,
+  isRefreshingSeries: false,
 
   lastFetchedFeed: null,
   lastFetchedExplore: null,
@@ -139,6 +150,55 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
     return get().fetchFeed(force);
   },
 
+  refreshExploreBatch: async (mediaType, excludeIds) => {
+    if (inflightRefreshPromises[mediaType]) {
+      return inflightRefreshPromises[mediaType]!;
+    }
+
+    const flagKey = mediaType === "movie" ? "isRefreshingMovies" : "isRefreshingSeries";
+    set({ [flagKey]: true } as Partial<ExploreStoreState>);
+
+    const promise = (async () => {
+      try {
+        const res = await api.post<{
+          items: RecommendationItem[];
+          refreshed: boolean;
+          fresh_count?: number;
+        }>("/api/recommendations/explore/refresh-batch", {
+          media_type: mediaType,
+          exclude_ids: excludeIds,
+          limit: 24,
+        });
+
+        const nextItems = res.data?.items || [];
+        if (nextItems.length > 0) {
+          const nowTs = Date.now();
+          set((state) => {
+            const others = state.exploreItems.filter((i) => i.media_type !== mediaType);
+            return {
+              exploreItems: mediaType === "movie" ? [...nextItems, ...others] : [...others, ...nextItems],
+              lastFetchedFeed: nowTs,
+              lastFetchedExplore: nowTs,
+            };
+          });
+        }
+        return {
+          refreshed: Boolean(res.data?.refreshed),
+          count: nextItems.length,
+        };
+      } catch (error) {
+        console.error(`Erro ao renovar lote de ${mediaType}:`, error);
+        return { refreshed: false, count: 0 };
+      } finally {
+        set({ [flagKey]: false } as Partial<ExploreStoreState>);
+        inflightRefreshPromises[mediaType] = null;
+      }
+    })();
+
+    inflightRefreshPromises[mediaType] = promise;
+    return promise;
+  },
+
   dismissItem: (itemId: number) => {
     set((state) => ({
       exploreItems: state.exploreItems.filter((i) => i.id !== itemId),
@@ -161,6 +221,8 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
       isLoadingExplore: true,
       isLoadingUpcoming: true,
       isLoadingPersonas: true,
+      isRefreshingMovies: false,
+      isRefreshingSeries: false,
       lastFetchedFeed: null,
       lastFetchedExplore: null,
       lastFetchedUpcoming: null,

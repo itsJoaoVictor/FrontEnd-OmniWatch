@@ -23,6 +23,8 @@ interface AddToListButtonProps {
   poster_path?: string | null;
   backdrop_path?: string | null;
   release_date?: string | null;
+  showLabel?: boolean;
+  addLabel?: string;
 }
 
 const statusConfig: Record<ListStatus, {
@@ -69,7 +71,17 @@ const statusConfig: Record<ListStatus, {
   },
 };
 
-export function AddToListButton({ tmdb_id, media_type, className, title, poster_path, backdrop_path, release_date }: AddToListButtonProps) {
+export function AddToListButton({
+  tmdb_id,
+  media_type,
+  className,
+  title,
+  poster_path,
+  backdrop_path,
+  release_date,
+  showLabel = false,
+  addLabel = 'Quero Assistir',
+}: AddToListButtonProps) {
   const { items, addToList, updateStatus, updateRating, updateRewatchCount, removeFromList } = useMyListStore();
   const [isOpen, setIsOpen] = useState(false);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
@@ -144,6 +156,21 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
   };
 
   if (!isInList) {
+    if (showLabel) {
+      return (
+        <Button
+          onClick={handleAdd}
+          className={cn(
+            'h-10 px-4 rounded-xl font-bold text-xs md:text-sm gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5',
+            className
+          )}
+          title="Adicionar à Lista"
+        >
+          <Plus className="h-4 w-4 shrink-0" />
+          <span>{addLabel}</span>
+        </Button>
+      );
+    }
     return (
       <Button
         onClick={handleAdd}
@@ -164,14 +191,17 @@ export function AddToListButton({ tmdb_id, media_type, className, title, poster_
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger
           className={cn(
-            'inline-flex items-center justify-center h-10 w-10 rounded-full shadow-[0_0_12px_rgba(0,0,0,0.6)] bg-black/70 hover:bg-black/90 backdrop-blur-md transition-all duration-200 hover:scale-105 border',
+            showLabel
+              ? 'inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl font-bold text-xs md:text-sm shadow-lg bg-black/75 hover:bg-black/90 backdrop-blur-md transition-all duration-200 border'
+              : 'inline-flex items-center justify-center h-10 w-10 rounded-full shadow-[0_0_12px_rgba(0,0,0,0.6)] bg-black/70 hover:bg-black/90 backdrop-blur-md transition-all duration-200 hover:scale-105 border',
             currentConfig.borderClass,
             currentConfig.colorClass,
             className
           )}
           title={`Status: ${currentConfig.label} (Clique para alterar)`}
         >
-          <StatusIcon className="h-5 w-5" />
+          <StatusIcon className={cn(showLabel ? 'h-4 w-4 shrink-0' : 'h-5 w-5')} />
+          {showLabel && <span>{currentConfig.label}</span>}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56 p-1.5 shadow-2xl backdrop-blur-md">
           <div className="px-2.5 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">

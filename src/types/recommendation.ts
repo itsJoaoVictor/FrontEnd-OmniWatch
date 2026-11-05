@@ -1,3 +1,8 @@
+export interface RecommendationGenre {
+  id: number;
+  name: string;
+}
+
 export interface RecommendationItem {
   id: number;
   title?: string;
@@ -11,6 +16,9 @@ export interface RecommendationItem {
   match_tags: string[];
   release_date?: string;
   first_air_date?: string;
+  runtime?: number;
+  genres?: Array<RecommendationGenre | string>;
+  is_preliminary?: boolean;
 }
 
 export interface UpcomingRecommendations {
