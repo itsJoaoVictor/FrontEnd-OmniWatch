@@ -219,7 +219,7 @@ export const TrendingBillboard = memo(function TrendingBillboard({
                     {/* Nota Estrelas na base */}
                     <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/85 backdrop-blur-md text-amber-400 border border-amber-400/30 text-[10.5px] font-extrabold flex items-center gap-1 shadow-sm">
                       <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      {item.vote_average.toFixed(1)}
+                      {(item.vote_average / 2).toFixed(1)}
                     </span>
                   </div>
 
