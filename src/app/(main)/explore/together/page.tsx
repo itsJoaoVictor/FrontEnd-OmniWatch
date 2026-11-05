@@ -54,6 +54,20 @@ const POPULAR_GENRES = [
   { id: 53, name: "Thriller" },
 ];
 
+const STORAGE_KEY = "omniwatch_together_session_state";
+
+interface SavedTogetherState {
+  selectedFriendId: string;
+  friendName: string;
+  unseenMode: "one" | "both";
+  mediaType: "all" | "movie" | "tv";
+  genreId: number | null;
+  minVoteAverage: number | null;
+  items: TogetherRecommendationItem[];
+  hasGenerated: boolean;
+  scrollY?: number;
+}
+
 export default function TogetherPage() {
   const [friends, setFriends] = useState<FriendUser[]>([]);
   const [isLoadingFriends, setIsLoadingFriends] = useState(true);
@@ -72,13 +86,80 @@ export default function TogetherPage() {
   const [hasGenerated, setHasGenerated] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const saveScrollPosition = () => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        parsed.scrollY = window.scrollY;
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     async function loadFriends() {
       try {
         setIsLoadingFriends(true);
         const list = await friendsService.getFriends();
         setFriends(list);
-        if (list.length > 0) {
+
+        let restored = false;
+        if (typeof window !== "undefined") {
+          try {
+            const raw = sessionStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const saved: SavedTogetherState = JSON.parse(raw);
+              if (saved.selectedFriendId && (list.length === 0 || list.some((f) => f.id === saved.selectedFriendId))) {
+                setSelectedFriendId(saved.selectedFriendId);
+                setFriendName(saved.friendName || list.find((f) => f.id === saved.selectedFriendId)?.name || "");
+                if (saved.unseenMode) setUnseenMode(saved.unseenMode);
+                if (saved.mediaType) setMediaType(saved.mediaType);
+                if (saved.genreId !== undefined) setGenreId(saved.genreId);
+                if (saved.minVoteAverage !== undefined) setMinVoteAverage(saved.minVoteAverage);
+                if (Array.isArray(saved.items) && saved.items.length > 0) {
+                  setItems(saved.items);
+                  setHasGenerated(true);
+                }
+                restored = true;
+                if (saved.scrollY && saved.scrollY > 0) {
+                  setTimeout(() => {
+                    window.scrollTo({ top: saved.scrollY, behavior: "instant" });
+                  }, 80);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn("Erro ao restaurar sessão de Assistir Juntos:", e);
+          }
+        }
+
+        // Se não havia estado salvo no sessionStorage, verifica parâmetros na URL
+        if (!restored && typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          const friendParam = params.get("friend");
+          const unseenParam = params.get("unseen") as "one" | "both" | null;
+          const typeParam = params.get("type") as "all" | "movie" | "tv" | null;
+          const genreParam = params.get("genre");
+          const minVoteParam = params.get("minVote");
+
+          if (friendParam && list.some((f) => f.id === friendParam)) {
+            setSelectedFriendId(friendParam);
+            const found = list.find((f) => f.id === friendParam);
+            if (found) setFriendName(found.name);
+          } else if (list.length > 0) {
+            setSelectedFriendId(list[0].id);
+            setFriendName(list[0].name);
+          }
+
+          if (unseenParam === "one" || unseenParam === "both") setUnseenMode(unseenParam);
+          if (typeParam === "all" || typeParam === "movie" || typeParam === "tv") setMediaType(typeParam);
+          if (genreParam && !isNaN(Number(genreParam))) setGenreId(Number(genreParam));
+          if (minVoteParam && !isNaN(Number(minVoteParam))) setMinVoteAverage(Number(minVoteParam));
+        } else if (!restored && list.length > 0) {
           setSelectedFriendId(list[0].id);
           setFriendName(list[0].name);
         }
@@ -91,12 +172,49 @@ export default function TogetherPage() {
     loadFriends();
   }, []);
 
+  const syncStateToStorageAndUrl = (
+    updatedFriendId = selectedFriendId,
+    updatedFriendName = friendName,
+    updatedItems = items,
+    updatedHasGen = hasGenerated
+  ) => {
+    if (typeof window === "undefined") return;
+    try {
+      const stateToSave: SavedTogetherState = {
+        selectedFriendId: updatedFriendId,
+        friendName: updatedFriendName,
+        unseenMode,
+        mediaType,
+        genreId,
+        minVoteAverage,
+        items: updatedItems,
+        hasGenerated: updatedHasGen,
+        scrollY: window.scrollY,
+      };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+
+      const params = new URLSearchParams();
+      if (updatedFriendId) params.set("friend", updatedFriendId);
+      if (unseenMode !== "one") params.set("unseen", unseenMode);
+      if (mediaType !== "all") params.set("type", mediaType);
+      if (genreId) params.set("genre", String(genreId));
+      if (minVoteAverage) params.set("minVote", String(minVoteAverage));
+
+      const queryStr = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${queryStr ? `?${queryStr}` : ""}`);
+    } catch (e) {
+      // ignore
+    }
+  };
+
   const handleFriendChange = (friendId: string) => {
     setSelectedFriendId(friendId);
     const friend = friends.find((f) => f.id === friendId);
+    const newName = friend ? friend.name : "";
     if (friend) {
-      setFriendName(friend.name);
+      setFriendName(newName);
     }
+    syncStateToStorageAndUrl(friendId, newName);
   };
 
   const handleFetchRecommendations = async () => {
@@ -114,11 +232,15 @@ export default function TogetherPage() {
         limit: 40,
       });
 
-      setItems(res.items || []);
+      const newItems = res.items || [];
+      const newFriendName = res.friend?.name || friendName;
+      setItems(newItems);
       if (res.friend?.name) {
         setFriendName(res.friend.name);
       }
       setHasGenerated(true);
+
+      syncStateToStorageAndUrl(selectedFriendId, newFriendName, newItems, true);
     } catch (err: any) {
       console.error("Erro ao gerar recomendações:", err);
       setErrorMsg(err.response?.data?.detail || "Não foi possível carregar as recomendações em dupla.");
@@ -154,7 +276,20 @@ export default function TogetherPage() {
     }
 
     setTimeout(() => {
-      setItems((prev) => prev.filter((i) => i.id !== item.id));
+      setItems((prev) => {
+        const next = prev.filter((i) => i.id !== item.id);
+        if (typeof window !== "undefined") {
+          try {
+            const raw = sessionStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const parsed: SavedTogetherState = JSON.parse(raw);
+              parsed.items = next;
+              sessionStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+            }
+          } catch (e) {}
+        }
+        return next;
+      });
       setHiddenIds((prev) => {
         const next = new Set(prev);
         next.delete(item.id);
@@ -430,6 +565,7 @@ export default function TogetherPage() {
                   <Link
                     href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`}
                     prefetch={false}
+                    onClick={saveScrollPosition}
                     className="block aspect-[2/3] relative w-full overflow-hidden bg-muted"
                   >
                     <PosterImage
@@ -540,6 +676,7 @@ export default function TogetherPage() {
                       <Link
                         href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`}
                         prefetch={false}
+                        onClick={saveScrollPosition}
                         className="font-bold text-xs md:text-sm line-clamp-1 hover:text-primary transition-colors text-foreground"
                         title={displayTitle}
                       >

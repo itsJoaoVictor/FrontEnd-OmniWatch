@@ -2355,6 +2355,422 @@
         gap: 10px;
       }
     }
+
+    /* ==========================================================================
+       SEÇÃO: CARD ASSISTIR JUNTOS (BANNER NO EXPLORAR) & DENTRO DO TOGETHER
+       ========================================================================== */
+    .together-banner-stage {
+      margin-bottom: 24px;
+    }
+
+    /* PROPOSTA 1: DUO RADAR POD */
+    .together-pod-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid rgba(var(--primary-rgb), 0.35);
+      background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.16) 0%, rgba(139, 92, 246, 0.12) 50%, rgba(236, 72, 153, 0.08) 100%), var(--card);
+      padding: 22px 24px;
+      box-shadow: 0 10px 30px -10px rgba(var(--primary-rgb), 0.2);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .together-pod-card:hover {
+      border-color: rgba(var(--primary-rgb), 0.6);
+      box-shadow: 0 16px 40px -12px rgba(var(--primary-rgb), 0.3);
+    }
+    .together-pod-glow {
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(var(--primary-rgb), 0.22) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .together-pod-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .together-pod-main-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .together-duo-avatar-unit {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .together-avatar-pair {
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+    .together-avatar-circle {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2.5px solid var(--background);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      object-fit: cover;
+      background: var(--secondary);
+    }
+    .together-avatar-circle.secondary {
+      margin-left: -16px;
+      border-color: rgba(var(--primary-rgb), 0.8);
+    }
+    .together-match-connector {
+      margin-left: -10px;
+      z-index: 2;
+      background: linear-gradient(135deg, #f59e0b, #ec4899);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+      border: 1.5px solid var(--background);
+      letter-spacing: -0.01em;
+    }
+    .together-pod-text h3 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .together-pod-text p {
+      font-size: 13px;
+      color: var(--muted-foreground);
+      max-width: 540px;
+      line-height: 1.4;
+    }
+    .together-friends-dock {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .together-friend-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px 5px 6px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--foreground);
+      white-space: nowrap;
+    }
+    .together-friend-pill:hover {
+      border-color: rgba(var(--primary-rgb), 0.5);
+      background: rgba(var(--primary-rgb), 0.1);
+      transform: translateY(-1px);
+    }
+    .together-friend-pill.active {
+      border-color: var(--primary);
+      background: rgba(var(--primary-rgb), 0.25);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.3);
+    }
+    .together-friend-pill img {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .together-friend-pill .match-tag {
+      font-size: 10px;
+      color: #fde047;
+      font-weight: 800;
+    }
+
+    /* PROPOSTA 2: CINE PASS VIP (BILHETE DUPLO HOLOGRÁFICO) */
+    .together-ticket-card {
+      position: relative;
+      border-radius: 20px;
+      border: 2px dashed rgba(var(--primary-rgb), 0.45);
+      background: linear-gradient(135deg, rgba(20, 20, 28, 0.95), rgba(30, 24, 45, 0.92));
+      padding: 22px 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: 0 12px 35px -10px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    .ticket-stub-cutout-left, .ticket-stub-cutout-right {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 24px;
+      background: var(--background);
+      border-radius: 50%;
+      z-index: 3;
+    }
+    .ticket-stub-cutout-left { left: -13px; border-right: 2px dashed rgba(var(--primary-rgb), 0.45); }
+    .ticket-stub-cutout-right { right: -13px; border-left: 2px dashed rgba(var(--primary-rgb), 0.45); }
+
+    /* PROPOSTA 3: SPLIT SPOTLIGHT */
+    .together-split-card {
+      position: relative;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 120px 1fr;
+      min-height: 150px;
+    }
+    .split-half {
+      padding: 20px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background-size: cover;
+      background-position: center;
+    }
+    .split-half-scrim {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(2px);
+    }
+    .split-center-fuse {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, rgba(var(--primary-rgb),0.3), rgba(139,92,246,0.3));
+      border-left: 1px solid rgba(255,255,255,0.1);
+      border-right: 1px solid rgba(255,255,255,0.1);
+      padding: 10px;
+      text-align: center;
+      z-index: 2;
+    }
+
+    /* SEÇÃO: DENTRO DO TOGETHER (/explore/together) */
+    .together-cockpit-panel {
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(var(--card-rgb, 24, 24, 27), 0.7);
+      backdrop-filter: blur(16px);
+      padding: 24px;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .together-friends-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .together-friend-dock-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      border: 1.5px solid var(--border);
+      background: var(--secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    .together-friend-dock-card:hover {
+      border-color: rgba(var(--primary-rgb), 0.6);
+      transform: translateY(-2px);
+    }
+    .together-friend-dock-card.active {
+      border-color: var(--primary);
+      background: rgba(var(--primary-rgb), 0.15);
+      box-shadow: 0 0 16px rgba(var(--primary-rgb), 0.25);
+    }
+    .together-friend-dock-card img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--background);
+    }
+
+    /* FILTROS SEGMENTADOS TOGETHER */
+    .together-filters-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      align-items: end;
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+    }
+
+    /* PALCO #1 SUPER CONSENSO (SANTO GRAAL) */
+    .together-grail-stage {
+      position: relative;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(var(--primary-rgb), 0.4);
+      background: #09090b;
+      min-height: 380px;
+      margin-bottom: 28px;
+      box-shadow: 0 16px 40px -10px rgba(0,0,0,0.6);
+      display: flex;
+      align-items: flex-end;
+    }
+    .together-grail-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 25%;
+      transition: transform 0.6s ease;
+    }
+    .together-grail-stage:hover .together-grail-bg {
+      transform: scale(1.03);
+    }
+    .together-grail-scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(9,9,11,0.2) 0%, rgba(9,9,11,0.85) 60%, #09090b 100%);
+    }
+    .together-grail-content {
+      position: relative;
+      z-index: 2;
+      padding: 30px;
+      max-width: 780px;
+    }
+    .together-score-breakdown-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      padding: 6px 14px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.15);
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    /* DUO GRID DE CARDS COM BARRA DE COMPATIBILIDADE */
+    .together-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+      gap: 16px;
+    }
+    .together-card {
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      cursor: pointer;
+    }
+    .together-card:hover {
+      border-color: rgba(var(--primary-rgb), 0.6);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px -6px rgba(0,0,0,0.4);
+    }
+    .together-compat-bar-wrap {
+      display: flex;
+      height: 5px;
+      width: 100%;
+      border-radius: 9999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.1);
+      margin-top: 6px;
+    }
+    .together-compat-bar-user {
+      background: #0ea5e9;
+    }
+    .together-compat-bar-friend {
+      background: #ec4899;
+    }
+
+    /* MODAL DE DEMONSTRAÇÃO DE ESTADO */
+    .state-demo-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(12px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .state-demo-box {
+      width: 100%;
+      max-width: 640px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 28px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+      animation: modalPop 0.25s ease-out;
+    }
+    @keyframes modalPop {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* RESPONSIVIDADE MOBILE PARA TOGETHER */
+    body.sim-mobile .together-pod-main-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    body.sim-mobile .together-split-card {
+      grid-template-columns: 1fr;
+    }
+    body.sim-mobile .together-grail-content {
+      padding: 18px;
+    }
+    body.sim-mobile .together-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 760px) {
+      .together-pod-main-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+      }
+      .together-split-card {
+        grid-template-columns: 1fr;
+      }
+      .together-grail-content {
+        padding: 18px;
+      }
+      .together-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2365,6 +2781,8 @@
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span class="proto-pill"><span class="dot"></span> Protótipo /explore</span>
         <div class="jump-links">
+          <a href="#sec-together-banner" class="jump-btn">🤝 Card Assistir Juntos (Explorar)</a>
+          <a href="#sec-together-page" class="jump-btn">👥 Tela Assistir Juntos (/together)</a>
           <a href="#sec-filmes" class="jump-btn">1. Filmes (Bento ✓)</a>
           <a href="#sec-series" class="jump-btn">2. Séries (Showrunner ✓)</a>
           <a href="#sec-upcoming" class="jump-btn">3. Próximos (Radar ✓)</a>
@@ -2422,6 +2840,135 @@
   </header>
 
   <main class="page-container">
+    <!-- ======================================================================
+         SEÇÃO A: 🤝 CARD "ASSISTIR JUNTOS" (BANNER NO TOPO DE /explore)
+         ====================================================================== -->
+    <section id="sec-together-banner" class="together-banner-stage">
+      <div class="rec-header-top">
+        <div class="rec-title-group">
+          <h2>
+            <span>🤝 Card "Assistir Juntos" (Banner no Explorar)</span>
+            <span class="status-chip-approved">Propostas de Redesign</span>
+          </h2>
+          <p>O ponto de entrada para convidar amigos e iniciar sessões de sintonia dupla diretamente na página principal.</p>
+        </div>
+      </div>
+
+      <!-- Seletor de proposta para o Card -->
+      <div class="series-switcher-bar">
+        <div class="layout-switcher" role="tablist">
+          <button class="layout-tab active" data-tcardlayout="pod" onclick="setTogetherCardLayout('pod')">
+            1. Duo Radar Pod (Avatares & Dock Rápido) <span class="rec-star">★ Sugestão #1</span>
+          </button>
+          <button class="layout-tab" data-tcardlayout="ticket" onclick="setTogetherCardLayout('ticket')">
+            2. Cine Pass VIP (Bilhete Duplo Holográfico)
+          </button>
+          <button class="layout-tab" data-tcardlayout="split" onclick="setTogetherCardLayout('split')">
+            3. Split Spotlight (Fusão Diagonal de Universos)
+          </button>
+          <button class="layout-tab" data-tcardlayout="legacy" onclick="setTogetherCardLayout('legacy')">
+            4. Atual (Banner Gradiente Simples)
+          </button>
+        </div>
+        <div id="togetherCardConceptNote" style="font-size:12.5px;color:var(--muted-foreground);max-width:560px;"></div>
+      </div>
+
+      <div class="mobile-ux-callout" id="togetherCardMobileCallout"></div>
+
+      <!-- Root dinâmico do Card -->
+      <div id="togetherBannerRoot"></div>
+    </section>
+
+    <!-- ======================================================================
+         SEÇÃO B: 👥 TELA INTERNA "ASSISTIR JUNTOS" (/explore/together)
+         ====================================================================== -->
+    <section id="sec-together-page" style="margin-bottom: 48px; padding-top: 10px; border-top: 1px dashed var(--border);">
+      <div class="rec-header-top">
+        <div class="rec-title-group">
+          <h2>
+            <span>👥 Tela "Assistir Juntos" (/explore/together)</span>
+            <span class="status-chip-approved">Cockpit + Resultados + Persistência</span>
+          </h2>
+          <p>Painel de sintonização com seleção de amigos por avatares, filtros de ineditismo e stage de máximo consenso mútuo.</p>
+        </div>
+      </div>
+
+      <!-- Cockpit Interativo de Sintonia -->
+      <div class="together-cockpit-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--primary);display:flex;align-items:center;gap:6px;">
+            <span>👥 Escolha com quem você vai assistir hoje</span>
+          </div>
+          <span style="font-size:11.5px;color:var(--muted-foreground);" id="selectedFriendInfoLabel">Sintonia ativa: Lucas Silva (⚡ 94% Compatibilidade)</span>
+        </div>
+
+        <!-- Seletor de amigos por avatares (Duo Friends Selector) -->
+        <div class="together-friends-selector-grid" id="togetherFriendsDock"></div>
+
+        <!-- Linha de Filtros de Sintonia -->
+        <div class="together-filters-row">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted-foreground);text-transform:uppercase;display:block;margin-bottom:6px;">
+              Filtro de Ineditismo
+            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;background:var(--secondary);border-radius:10px;border:1px solid var(--border);">
+              <button class="batch-step-btn active" id="unseenModeOneBtn" style="font-size:11px;padding:6px;width:auto;" onclick="setUnseenMode('one')">Inédito p/ 1 (Padrão)</button>
+              <button class="batch-step-btn" id="unseenModeBothBtn" style="font-size:11px;padding:6px;width:auto;" onclick="setUnseenMode('both')">Inédito p/ Ambos</button>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted-foreground);text-transform:uppercase;display:block;margin-bottom:6px;">
+              Formato
+            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:3px;background:var(--secondary);border-radius:10px;border:1px solid var(--border);">
+              <button class="batch-step-btn active" id="mediaTypeAllBtn" style="font-size:11px;padding:6px;width:auto;" onclick="setMediaTypeTogether('all')">Todos</button>
+              <button class="batch-step-btn" id="mediaTypeMovieBtn" style="font-size:11px;padding:6px;width:auto;" onclick="setMediaTypeTogether('movie')">Filmes</button>
+              <button class="batch-step-btn" id="mediaTypeTvBtn" style="font-size:11px;padding:6px;width:auto;" onclick="setMediaTypeTogether('tv')">Séries</button>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted-foreground);text-transform:uppercase;display:block;margin-bottom:6px;">
+              Gênero em Comum
+            </label>
+            <select id="togetherGenreSelect" onchange="setTogetherGenre(this.value)" style="width:100%;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--secondary);color:var(--foreground);padding:0 10px;font-size:12px;font-weight:600;">
+              <option value="">Todos os Gêneros</option>
+              <option value="Ficção Científica">Ficção Científica</option>
+              <option value="Ação">Ação & Aventura</option>
+              <option value="Animação">Animação & Anime</option>
+              <option value="Drama">Drama Psicológico</option>
+              <option value="Terror">Terror & Suspense</option>
+            </select>
+          </div>
+
+          <div>
+            <button class="btn-primary-action" style="width:100%;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:12.5px;box-shadow:0 4px 14px rgba(var(--primary-rgb),0.35);" onclick="simulateCalculateTogether()">
+              <span id="togetherRecalculateIcon">✨</span> Recalcular Sintonia
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Layouts para a exibição dos resultados -->
+      <div class="series-switcher-bar">
+        <div class="layout-switcher" role="tablist">
+          <button class="layout-tab active" data-tresultlayout="grail" onclick="setTogetherResultLayout('grail')">
+            1. O Santo Graal & Trilhos de Consenso <span class="rec-star">★ Sugestão #1</span>
+          </button>
+          <button class="layout-tab" data-tresultlayout="grid" onclick="setTogetherResultLayout('grid')">
+            2. Duo Grid Inteligente (com Comparador Tátil)
+          </button>
+        </div>
+        <div id="togetherResultConceptNote" style="font-size:12.5px;color:var(--muted-foreground);max-width:540px;"></div>
+      </div>
+
+      <div class="mobile-ux-callout" id="togetherResultMobileCallout"></div>
+
+      <!-- Root dos Resultados de Assistir Juntos -->
+      <div id="togetherResultsRoot"></div>
+    </section>
+
     <!-- ======================================================================
          SEÇÃO 1: ✨ FILMES RECOMENDADOS (JÁ IMPLEMENTADA NO NEXT.JS)
          ====================================================================== -->
@@ -5028,6 +5575,679 @@
       renderTrendingSection();
     }
 
+    /* ==========================================================================
+       ASSISTIR JUNTOS (CARD EXPLORAR + TELA /explore/together)
+       ========================================================================== */
+    const TOGETHER_FRIENDS = [
+      {
+        id: "f1",
+        name: "Lucas Silva",
+        username: "lucas_film",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+        match_score: 94,
+        shared_tags: ["🍿 Sci-Fi anos 90", "⚔️ Shonen & Ação"],
+        recent_shared: "Interestelar, Arcane"
+      },
+      {
+        id: "f2",
+        name: "Beatriz Lima",
+        username: "bia_cinema",
+        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+        match_score: 89,
+        shared_tags: ["🎭 Drama Psicológico", "🏆 A24 & Cult"],
+        recent_shared: "Parasita, Oppenheimer"
+      },
+      {
+        id: "f3",
+        name: "Matheus Costa",
+        username: "math_series",
+        avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80",
+        match_score: 86,
+        shared_tags: ["⚡ Distopias", "🔪 Suspense Noir"],
+        recent_shared: "Severance, The Last of Us"
+      },
+      {
+        id: "f4",
+        name: "Camila Rocha",
+        username: "camilarocha",
+        avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80",
+        match_score: 82,
+        shared_tags: ["🌸 Animações", "✨ Fantasia Épica"],
+        recent_shared: "Demon Slayer, Ghibli"
+      }
+    ];
+
+    let TOGETHER_ITEMS = [
+      {
+        id: 693134,
+        title: "Duna: Parte 2",
+        media_type: "movie",
+        year: "2024",
+        genres: ["Ficção Científica", "Aventura"],
+        match_score: 98,
+        user_score: 96,
+        friend_score: 99,
+        vote_average: 8.6,
+        vote_count: 5120,
+        in_both_watchlists: true,
+        watched_by_user: false,
+        watched_by_friend: false,
+        poster_path: "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg",
+        backdrop_path: "https://image.tmdb.org/t/p/w1280/xOMo8BRK7PfcJv9JCnx7s520042.jpg",
+        overview: "Paul Atreides se une a Chani e aos Fremen enquanto busca vingança contra os conspiradores que destruíram sua família. Uma jornada épica através do deserto de Arrakis.",
+        match_reason: "Ambos amam ficção científica épica, Denis Villeneuve e avaliaram Interestelar com 5 estrelas."
+      },
+      {
+        id: 157336,
+        title: "Interestelar",
+        media_type: "movie",
+        year: "2014",
+        genres: ["Ficção Científica", "Drama"],
+        match_score: 96,
+        user_score: 98,
+        friend_score: 94,
+        vote_average: 8.8,
+        vote_count: 34500,
+        in_both_watchlists: false,
+        watched_by_user: true,
+        watched_by_friend: false,
+        poster_path: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+        backdrop_path: "https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fK5VQsXEG.jpg",
+        overview: "Uma equipe de exploradores viaja através de um buraco de minhoca no espaço, na tentativa de garantir a sobrevivência da humanidade.",
+        match_reason: "Você favoritou com nota máxima e Lucas tem 94% de afinidade com o tema de viagem no tempo e espaço."
+      },
+      {
+        id: 94605,
+        title: "Arcane",
+        media_type: "tv",
+        year: "2021",
+        genres: ["Animação", "Ação", "Ficção Científica"],
+        match_score: 95,
+        user_score: 94,
+        friend_score: 96,
+        vote_average: 9.0,
+        vote_count: 4200,
+        in_both_watchlists: true,
+        watched_by_user: false,
+        watched_by_friend: false,
+        poster_path: "https://image.tmdb.org/t/p/w500/fqldf2t8ztc9aiwn397FvFeNc97.jpg",
+        backdrop_path: "https://image.tmdb.org/t/p/w1280/70vEXZMTxbR8QzBv3Yx7g6nUfGk.jpg",
+        overview: "Em meio ao conflito entre as cidades-gêmeas de Piltover e Zaun, duas irmãs lutam em lados opostos de uma guerra entre tecnologias mágicas e convicções incompatíveis.",
+        match_reason: "Está na lista 'Quero Ver' de vocês dois há 2 semanas."
+      },
+      {
+        id: 95557,
+        title: "Ruptura (Severance)",
+        media_type: "tv",
+        year: "2022",
+        genres: ["Ficção Científica", "Drama", "Mistério"],
+        match_score: 93,
+        user_score: 91,
+        friend_score: 95,
+        vote_average: 8.4,
+        vote_count: 2200,
+        in_both_watchlists: false,
+        watched_by_user: false,
+        watched_by_friend: true,
+        poster_path: "https://image.tmdb.org/t/p/w500/A085M9sCPb9yX7UqRzX7i78B6eN.jpg",
+        backdrop_path: "https://image.tmdb.org/t/p/w1280/m917qN0W0kZ6jK6tF9G3wS1fK9n.jpg",
+        overview: "Mark lidera uma equipe de funcionários de escritório cujas memórias foram divididas cirurgicamente entre a vida profissional e pessoal.",
+        match_reason: "Lucas assistiu recentemente e amou. Perfeito para uma sessão onde ele te apresenta a série."
+      },
+      {
+        id: 872585,
+        title: "Oppenheimer",
+        media_type: "movie",
+        year: "2023",
+        genres: ["Drama", "História"],
+        match_score: 91,
+        user_score: 92,
+        friend_score: 90,
+        vote_average: 8.2,
+        vote_count: 9800,
+        in_both_watchlists: false,
+        watched_by_user: false,
+        watched_by_friend: false,
+        poster_path: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+        backdrop_path: "https://image.tmdb.org/t/p/w1280/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg",
+        overview: "A história do cientista J. Robert Oppenheimer e seu papel no desenvolvimento da bomba atômica durante o Projeto Manhattan.",
+        match_reason: "Alto consenso mútuo por cinema biográfico e direção de impacto."
+      },
+      {
+        id: 100088,
+        title: "The Last of Us",
+        media_type: "tv",
+        year: "2023",
+        genres: ["Drama", "Ação", "Ficção Científica"],
+        match_score: 89,
+        user_score: 90,
+        friend_score: 88,
+        vote_average: 8.6,
+        vote_count: 5300,
+        in_both_watchlists: false,
+        watched_by_user: false,
+        watched_by_friend: false,
+        poster_path: "https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2V7JMrRI.jpg",
+        backdrop_path: "https://image.tmdb.org/t/p/w1280/uDgy6hyPd82kOHh6I95FLtLnj6p.jpg",
+        overview: "Vinte anos após uma praga destruir a civilização, Joel é contratado para contrabandear Ellie para fora de uma zona de quarentena opressiva.",
+        match_reason: "Compatibilidade em narrativas pós-apocalípticas e drama de sobrevivência."
+      }
+    ];
+
+    let activeTogetherFriendId = "f1";
+    let activeTogetherCardLayout = "pod";
+    let activeTogetherResultLayout = "grail";
+    let activeTogetherUnseenMode = "one";
+    let activeTogetherMediaType = "all";
+    let activeTogetherGenre = "";
+
+    const TOGETHER_CARD_CONCEPTS = {
+      pod: "Duo Radar Pod: Mostra os avatares conectados com anel pulsante de sintonia, dock rápido de amigos para alternar em 1 clique e afinidades em comum.",
+      ticket: "Cine Pass VIP: Estilizado como um bilhete duplo de cinema com bordas tracejadas, preview das obras em comum no Quero Ver e emissão de ingresso duplo.",
+      split: "Split Spotlight: Fusão diagonal de dois mundos — metade esquerda com seu gosto, metade direita com o gosto do amigo, colidindo no centro.",
+      legacy: "Banner Atual: O visual legado em gradiente horizontal com ícone roxo e botão 'Combinar Gostos'."
+    };
+
+    const TOGETHER_RESULT_CONCEPTS = {
+      grail: "O Santo Graal & Trilhos: A obra #1 de maior afinidade mútua ganha vitrine 16:9 widescreen no topo ('O Santo Graal'), seguida por trilhos temáticos da dupla.",
+      grid: "Duo Grid Inteligente: Grid tátil de cards modernos com barra bicolor de afinidade (Você vs Amigo), tags de justificativa e nota no padrão 5 estrelas."
+    };
+
+    function renderTogetherCard() {
+      const root = document.getElementById("togetherBannerRoot");
+      const note = document.getElementById("togetherCardConceptNote");
+      const mobileCallout = document.getElementById("togetherCardMobileCallout");
+      if (!root) return;
+
+      const friend = TOGETHER_FRIENDS.find(f => f.id === activeTogetherFriendId) || TOGETHER_FRIENDS[0];
+      if (note) note.textContent = TOGETHER_CARD_CONCEPTS[activeTogetherCardLayout];
+
+      if (mobileCallout) {
+        if (activeTogetherCardLayout === "pod") {
+          mobileCallout.innerHTML = `<strong>📱 No Mobile (390px) — Duo Pod:</strong> Avatares no topo com selo central de sintonia, carrossel touch de amigos em rolagem horizontal (snap) e botão de ação em largura completa no polegar.`;
+        } else if (activeTogetherCardLayout === "ticket") {
+          mobileCallout.innerHTML = `<strong>📱 No Mobile (390px) — Cine Pass:</strong> Recortes circulares laterais ajustados para tela pequena, mantendo o picote tracejado e o selo Admit Two.`;
+        } else if (activeTogetherCardLayout === "split") {
+          mobileCallout.innerHTML = `<strong>📱 No Mobile (390px) — Split:</strong> Empilha as duas metades verticalmente com o selo de Match Duplo no divisor central.`;
+        } else {
+          mobileCallout.innerHTML = `<strong>📱 No Mobile (390px) — Atual:</strong> Botão e texto empilhados verticalmente.`;
+        }
+      }
+
+      if (activeTogetherCardLayout === "pod") {
+        root.innerHTML = `
+          <div class="together-pod-card">
+            <div class="together-pod-glow"></div>
+            <div class="together-pod-content">
+              <div class="together-pod-main-row">
+                <div class="together-duo-avatar-unit">
+                  <div class="together-avatar-pair">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Você" class="together-avatar-circle" title="Você (João Victor)" />
+                    <img src="${friend.avatar}" alt="${friend.name}" class="together-avatar-circle secondary" title="${friend.name}" />
+                    <div class="together-match-connector">
+                      <span>⚡ ${friend.match_score}%</span>
+                    </div>
+                  </div>
+                  <div class="together-pod-text">
+                    <h3>
+                      <span>Assistir com ${friend.name}</span>
+                      <span class="status-chip-approved" style="font-size:10px;padding:2px 8px;">Duo Match Ativo</span>
+                    </h3>
+                    <p>Sintonia de alto consenso em <strong>${friend.shared_tags.join("</strong> e <strong>")}</strong>. Nosso algoritmo cruza a biblioteca de vocês para a sessão perfeita.</p>
+                  </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <button class="btn-primary-action" onclick="jumpToTogetherPage('${friend.id}')" style="box-shadow:0 4px 18px rgba(var(--primary-rgb),0.4);font-weight:800;padding:10px 18px;display:flex;align-items:center;gap:8px;">
+                    <span>Sintonizar Sessão Dupla</span>
+                    <span style="font-size:14px;">↗</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Dock Rápido de Amigos -->
+              <div style="display:flex;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;flex-wrap:wrap;">
+                <span style="font-size:11px;font-weight:700;color:var(--muted-foreground);text-transform:uppercase;letter-spacing:0.04em;">Trocar Amigo:</span>
+                <div class="together-friends-dock">
+                  ${TOGETHER_FRIENDS.map(f => `
+                    <div class="together-friend-pill ${f.id === activeTogetherFriendId ? 'active' : ''}" onclick="selectTogetherFriend('${f.id}')">
+                      <img src="${f.avatar}" alt="${f.name}" />
+                      <span>${f.name.split(" ")[0]}</span>
+                      <span class="match-tag">${f.match_score}%</span>
+                    </div>
+                  `).join("")}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (activeTogetherCardLayout === "ticket") {
+        root.innerHTML = `
+          <div class="together-ticket-card">
+            <div class="ticket-stub-cutout-left"></div>
+            <div class="ticket-stub-cutout-right"></div>
+            <div style="display:flex;align-items:center;gap:18px;">
+              <div style="font-size:36px;background:rgba(var(--primary-rgb),0.15);width:64px;height:64px;border-radius:16px;border:1px solid rgba(var(--primary-rgb),0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                🎟️
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                  <span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:900;letter-spacing:0.12em;color:#fde047;background:rgba(250,204,21,0.12);padding:2px 8px;border-radius:4px;border:1px solid rgba(250,204,21,0.3);">
+                    OMNIWATCH DOUBLE PASS #2026
+                  </span>
+                  <span style="font-size:11px;color:#a5f3fc;font-weight:700;">★ 2 Obras no Quero Ver Mútuo</span>
+                </div>
+                <h3 style="font-size:19px;font-weight:800;color:#fff;margin-bottom:4px;">Entrada Dupla: Você & ${friend.name}</h3>
+                <p style="font-size:12.5px;color:#cbd5e1;max-width:500px;">Descubra obras compatíveis com os dois perfis antes do balde de pipoca esfriar.</p>
+              </div>
+            </div>
+            <button class="btn-primary-action" onclick="jumpToTogetherPage('${friend.id}')" style="white-space:nowrap;font-weight:800;padding:10px 18px;">
+              Emitir Ingresso Duplo ↗
+            </button>
+          </div>
+        `;
+      } else if (activeTogetherCardLayout === "split") {
+        root.innerHTML = `
+          <div class="together-split-card">
+            <div class="split-half" style="background-image:url('https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fK5VQsXEG.jpg');">
+              <div class="split-half-scrim"></div>
+              <div style="position:relative;z-index:2;">
+                <span style="font-size:10px;font-weight:800;text-transform:uppercase;color:#38bdf8;">Seu Universo</span>
+                <h4 style="font-size:15px;font-weight:800;color:#fff;">Ficção Científica & Christopher Nolan</h4>
+              </div>
+            </div>
+
+            <div class="split-center-fuse">
+              <span style="font-size:22px;">⚡</span>
+              <span style="font-size:11px;font-weight:900;color:#fde047;">${friend.match_score}%</span>
+              <span style="font-size:9.5px;color:#fff;text-transform:uppercase;font-weight:800;">Match</span>
+            </div>
+
+            <div class="split-half" style="background-image:url('https://image.tmdb.org/t/p/w1280/xOMo8BRK7PfcJv9JCnx7s520042.jpg');text-align:right;">
+              <div class="split-half-scrim"></div>
+              <div style="position:relative;z-index:2;">
+                <span style="font-size:10px;font-weight:800;text-transform:uppercase;color:#ec4899;">Universo de ${friend.name.split(" ")[0]}</span>
+                <h4 style="font-size:15px;font-weight:800;color:#fff;">Duna, Distopias & Animação</h4>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:10px;text-align:right;">
+            <button class="btn-primary-action" onclick="jumpToTogetherPage('${friend.id}')" style="font-weight:800;font-size:12px;padding:8px 16px;">
+              Explorar Sessão Fundida com ${friend.name.split(" ")[0]} ↗
+            </button>
+          </div>
+        `;
+      } else {
+        root.innerHTML = `
+          <div style="position:relative;overflow:hidden;border-radius:16px;border:1px solid rgba(var(--primary-rgb),0.25);background:linear-gradient(to right, rgba(var(--primary-rgb),0.15), rgba(147,51,234,0.1), rgba(219,39,119,0.1));padding:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="padding:10px;border-radius:12px;background:rgba(var(--primary-rgb),0.2);color:var(--primary);border:1px solid rgba(var(--primary-rgb),0.3);font-size:20px;">
+                👥
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <h3 style="font-size:18px;font-weight:800;color:var(--foreground);">Assistir Juntos</h3>
+                  <span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:9999px;background:rgba(var(--primary-rgb),0.2);color:var(--primary);border:1px solid rgba(var(--primary-rgb),0.3);">Novo</span>
+                </div>
+                <p style="font-size:12.5px;color:var(--muted-foreground);margin-top:2px;">Combine seu perfil com o de um amigo para descobrir o que vocês vão adorar assistir juntos.</p>
+              </div>
+            </div>
+            <button class="btn-primary-action" onclick="jumpToTogetherPage('${friend.id}')" style="font-weight:700;">
+              Combinar Gostos ↗
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    function setTogetherCardLayout(layout) {
+      activeTogetherCardLayout = layout;
+      document.querySelectorAll("[data-tcardlayout]").forEach(b => {
+        b.classList.toggle("active", b.dataset.tcardlayout === layout);
+      });
+      renderTogetherCard();
+    }
+
+    function selectTogetherFriend(friendId) {
+      activeTogetherFriendId = friendId;
+      const f = TOGETHER_FRIENDS.find(x => x.id === friendId);
+      renderTogetherCard();
+      renderTogetherCockpit();
+      renderTogetherResults();
+      showToast(`Sintonia alterada para ${f.name} (⚡ ${f.match_score}% compatibilidade)`);
+    }
+
+    function jumpToTogetherPage(friendId) {
+      selectTogetherFriend(friendId);
+      const target = document.getElementById("sec-together-page");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       TELA /explore/together
+       -------------------------------------------------------------------------- */
+    function renderTogetherCockpit() {
+      const dock = document.getElementById("togetherFriendsDock");
+      const infoLabel = document.getElementById("selectedFriendInfoLabel");
+      const friend = TOGETHER_FRIENDS.find(f => f.id === activeTogetherFriendId) || TOGETHER_FRIENDS[0];
+
+      if (infoLabel) {
+        infoLabel.innerHTML = `Sintonia ativa: <strong>${friend.name}</strong> • Compatibilidade Média: <strong style="color:#fde047;">⚡ ${friend.match_score}%</strong>`;
+      }
+
+      if (dock) {
+        dock.innerHTML = TOGETHER_FRIENDS.map(f => {
+          const isActive = f.id === activeTogetherFriendId;
+          return `
+            <div class="together-friend-dock-card ${isActive ? 'active' : ''}" onclick="selectTogetherFriend('${f.id}')">
+              <img src="${f.avatar}" alt="${f.name}" />
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground);">${f.name}</div>
+                <div style="font-size:10.5px;color:var(--muted-foreground);">@${f.username}</div>
+                <div style="font-size:10px;font-weight:800;color:#fde047;margin-top:2px;">⚡ ${f.match_score}% Sintonia</div>
+              </div>
+              ${isActive ? '<span style="color:var(--primary);font-size:16px;">✓</span>' : ''}
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    function setUnseenMode(mode) {
+      activeTogetherUnseenMode = mode;
+      document.getElementById("unseenModeOneBtn")?.classList.toggle("active", mode === "one");
+      document.getElementById("unseenModeBothBtn")?.classList.toggle("active", mode === "both");
+      renderTogetherResults();
+      showToast(mode === "one" ? "Modo: Inédito para 1 (inclui obras que um de vocês já viu)" : "Modo: Inédito para Ambos (apenas obras 100% novas para os dois)");
+    }
+
+    function setMediaTypeTogether(type) {
+      activeTogetherMediaType = type;
+      document.getElementById("mediaTypeAllBtn")?.classList.toggle("active", type === "all");
+      document.getElementById("mediaTypeMovieBtn")?.classList.toggle("active", type === "movie");
+      document.getElementById("mediaTypeTvBtn")?.classList.toggle("active", type === "tv");
+      renderTogetherResults();
+    }
+
+    function setTogetherGenre(genre) {
+      activeTogetherGenre = genre;
+      renderTogetherResults();
+    }
+
+    function simulateCalculateTogether() {
+      const icon = document.getElementById("togetherRecalculateIcon");
+      if (icon) icon.textContent = "⏳";
+      showToast("Calculando matriz de consenso mútuo e afinidades cruzadas...");
+      setTimeout(() => {
+        if (icon) icon.textContent = "✨";
+        renderTogetherResults();
+        showToast("✓ Recomendações em dupla recalculadas com sucesso!");
+      }, 350);
+    }
+
+    function setTogetherResultLayout(layout) {
+      activeTogetherResultLayout = layout;
+      document.querySelectorAll("[data-tresultlayout]").forEach(b => {
+        b.classList.toggle("active", b.dataset.tresultlayout === layout);
+      });
+      renderTogetherResults();
+    }
+
+    function renderTogetherResults() {
+      const root = document.getElementById("togetherResultsRoot");
+      const note = document.getElementById("togetherResultConceptNote");
+      const mobileCallout = document.getElementById("togetherResultMobileCallout");
+      if (!root) return;
+
+      const friend = TOGETHER_FRIENDS.find(f => f.id === activeTogetherFriendId) || TOGETHER_FRIENDS[0];
+      if (note) note.textContent = TOGETHER_RESULT_CONCEPTS[activeTogetherResultLayout];
+
+      if (mobileCallout) {
+        if (activeTogetherResultLayout === "grail") {
+          mobileCallout.innerHTML = `<strong>📱 No Mobile (390px) — Santo Graal & Trilhos:</strong> Card #1 com pôster 16:9 widescreen, seguido por trilhos horizontais deslizantes (snap-x) agrupados por intenção de sessão.`;
+        } else {
+          mobileCallout.innerHTML = `<strong>📱 No Mobile (390px) — Duo Grid:</strong> Grid tátil de 2 colunas com barras bicolores de compatibilidade e botões de toque com espaçamento ergonômico.`;
+        }
+      }
+
+      // Filtra por tipo e gênero
+      let filtered = TOGETHER_ITEMS;
+      if (activeTogetherMediaType !== "all") {
+        filtered = filtered.filter(i => i.media_type === activeTogetherMediaType);
+      }
+      if (activeTogetherGenre) {
+        filtered = filtered.filter(i => i.genres.includes(activeTogetherGenre));
+      }
+      if (activeTogetherUnseenMode === "both") {
+        filtered = filtered.filter(i => !i.watched_by_user && !i.watched_by_friend);
+      }
+
+      if (filtered.length === 0) {
+        root.innerHTML = `
+          <div style="text-align:center;padding:48px 20px;border-radius:18px;border:1px dashed var(--border);background:var(--card);">
+            <div style="font-size:32px;margin-bottom:8px;">🔍</div>
+            <h4 style="font-size:16px;font-weight:800;color:var(--foreground);">Nenhuma obra encontrada para esta combinação</h4>
+            <p style="font-size:12px;color:var(--muted-foreground);margin-top:4px;">Tente relaxar o filtro de gênero ou mudar para 'Inédito p/ 1'.</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (activeTogetherResultLayout === "grail") {
+        const grailLead = filtered[0];
+        const safeLeadTitle = grailLead.title.replace(/'/g, "\\'");
+        const isLeadSaved = savedSet.has(grailLead.id);
+
+        root.innerHTML = `
+          <!-- #1 SUPER CONSENSO (SANTO GRAAL) -->
+          <div class="together-grail-stage" onclick="simulateNavigateTogetherMedia('${grailLead.media_type}', ${grailLead.id}, '${safeLeadTitle}')">
+            <img src="${grailLead.backdrop_path}" alt="${grailLead.title}" class="together-grail-bg" />
+            <div class="together-grail-scrim"></div>
+            <div class="together-grail-content">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                <span class="spotlight-crown" style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fde047;font-weight:900;padding:3px 10px;border-radius:8px;font-size:11px;">
+                  👑 #1 MÁXIMO CONSENSO DA DUPLA
+                </span>
+                <span class="match-pill" style="font-size:12px;font-weight:900;background:var(--primary);color:#fff;">
+                  ⚡ ${grailLead.match_score}% Match
+                </span>
+                ${grailLead.in_both_watchlists ? '<span style="font-size:10.5px;font-weight:800;background:#fde047;color:#09090b;padding:3px 8px;border-radius:6px;">⭐ No Quero Ver dos Dois</span>' : ''}
+                <span style="font-size:11.5px;color:#fde047;font-weight:800;">
+                  ★ ${(grailLead.vote_average / 2).toFixed(1)}
+                </span>
+              </div>
+
+              <h3 style="font-size:28px;font-weight:900;color:#fff;line-height:1.15;margin-bottom:6px;">${grailLead.title}</h3>
+
+              <!-- Breakdown Você vs Amigo -->
+              <div class="together-score-breakdown-box">
+                <span style="color:#38bdf8;font-weight:700;">Você: <strong>${grailLead.user_score}%</strong></span>
+                <span style="color:rgba(255,255,255,0.3);">|</span>
+                <span style="color:#ec4899;font-weight:700;">${friend.name.split(" ")[0]}: <strong>${grailLead.friend_score}%</strong></span>
+                <span style="color:rgba(255,255,255,0.3);">|</span>
+                <span style="color:#dbe4f0;font-size:11px;">💡 ${grailLead.match_reason}</span>
+              </div>
+
+              <p style="font-size:13px;color:#cbd5e1;line-height:1.45;margin-bottom:16px;max-width:680px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                ${grailLead.overview}
+              </p>
+
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;" onclick="event.stopPropagation()">
+                <button class="btn-primary-action ${isLeadSaved ? 'saved' : ''}" onclick="toggleSave(${grailLead.id}, '${safeLeadTitle}')">
+                  ${isLeadSaved ? '✓ Salvo na Lista' : '+ Adicionar ao Quero Ver'}
+                </button>
+                <button class="btn-glass-action" onclick="simulateNavigateTogetherMedia('${grailLead.media_type}', ${grailLead.id}, '${safeLeadTitle}')">
+                  Ver Detalhes (Testar Retorno de Estado) ↗
+                </button>
+                <button class="btn-icon-circle" style="width:34px;height:34px;font-size:12px;" title="Dispensar recomendação" onclick="simulateDismissTogetherItem(${grailLead.id}, '${safeLeadTitle}')">
+                  👁️‍🗨️
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TRILHO DAS DEMAIS RECOMENDAÇÕES DA DUPLA -->
+          <div style="margin-top:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <h4 style="font-size:16px;font-weight:800;color:var(--foreground);">Outras Obras de Alta Sintonia (${filtered.slice(1).length})</h4>
+              <span style="font-size:11px;color:var(--muted-foreground);">Ordenado por Maior Consenso Mútuo</span>
+            </div>
+
+            <div class="together-grid">
+              ${filtered.slice(1).map(item => {
+                const safeT = item.title.replace(/'/g, "\\'");
+                const isSaved = savedSet.has(item.id);
+                return `
+                  <article class="together-card" onclick="simulateNavigateTogetherMedia('${item.media_type}', ${item.id}, '${safeT}')">
+                    <div style="position:relative;aspect-ratio:2/3;overflow:hidden;background:#000;">
+                      <img src="${item.poster_path}" alt="${item.title}" style="width:100%;height:100%;object-fit:cover;" />
+                      <span style="position:absolute;top:6px;left:6px;padding:2px 6px;border-radius:5px;background:var(--primary);color:#fff;font-size:10px;font-weight:900;">
+                        ${item.match_score}%
+                      </span>
+                      ${item.in_both_watchlists ? '<span style="position:absolute;top:6px;right:6px;padding:2px 5px;border-radius:4px;background:#fde047;color:#09090b;font-size:8.5px;font-weight:900;">⭐ Quero Ver</span>' : ''}
+                      ${item.watched_by_user ? '<span style="position:absolute;top:28px;left:6px;padding:2px 5px;border-radius:4px;background:#10b981;color:#fff;font-size:8.5px;font-weight:800;">✓ Você viu</span>' : ''}
+                      ${item.watched_by_friend ? `<span style="position:absolute;top:28px;left:6px;padding:2px 5px;border-radius:4px;background:#0284c7;color:#fff;font-size:8.5px;font-weight:800;">✓ ${friend.name.split(" ")[0]} viu</span>` : ''}
+                      <span style="position:absolute;bottom:6px;right:6px;padding:2px 6px;border-radius:5px;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);color:#fde047;font-size:10.5px;font-weight:800;border:1px solid rgba(250,204,21,0.3);">
+                        ★ ${(item.vote_average / 2).toFixed(1)}
+                      </span>
+                    </div>
+
+                    <div style="padding:10px;flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:8px;">
+                      <div>
+                        <h5 style="font-size:13px;font-weight:800;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.title}</h5>
+                        <div style="font-size:10.5px;color:var(--muted-foreground);">${item.year} • ${item.genres[0]}</div>
+                        
+                        <!-- Barra Bicolor de Afinidade -->
+                        <div class="together-compat-bar-wrap" title="Você: ${item.user_score}% | ${friend.name.split(' ')[0]}: ${item.friend_score}%">
+                          <div class="together-compat-bar-user" style="width:${item.user_score}%;"></div>
+                          <div class="together-compat-bar-friend" style="width:${item.friend_score}%;"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted-foreground);margin-top:3px;">
+                          <span>Você: ${item.user_score}%</span>
+                          <span>${friend.name.split(' ')[0]}: ${item.friend_score}%</span>
+                        </div>
+                      </div>
+
+                      <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:6px;" onclick="event.stopPropagation()">
+                        <button class="btn-icon-circle" style="width:26px;height:26px;font-size:11px;" title="Dispensar recomendação" onclick="simulateDismissTogetherItem(${item.id}, '${safeT}')">
+                          👁️‍🗨️
+                        </button>
+                        <button class="btn-icon-circle ${isSaved ? 'saved' : ''}" style="width:26px;height:26px;font-size:11px;" onclick="toggleSave(${item.id}, '${safeT}')">
+                          ${isSaved ? '✓' : '+'}
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      } else {
+        root.innerHTML = `
+          <div class="together-grid">
+            ${filtered.map(item => {
+              const safeT = item.title.replace(/'/g, "\\'");
+              const isSaved = savedSet.has(item.id);
+              return `
+                <article class="together-card" onclick="simulateNavigateTogetherMedia('${item.media_type}', ${item.id}, '${safeT}')">
+                  <div style="position:relative;aspect-ratio:2/3;overflow:hidden;background:#000;">
+                    <img src="${item.poster_path}" alt="${item.title}" style="width:100%;height:100%;object-fit:cover;" />
+                    <span style="position:absolute;top:6px;left:6px;padding:2px 6px;border-radius:5px;background:var(--primary);color:#fff;font-size:10px;font-weight:900;">
+                      ${item.match_score}%
+                    </span>
+                    <span style="position:absolute;bottom:6px;right:6px;padding:2px 6px;border-radius:5px;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);color:#fde047;font-size:10.5px;font-weight:800;border:1px solid rgba(250,204,21,0.3);">
+                      ★ ${(item.vote_average / 2).toFixed(1)}
+                    </span>
+                  </div>
+
+                  <div style="padding:10px;flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:8px;">
+                    <div>
+                      <h5 style="font-size:13px;font-weight:800;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.title}</h5>
+                      <div style="font-size:10.5px;color:var(--muted-foreground);">${item.year} • ${item.genres[0]}</div>
+                      
+                      <div class="together-compat-bar-wrap">
+                        <div class="together-compat-bar-user" style="width:${item.user_score}%;"></div>
+                        <div class="together-compat-bar-friend" style="width:${item.friend_score}%;"></div>
+                      </div>
+                      <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted-foreground);margin-top:3px;">
+                        <span>Você: ${item.user_score}%</span>
+                        <span>${friend.name.split(' ')[0]}: ${item.friend_score}%</span>
+                      </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:6px;" onclick="event.stopPropagation()">
+                      <button class="btn-icon-circle" style="width:26px;height:26px;font-size:11px;" title="Dispensar recomendação" onclick="simulateDismissTogetherItem(${item.id}, '${safeT}')">
+                        👁️‍🗨️
+                      </button>
+                      <button class="btn-icon-circle ${isSaved ? 'saved' : ''}" style="width:26px;height:26px;font-size:11px;" onclick="toggleSave(${item.id}, '${safeT}')">
+                        ${isSaved ? '✓' : '+'}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              `;
+            }).join("")}
+          </div>
+        `;
+      }
+    }
+
+    function simulateDismissTogetherItem(id, title) {
+      TOGETHER_ITEMS = TOGETHER_ITEMS.filter(i => i.id !== id);
+      renderTogetherResults();
+      showToast(`"${title}" dispensada por 6 meses.`);
+    }
+
+    /* SIMULADOR DE PERSISTÊNCIA DE ESTADO */
+    function simulateNavigateTogetherMedia(type, id, title) {
+      const friend = TOGETHER_FRIENDS.find(f => f.id === activeTogetherFriendId) || TOGETHER_FRIENDS[0];
+      const item = TOGETHER_ITEMS.find(i => i.id === id);
+
+      const modal = document.createElement("div");
+      modal.className = "state-demo-modal";
+      modal.id = "stateDemoModal";
+      modal.innerHTML = `
+        <div class="state-demo-box">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <span style="font-size:24px;">🎬</span>
+            <div>
+              <span style="font-size:10px;font-weight:800;color:var(--primary);text-transform:uppercase;">Visualizando Detalhes da Obra</span>
+              <h3 style="font-size:20px;font-weight:800;color:var(--foreground);">${title}</h3>
+            </div>
+          </div>
+
+          <div style="padding:14px;border-radius:12px;background:rgba(var(--primary-rgb),0.12);border:1px solid rgba(var(--primary-rgb),0.3);margin-bottom:16px;">
+            <div style="font-size:12px;font-weight:800;color:var(--foreground);margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+              <span>⚡ Demonstração de Persistência de Estado (Next.js):</span>
+            </div>
+            <p style="font-size:11.5px;color:var(--muted-foreground);line-height:1.45;">
+              No Next.js real, implementamos o salvamento via <code>sessionStorage</code> + sincronização de URL query params. Ao clicar no botão abaixo para voltar, seu amigo ativo (<strong>${friend.name}</strong>), seus filtros de ineditismo e todas as sugestões geradas permanecem <strong>100% preservados</strong>, sem recarregar ou esvaziar a lista!
+            </p>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:10px;">
+            <button class="btn-primary-action" onclick="closeStateDemoModal('${friend.name}')" style="font-weight:800;">
+              ← Voltar para Assistir Juntos (Estado Preservado)
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    function closeStateDemoModal(friendName) {
+      const modal = document.getElementById("stateDemoModal");
+      if (modal) modal.remove();
+      showToast(`✓ Estado Preservado: Sessão com ${friendName} mantida intacta!`);
+    }
+
+    // Inicializa Assistir Juntos no carregamento
+    renderTogetherCard();
+    renderTogetherCockpit();
+    renderTogetherResults();
     renderTrendingSection();
   </script>
 </body>
