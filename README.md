@@ -2,6 +2,7 @@
   🎬 OmniWatch - Frontend
 </h1>
 
+
 <p align="center">
   <img alt="React" src="https://img.shields.io/badge/React-19.2-61DAFB.svg?logo=react&logoColor=black">
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16.3-black.svg?logo=next.js&logoColor=white">
