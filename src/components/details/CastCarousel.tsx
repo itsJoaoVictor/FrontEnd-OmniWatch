@@ -37,7 +37,7 @@ export function CastCarousel({ cast }: CastCarouselProps) {
         <CarouselContent className="-ml-2 md:-ml-4">
           {cast.map((actor) => (
             <CarouselItem key={actor.id} className="pl-2 md:pl-4 basis-[140px] md:basis-[180px]">
-              <Link href={`/person/${actor.id}`}>
+              <Link href={`/person/${actor.id}`} prefetch={false}>
                 <Card className="border-0 bg-transparent shadow-none hover:opacity-80 transition-opacity cursor-pointer">
                   <CardContent className="p-0">
                     <div className="w-full aspect-[2/3] relative rounded-md overflow-hidden bg-muted mb-2">

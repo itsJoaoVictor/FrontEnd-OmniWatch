@@ -290,7 +290,7 @@ export function PersonDiscoverSection({ person }: PersonDiscoverSectionProps) {
               key={`${mode}-${item.id}`}
               className="snap-start flex-shrink-0 w-[140px] flex flex-col gap-1.5 relative group"
             >
-              <Link href={`/${item.media_type}/${item.id}`}>
+              <Link href={`/${item.media_type}/${item.id}`} prefetch={false}>
                 <div className="aspect-[2/3] relative rounded-lg overflow-hidden bg-muted shadow-sm border border-border/40 group-hover:border-primary/50 transition-all">
                   {item.poster_path && (
                     <Image
@@ -331,7 +331,7 @@ export function PersonDiscoverSection({ person }: PersonDiscoverSectionProps) {
                 />
               </div>
 
-              <Link href={`/${item.media_type}/${item.id}`} className="mt-0.5">
+              <Link href={`/${item.media_type}/${item.id}`} prefetch={false} className="mt-0.5">
                 <p className="text-xs font-semibold text-center truncate hover:underline" title={item.title}>
                   {item.title}
                 </p>

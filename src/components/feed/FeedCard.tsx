@@ -133,7 +133,7 @@ export function FeedCard({ item }: FeedCardProps) {
 
       {/* Main Content Card */}
       <div className="flex gap-4 items-center bg-secondary/25 hover:bg-secondary/35 transition-colors rounded-xl p-3 border border-border/40">
-        <Link href={mediaHref} className="shrink-0 relative group/poster block overflow-hidden rounded-xl">
+        <Link href={mediaHref} prefetch={false} className="shrink-0 relative group/poster block overflow-hidden rounded-xl">
           <div className="w-20 h-28 sm:w-24 sm:h-36 rounded-xl overflow-hidden bg-muted relative shadow-md">
             <Image
               src={posterUrl}

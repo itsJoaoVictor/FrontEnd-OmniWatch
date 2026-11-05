@@ -16,6 +16,7 @@ export interface RecommendationItem {
 export interface UpcomingRecommendations {
   movies: RecommendationItem[];
   series: RecommendationItem[];
+  tv?: RecommendationItem[];
 }
 
 export interface PersonaCarousel {

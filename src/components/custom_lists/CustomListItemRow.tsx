@@ -48,7 +48,7 @@ export function CustomListItemRow({
         </div>
 
         {/* Poster Thumbnail */}
-        <Link href={mediaHref} className="relative w-12 h-18 rounded-md overflow-hidden bg-zinc-950 flex-shrink-0">
+        <Link href={mediaHref} prefetch={false} className="relative w-12 h-18 rounded-md overflow-hidden bg-zinc-950 flex-shrink-0">
           <PosterImage
             src={item.poster_path}
             fallbackSrc={item.backdrop_path}
@@ -63,6 +63,7 @@ export function CustomListItemRow({
         <div className="min-w-0 flex-1">
           <Link
             href={mediaHref}
+            prefetch={false}
             className="text-sm font-semibold text-white hover:text-primary transition-colors truncate block"
           >
             {item.title}

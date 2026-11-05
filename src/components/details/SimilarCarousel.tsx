@@ -40,7 +40,7 @@ export function SimilarCarousel({ items, type }: SimilarCarouselProps) {
         <CarouselContent className="-ml-2 md:-ml-4">
           {items.map((item) => (
             <CarouselItem key={item.id} className="pl-2 md:pl-4 basis-[140px] md:basis-[180px] lg:basis-[220px]">
-              <Link href={`/${type}/${item.id}`}>
+              <Link href={`/${type}/${item.id}`} prefetch={false}>
                 <Card className="border-0 bg-transparent shadow-none hover:opacity-80 transition-opacity">
                   <CardContent className="p-0">
                     <div className="w-full aspect-[2/3] relative rounded-md overflow-hidden bg-muted mb-2 group">

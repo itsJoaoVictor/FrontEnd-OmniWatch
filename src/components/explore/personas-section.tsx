@@ -1,41 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { PersonaCarousel } from "@/types/recommendation";
+import { useEffect } from "react";
 import { RecommendationsCarousel } from "./recommendations-carousel";
-import { api } from "@/lib/axios";
 import { Sparkles } from "lucide-react";
 import { TrendingSkeleton } from "./trending-skeleton";
+import { useExploreStore } from "@/store/useExploreStore";
 
 export function PersonasSection() {
-  const [personas, setPersonas] = useState<PersonaCarousel[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const personas = useExploreStore((state) => state.personasData);
+  const isLoading = useExploreStore((state) => state.isLoadingPersonas);
+  const fetchFeed = useExploreStore((state) => state.fetchFeed);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await api.get("/api/recommendations/personas");
-        setPersonas(res.data);
-      } catch (error) {
-        console.error("Error loading personas recommendations section:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchData();
-  }, []);
+    fetchFeed();
+  }, [fetchFeed]);
 
-  if (isLoading) {
-    return <TrendingSkeleton />;
-  }
-
-  if (!personas || personas.length === 0) {
-    return null;
-  }
-
-  const validPersonas = personas.filter(
+  const validPersonas = (personas || []).filter(
     (p) => p.recommendations && p.recommendations.length > 0
   );
+
+  if (isLoading && validPersonas.length === 0) {
+    return <TrendingSkeleton />;
+  }
 
   if (validPersonas.length === 0) {
     return null;

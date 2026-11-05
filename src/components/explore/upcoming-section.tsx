@@ -1,36 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { RecommendationItem, UpcomingRecommendations } from "@/types/recommendation";
+import { useEffect } from "react";
 import { RecommendationsCarousel } from "./recommendations-carousel";
-import { api } from "@/lib/axios";
 import { TrendingSkeleton } from "./trending-skeleton";
+import { useExploreStore } from "@/store/useExploreStore";
 
 export function UpcomingSection() {
-  const [data, setData] = useState<UpcomingRecommendations>({ movies: [], series: [] });
-  const [isLoading, setIsLoading] = useState(true);
+  const data = useExploreStore((state) => state.upcomingData);
+  const isLoading = useExploreStore((state) => state.isLoadingUpcoming);
+  const fetchFeed = useExploreStore((state) => state.fetchFeed);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await api.get("/api/recommendations/upcoming");
-        setData(res.data || { movies: [], series: [] });
-      } catch (error) {
-        console.error("Error loading upcoming recommendations section:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchData();
-  }, []);
+    fetchFeed();
+  }, [fetchFeed]);
 
-  if (isLoading) {
+  const { movies, series } = data;
+  const hasData = (movies && movies.length > 0) || (series && series.length > 0);
+
+  if (isLoading && !hasData) {
     return <TrendingSkeleton />;
   }
 
-  const { movies, series } = data;
-
-  if ((!movies || movies.length === 0) && (!series || series.length === 0)) {
+  if (!hasData) {
     return null;
   }
 

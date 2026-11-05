@@ -23,6 +23,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import { api } from "@/lib/axios";
 import { cn } from "@/lib/utils";
+import { useExploreStore } from "@/store/useExploreStore";
 
 interface RecommendationsCarouselProps {
   items: RecommendationItem[];
@@ -72,8 +73,9 @@ export function RecommendationsCarousel({ items, showReleaseDate = false }: Reco
       console.error("Erro ao dispensar recomendação:", err);
     }
 
-    // 2. Remove do carrossel após a transição
+    // 2. Remove do carrossel após a transição e sincroniza o store global
     setTimeout(() => {
+      useExploreStore.getState().dismissItem(item.id);
       setItemsList((prev) => prev.filter((i) => i.id !== item.id));
       setHiddenIds((prev) => {
         const next = new Set(prev);

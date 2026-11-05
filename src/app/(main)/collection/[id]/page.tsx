@@ -618,7 +618,7 @@ export default function CollectionPage() {
                   className="group relative flex flex-col justify-between rounded-2xl bg-card hover:bg-card/90 border border-border/80 hover:border-border p-2 sm:p-2.5 transition-all duration-300 shadow-md hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 cursor-pointer select-none min-w-0"
                 >
                   {/* Poster Limpo e Polido */}
-                  <Link href={`/movie/${item.tmdb_id}`} className="block">
+                  <Link href={`/movie/${item.tmdb_id}`} prefetch={false} className="block">
                     <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden bg-muted shadow-sm border border-border/40">
                       <PosterImage
                         src={item.poster_path}
@@ -666,7 +666,7 @@ export default function CollectionPage() {
                   {/* Corpo do Card com Metadados */}
                   <div className="pt-2.5 px-0.5 flex flex-col flex-1 justify-between gap-1.5">
                     <div>
-                      <Link href={`/movie/${item.tmdb_id}`}>
+                      <Link href={`/movie/${item.tmdb_id}`} prefetch={false}>
                         <h3
                           className="text-xs sm:text-sm font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors"
                           title={item.title}

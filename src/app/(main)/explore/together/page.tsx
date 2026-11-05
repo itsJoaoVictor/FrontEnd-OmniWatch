@@ -539,6 +539,7 @@ export default function TogetherPage() {
                     <div>
                       <Link
                         href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`}
+                        prefetch={false}
                         className="font-bold text-xs md:text-sm line-clamp-1 hover:text-primary transition-colors text-foreground"
                         title={displayTitle}
                       >

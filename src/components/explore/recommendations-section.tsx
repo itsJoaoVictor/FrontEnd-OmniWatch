@@ -1,30 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { RecommendationItem } from "@/types/recommendation";
+import { useEffect } from "react";
 import { RecommendationsCarousel } from "./recommendations-carousel";
-import { api } from "@/lib/axios";
 import { TrendingSkeleton } from "./trending-skeleton";
+import { useExploreStore } from "@/store/useExploreStore";
 
 export function RecommendationsSection() {
-  const [items, setItems] = useState<RecommendationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const items = useExploreStore((state) => state.exploreItems);
+  const isLoading = useExploreStore((state) => state.isLoadingExplore);
+  const fetchFeed = useExploreStore((state) => state.fetchFeed);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await api.get("/api/recommendations/explore");
-        setItems(res.data);
-      } catch (error) {
-        console.error("Error loading recommendations section:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchData();
-  }, []);
+    fetchFeed();
+  }, [fetchFeed]);
 
-  if (isLoading) {
+  if (isLoading && items.length === 0) {
     return <TrendingSkeleton />;
   }
 
