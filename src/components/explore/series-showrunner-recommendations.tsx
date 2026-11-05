@@ -329,6 +329,21 @@ export function SeriesShowrunnerRecommendations({
     }, 150);
   }, [safeBatchIndex, totalBatches]);
 
+  const handlePrevBatch = useCallback(() => {
+    if (totalBatches <= 1) return;
+    const prevIdx = (safeBatchIndex - 1 + totalBatches) % totalBatches;
+
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setBatchIndex(prevIdx);
+      setActiveSlideIdx(0);
+      if (mobileStageRailRef.current) {
+        mobileStageRailRef.current.scrollTo({ left: 0, behavior: "instant" as ScrollBehavior });
+      }
+      setIsTransitioning(false);
+    }, 150);
+  }, [safeBatchIndex, totalBatches]);
+
   const handleGenerateFreshSuggestions = useCallback(async () => {
     const excludeIds = Array.from(seenInCycleRef.current);
     seriesList.forEach((s) => {
@@ -425,9 +440,34 @@ export function SeriesShowrunnerRecommendations({
 
         <div className="flex items-center gap-2 flex-wrap">
           {totalBatches > 1 && (
-            <span className="font-mono text-xs text-muted-foreground px-2.5 py-1.5 rounded-lg bg-secondary/80 border border-border">
-              Lote {safeBatchIndex + 1}/{totalBatches} • {seriesList.length} sugestões
-            </span>
+            <div className="inline-flex items-center rounded-xl bg-secondary/80 border border-border p-0.5 shadow-sm">
+              <button
+                type="button"
+                onClick={handlePrevBatch}
+                disabled={isRefreshingSeries}
+                className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all active:scale-95 disabled:opacity-40"
+                title="Voltar ao lote anterior"
+                aria-label="Voltar ao lote anterior"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <span className="font-mono text-xs text-muted-foreground px-2 py-0.5 select-none font-medium whitespace-nowrap">
+                Lote {safeBatchIndex + 1}/{totalBatches}
+                <span className="hidden sm:inline"> • {seriesList.length} sugestões</span>
+              </span>
+
+              <button
+                type="button"
+                onClick={handleCycleBatch}
+                disabled={isRefreshingSeries}
+                className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all active:scale-95 disabled:opacity-40"
+                title="Avançar para o próximo lote"
+                aria-label="Avançar para o próximo lote"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           )}
 
           {totalBatches > 1 && (
@@ -436,7 +476,7 @@ export function SeriesShowrunnerRecommendations({
               onClick={handleCycleBatch}
               disabled={isRefreshingSeries}
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-semibold bg-secondary hover:bg-accent text-foreground border border-border hover:border-primary/40 transition-all active:scale-[0.98] disabled:opacity-50"
-              title="Ver próximo lote de séries já calculadas"
+              title="Alternar para o próximo lote de séries já calculadas"
             >
               <RefreshCw className="w-3.5 h-3.5 text-primary" />
               <span>Alternar Lote</span>
