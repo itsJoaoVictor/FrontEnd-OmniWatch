@@ -8,11 +8,15 @@ import {
   ChevronRight,
   ArrowUpRight,
   Compass,
+  EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PersonaCarousel, RecommendationItem } from "@/types/recommendation";
 import { PosterImage } from "@/components/shared/PosterImage";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { api } from "@/lib/axios";
+import { toast } from "@/components/ui/toast";
+import { useExploreStore } from "@/store/useExploreStore";
 
 interface PersonasMoodSwitcherProps {
   personas: PersonaCarousel[];
@@ -50,6 +54,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
     personas[0]?.id || ""
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
   const subRailRef = useRef<HTMLDivElement | null>(null);
 
   const currentPersona = useMemo(() => {
@@ -77,9 +82,49 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
     subRailRef.current.scrollBy({ left: direction * step, behavior: "smooth" });
   };
 
+  const handleDismiss = useCallback(
+    async (item: RecommendationItem, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const numericId = Number(item.id);
+      const displayTitle = item.title || item.name || "Título";
+      const mediaType = item.media_type === "tv" ? "tv" : "movie";
+
+      setDismissedIds((prev) => new Set(prev).add(numericId));
+
+      try {
+        await api.post("/api/recommendations/dismiss", {
+          tmdb_id: numericId,
+          media_type: mediaType,
+          title: displayTitle,
+          poster_path: item.poster_path,
+          days_snooze: 180,
+        });
+
+        toast.add({
+          title: "Recomendação dispensada",
+          description: `"${displayTitle}" foi ocultado das suas recomendações por 6 meses.`,
+          type: "info",
+        });
+      } catch (err) {
+        console.error("Erro ao dispensar recomendação da persona:", err);
+      }
+
+      setTimeout(() => {
+        useExploreStore.getState().dismissItem(numericId);
+      }, 300);
+    },
+    []
+  );
+
   if (!currentPersona) return null;
 
-  const recommendations = currentPersona.recommendations || [];
+  // Filtra itens já dispensados
+  const recommendations = (currentPersona.recommendations || []).filter(
+    (item) => !dismissedIds.has(item.id)
+  );
+
   const leadItem = recommendations[0];
   const secondaryItems = recommendations.slice(1, 5);
 
@@ -88,6 +133,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
   const leadRoute = leadMediaType === "movie" ? `/movie/${leadItem?.id}` : `/tv/${leadItem?.id}`;
   const leadYear = leadItem ? extractYear(leadItem) : "";
   const leadGenres = leadItem ? extractGenres(leadItem) : [];
+  const isLeadDismissing = leadItem ? dismissedIds.has(leadItem.id) : false;
 
   return (
     <section className="mb-12 flex flex-col gap-6">
@@ -101,7 +147,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
             </span>
           </h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Escolha um humor para transformar a vitrine editorial com base no que você assiste.
+            Escolha um humor para transformar a vitrine editorial com base no seu histórico assistido.
           </p>
         </div>
       </div>
@@ -130,8 +176,11 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
             >
               <div className="flex items-center justify-between gap-2 w-full">
                 <span className="text-2xl leading-none select-none">{p.emoji}</span>
-                <span className="font-mono text-[11px] font-semibold text-muted-foreground px-2 py-0.5 rounded-md bg-secondary border border-border">
-                  {p.item_count} obras
+                <span
+                  className="font-mono text-[11px] font-semibold text-muted-foreground px-2 py-0.5 rounded-md bg-secondary border border-border"
+                  title="Quantidade de obras da sua biblioteca que formam esta faceta"
+                >
+                  {p.item_count} assistidos
                 </span>
               </div>
 
@@ -179,7 +228,10 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
               <span className="text-foreground font-semibold">
                 {currentPersona.top_genres.join(", ")}
               </span>{" "}
-              • com base em {currentPersona.item_count} obras assistidas
+              • calculadas a partir de{" "}
+              <strong className="text-foreground font-medium">
+                {currentPersona.item_count} obras assistidas da sua biblioteca
+              </strong>
             </p>
           </div>
 
@@ -195,8 +247,13 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
         </div>
 
         {/* Spotlight Lead 16:9 (#1 Escolha para este Humor) */}
-        {leadItem && (
-          <article className="relative min-h-[260px] sm:min-h-[340px] md:min-h-[380px] rounded-2xl overflow-hidden border border-border-strong bg-zinc-950 flex flex-col justify-end p-4 sm:p-6 md:p-8 isolate group shadow-xl">
+        {leadItem ? (
+          <article
+            className={cn(
+              "relative min-h-[260px] sm:min-h-[340px] md:min-h-[380px] rounded-2xl overflow-hidden border border-border-strong bg-zinc-950 flex flex-col justify-end p-4 sm:p-6 md:p-8 isolate group shadow-xl transition-all duration-300",
+              isLeadDismissing && "opacity-0 scale-95 pointer-events-none"
+            )}
+          >
             {/* Widescreen Backdrop */}
             <div className="absolute inset-0 -z-20">
               <PosterImage
@@ -297,9 +354,23 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
                   <span>Ver Detalhes</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />
                 </Link>
+
+                <button
+                  type="button"
+                  onClick={(e) => handleDismiss(leadItem, e)}
+                  className="w-10 h-10 rounded-xl bg-black/60 hover:bg-rose-500/20 text-zinc-300 hover:text-rose-400 border border-white/20 hover:border-rose-400/40 backdrop-blur-md inline-flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                  title="Não tenho interesse nesta sugestão (ocultar por 6 meses)"
+                  aria-label="Não tenho interesse"
+                >
+                  <EyeOff className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </article>
+        ) : (
+          <div className="py-12 text-center text-sm text-muted-foreground bg-secondary/30 rounded-2xl border border-dashed border-border">
+            Você já explorou ou dispensou todas as sugestões ativas para esta faceta.
+          </div>
         )}
 
         {/* Trilho Panorâmico das Demais Recomendações */}
@@ -315,7 +386,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
                 <button
                   type="button"
                   onClick={() => scrollSubRail(-1)}
-                  className="w-8 h-8 rounded-lg bg-secondary/80 hover:bg-accent border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95"
+                  className="w-8 h-8 rounded-lg bg-secondary/80 hover:bg-accent border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer"
                   title="Voltar sugestões"
                   aria-label="Voltar sugestões"
                 >
@@ -324,7 +395,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
                 <button
                   type="button"
                   onClick={() => scrollSubRail(1)}
-                  className="w-8 h-8 rounded-lg bg-secondary/80 hover:bg-accent border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95"
+                  className="w-8 h-8 rounded-lg bg-secondary/80 hover:bg-accent border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer"
                   title="Avançar sugestões"
                   aria-label="Avançar sugestões"
                 >
@@ -344,11 +415,15 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
                 const itemRoute = itemMediaType === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`;
                 const itemYear = extractYear(item);
                 const primaryTag = item.match_tags?.[0];
+                const isItemDismissing = dismissedIds.has(item.id);
 
                 return (
                   <article
                     key={`${itemMediaType}-${item.id}`}
-                    className="flex-[0_0_68%] sm:flex-[0_0_45%] lg:flex-1 snap-start rounded-xl overflow-hidden border border-border bg-card-elevated hover:border-primary/60 transition-all duration-200 flex flex-col justify-between group shadow-sm hover:shadow-md"
+                    className={cn(
+                      "flex-[0_0_68%] sm:flex-[0_0_45%] lg:flex-1 snap-start rounded-xl overflow-hidden border border-border bg-card-elevated hover:border-primary/60 transition-all duration-300 flex flex-col justify-between group shadow-sm hover:shadow-md",
+                      isItemDismissing && "opacity-0 scale-95 pointer-events-none"
+                    )}
                   >
                     <Link href={itemRoute} prefetch={false} className="block">
                       <div className="relative aspect-video bg-zinc-950 overflow-hidden">
@@ -396,13 +471,24 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
                       <span className="text-[11px] text-muted-foreground truncate">
                         Sintonia afinada
                       </span>
-                      <AddToListButton
-                        tmdb_id={item.id}
-                        media_type={itemMediaType}
-                        title={itemTitle}
-                        poster_path={item.poster_path}
-                        backdrop_path={item.backdrop_path}
-                      />
+                      <div className="flex items-center gap-1.5">
+                        <AddToListButton
+                          tmdb_id={item.id}
+                          media_type={itemMediaType}
+                          title={itemTitle}
+                          poster_path={item.poster_path}
+                          backdrop_path={item.backdrop_path}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => handleDismiss(item, e)}
+                          className="w-8 h-8 rounded-lg bg-secondary/80 hover:bg-rose-500/15 text-muted-foreground hover:text-rose-400 border border-border hover:border-rose-500/30 inline-flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                          title="Não tenho interesse (ocultar por 6 meses)"
+                          aria-label="Não tenho interesse"
+                        >
+                          <EyeOff className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </article>
                 );
