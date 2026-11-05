@@ -14,12 +14,15 @@ import {
   Bell,
   Sparkles,
   ArrowRightLeft,
+  EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RecommendationItem } from "@/types/recommendation";
 import { PosterImage } from "@/components/shared/PosterImage";
 import { parseReleaseDate } from "@/lib/dateUtils";
 import { useMyListStore } from "@/store/useMyListStore";
+import { useExploreStore } from "@/store/useExploreStore";
+import { api } from "@/lib/axios";
 import { toast } from "@/components/ui/toast";
 
 interface UpcomingTimelineRadarProps {
@@ -127,6 +130,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
 }: UpcomingTimelineRadarProps) {
   const [activeFilter, setActiveFilter] = useState<"all" | "movie" | "tv">("all");
   const [radarDualMode, setRadarDualMode] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
 
   const { items: myListItems, addToList, removeFromList } = useMyListStore();
 
@@ -136,14 +140,17 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
     [now]
   );
 
-  const enrichedMovies = useMemo(
-    () => enrichItems(movies, "movie", todayNoon),
-    [movies, todayNoon]
-  );
-  const enrichedSeries = useMemo(
-    () => enrichItems(series, "tv", todayNoon),
-    [series, todayNoon]
-  );
+  const enrichedMovies = useMemo(() => {
+    return enrichItems(movies, "movie", todayNoon).filter(
+      (i) => !dismissedIds.has(i.id)
+    );
+  }, [movies, todayNoon, dismissedIds]);
+
+  const enrichedSeries = useMemo(() => {
+    return enrichItems(series, "tv", todayNoon).filter(
+      (i) => !dismissedIds.has(i.id)
+    );
+  }, [series, todayNoon, dismissedIds]);
 
   const enrichedAll = useMemo(() => {
     return [...enrichedMovies, ...enrichedSeries].sort(
@@ -192,6 +199,40 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
     [myListItems, addToList, removeFromList]
   );
 
+  const handleDismiss = useCallback(
+    async (item: EnrichedRadarItem, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const numericId = Number(item.id);
+      const displayTitle = item.title || item.name || "Título";
+      setDismissedIds((prev) => new Set(prev).add(numericId));
+
+      try {
+        await api.post("/api/recommendations/dismiss", {
+          tmdb_id: numericId,
+          media_type: item.media_type,
+          title: displayTitle,
+          poster_path: item.poster_path,
+          days_snooze: 180,
+        });
+
+        toast.add({
+          title: "Lançamento dispensado",
+          description: `"${displayTitle}" foi ocultado das suas recomendações por 6 meses.`,
+          type: "info",
+        });
+      } catch (err) {
+        console.error("Erro ao dispensar lançamento:", err);
+      }
+
+      setTimeout(() => {
+        useExploreStore.getState().dismissItem(numericId);
+      }, 300);
+    },
+    []
+  );
+
   const renderTrack = (
     itemsList: EnrichedRadarItem[],
     railId: string,
@@ -204,6 +245,14 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
       el.scrollBy({ left: direction * step, behavior: "smooth" });
     };
 
+    if (itemsList.length === 0) {
+      return (
+        <div className="py-6 text-center text-xs text-muted-foreground bg-secondary/30 rounded-2xl border border-dashed border-border">
+          Nenhum lançamento futuro nesta categoria.
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3 px-1">
@@ -214,7 +263,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
             <button
               type="button"
               onClick={() => scrollTrack(-1)}
-              className="w-8 h-8 rounded-lg bg-secondary/80 hover:bg-accent border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95"
+              className="w-8 h-8 rounded-lg bg-secondary/80 hover:bg-accent border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer"
               title="Voltar na linha do tempo"
               aria-label="Voltar na linha do tempo"
             >
@@ -223,7 +272,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
             <button
               type="button"
               onClick={() => scrollTrack(1)}
-              className="w-8 h-8 rounded-lg bg-secondary/80 hover:bg-accent border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95"
+              className="w-8 h-8 rounded-lg bg-secondary/80 hover:bg-accent border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer"
               title="Avançar na linha do tempo"
               aria-label="Avançar na linha do tempo"
             >
@@ -240,6 +289,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
           {itemsList.map((item, idx) => {
             const isLast = idx === itemsList.length - 1;
             const isSaved = Boolean(myListItems[item.id]);
+            const isDismissing = dismissedIds.has(item.id);
             const itemTitle = item.title || item.name || "Sem título";
             const route = item.media_type === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`;
             const primaryTag = item.match_tags?.[0];
@@ -247,7 +297,10 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
             return (
               <div
                 key={`${item.media_type}-${item.id}`}
-                className="flex-[0_0_80%] sm:flex-[0_0_292px] snap-start pr-4 sm:pr-4 flex flex-col"
+                className={cn(
+                  "flex-[0_0_80%] sm:flex-[0_0_292px] snap-start pr-4 sm:pr-4 flex flex-col transition-all duration-300",
+                  isDismissing && "opacity-0 scale-95 pointer-events-none"
+                )}
               >
                 {/* Linha Conectora da Linha do Tempo */}
                 <div className="relative flex items-center h-9 mb-2.5">
@@ -344,13 +397,13 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
                     )}
                   </Link>
 
-                  {/* Botão de Ação: Conecta diretamente com o /dashboard */}
-                  <div className="pt-2 border-t border-border/60">
+                  {/* Botão de Ação: Conecta diretamente com o /dashboard + Botão Dispensar */}
+                  <div className="pt-2 border-t border-border/60 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={(e) => handleToggleRadar(item, e)}
                       className={cn(
-                        "w-full py-2 px-3 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-all active:scale-[0.98]",
+                        "flex-1 py-2 px-3 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer",
                         isSaved
                           ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-500/25"
                           : "bg-primary/10 border border-primary/35 text-primary hover:bg-primary hover:text-primary-foreground shadow-xs"
@@ -364,7 +417,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
                       {isSaved ? (
                         <>
                           <Check className="w-3.5 h-3.5" />
-                          <span>✓ No Radar do Dashboard</span>
+                          <span>✓ No Radar</span>
                         </>
                       ) : (
                         <>
@@ -372,6 +425,16 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
                           <span>🔔 Aguardar Estreia</span>
                         </>
                       )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleDismiss(item, e)}
+                      className="w-8 h-8 shrink-0 rounded-xl bg-secondary/80 hover:bg-rose-500/15 text-muted-foreground hover:text-rose-400 border border-border hover:border-rose-500/30 inline-flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                      title="Não tenho interesse neste lançamento (ocultar por 6 meses)"
+                      aria-label="Não tenho interesse"
+                    >
+                      <EyeOff className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </article>
@@ -411,7 +474,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
                 type="button"
                 onClick={() => setActiveFilter("all")}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                   activeFilter === "all"
                     ? "bg-background text-primary shadow-xs border border-primary/30"
                     : "text-muted-foreground hover:text-foreground"
@@ -423,7 +486,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
                 type="button"
                 onClick={() => setActiveFilter("movie")}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                   activeFilter === "movie"
                     ? "bg-background text-primary shadow-xs border border-primary/30"
                     : "text-muted-foreground hover:text-foreground"
@@ -435,7 +498,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
                 type="button"
                 onClick={() => setActiveFilter("tv")}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                   activeFilter === "tv"
                     ? "bg-background text-primary shadow-xs border border-primary/30"
                     : "text-muted-foreground hover:text-foreground"
@@ -450,7 +513,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
           <button
             type="button"
             onClick={() => setRadarDualMode((prev) => !prev)}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-accent text-foreground border border-border hover:border-primary/40 transition-all active:scale-[0.98]"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-accent text-foreground border border-border hover:border-primary/40 transition-all active:scale-[0.98] cursor-pointer"
             title="Alternar entre visualização unificada com abas ou 2 linhas do tempo separadas"
           >
             <ArrowRightLeft className="w-3.5 h-3.5 text-primary" />
