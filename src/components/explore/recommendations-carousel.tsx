@@ -111,7 +111,7 @@ export function RecommendationsCarousel({ items, showReleaseDate = false }: Reco
                   isHiding ? "opacity-0 scale-90 pointer-events-none" : "opacity-100 scale-100"
                 )}
               >
-                <Link href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`} className="block p-1">
+                <Link href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`} prefetch={false} className="block p-1">
                 <Card className="overflow-hidden border-2 border-primary/50 bg-transparent group relative cursor-pointer aspect-[2/3]">
                   <CardContent className="p-0 h-full w-full relative">
                     <PosterImage

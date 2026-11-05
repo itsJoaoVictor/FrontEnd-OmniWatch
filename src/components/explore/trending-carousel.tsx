@@ -36,7 +36,7 @@ export function TrendingCarousel({ items }: TrendingCarouselProps) {
               key={item.id}
               className="pl-2 md:pl-4 basis-1/2 md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
             >
-              <Link href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`} className="block p-1">
+              <Link href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`} prefetch={false} className="block p-1">
                 <Card className="overflow-hidden border-0 bg-transparent group relative cursor-pointer aspect-[2/3]">
                   <CardContent className="p-0 h-full w-full relative">
                     <PosterImage

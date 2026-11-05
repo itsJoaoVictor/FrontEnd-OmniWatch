@@ -429,6 +429,7 @@ export default function TogetherPage() {
                 >
                   <Link
                     href={`/${item.media_type === "movie" ? "movie" : "tv"}/${item.id}`}
+                    prefetch={false}
                     className="block aspect-[2/3] relative w-full overflow-hidden bg-muted"
                   >
                     <PosterImage
