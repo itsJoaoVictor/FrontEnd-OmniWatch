@@ -314,7 +314,7 @@ export function PersonDiscoverSection({ person }: PersonDiscoverSectionProps) {
                   ) : hasVoteAvg ? (
                     <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-semibold text-amber-300 flex items-center gap-1 shadow-sm">
                       <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                      {item.vote_average!.toFixed(1)}
+                      {(item.vote_average! / 2).toFixed(1)}
                     </div>
                   ) : null}
                 </div>

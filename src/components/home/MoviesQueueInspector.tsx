@@ -78,7 +78,7 @@ async function fetchMovieInspectorMeta(tmdbId: number): Promise<CachedMovieMeta 
         runtimeText: formatRuntime(data.runtime),
         voteAverage:
           typeof data.vote_average === "number" && data.vote_average > 0
-            ? Number(data.vote_average.toFixed(1))
+            ? Number((data.vote_average / 2).toFixed(1))
             : null,
         genres: Array.isArray(data.genres)
           ? data.genres.slice(0, 3).map((g) => g.name)
@@ -734,7 +734,7 @@ export const MoviesQueueInspector = memo(function MoviesQueueInspector({
                       {currentMeta?.voteAverage && (
                         <span className="inline-flex items-center gap-1 text-amber-400 font-extrabold px-1">
                           <Star className="w-3.5 h-3.5 fill-amber-400" />
-                          <span>{currentMeta.voteAverage}</span>
+                          <span>{currentMeta.voteAverage.toFixed(1)}</span>
                         </span>
                       )}
 

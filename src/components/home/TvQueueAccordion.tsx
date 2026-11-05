@@ -78,7 +78,7 @@ async function fetchTvAccordionMeta(tmdbId: number): Promise<CachedTvMeta | null
             : null,
         voteAverage:
           typeof data.vote_average === "number" && data.vote_average > 0
-            ? Number(data.vote_average.toFixed(1))
+            ? Number((data.vote_average / 2).toFixed(1))
             : null,
         genres: Array.isArray(data.genres)
           ? data.genres.slice(0, 2).map((g) => g.name)
@@ -607,7 +607,7 @@ export const TvQueueAccordion = memo(function TvQueueAccordion({
                             {meta?.voteAverage && (
                               <span className="inline-flex items-center gap-1 text-amber-400 font-extrabold">
                                 <Star className="w-3.5 h-3.5 fill-amber-400" />
-                                <span>{meta.voteAverage}</span>
+                                <span>{meta.voteAverage.toFixed(1)}</span>
                               </span>
                             )}
                             {series.releaseYear && (
@@ -726,7 +726,7 @@ export const TvQueueAccordion = memo(function TvQueueAccordion({
                           <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-300">
                             {meta?.voteAverage && (
                               <span className="text-amber-400 font-bold">
-                                ★ {meta.voteAverage}
+                                ★ {meta.voteAverage.toFixed(1)}
                               </span>
                             )}
                             {activeSlice.releaseYear && <span>{activeSlice.releaseYear}</span>}
