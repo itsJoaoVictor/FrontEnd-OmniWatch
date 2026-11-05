@@ -13,7 +13,9 @@ export default function Page() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 md:space-y-12">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Explorar</h1>
-        <p className="text-sm md:text-base text-muted-foreground mt-2">Descubra novas obras, o que está em alta e suas recomendações personalizadas.</p>
+        <p className="text-sm md:text-base text-muted-foreground mt-2">
+          Descubra novas obras, o que está em alta e suas recomendações personalizadas.
+        </p>
       </div>
 
       <TogetherBanner />
@@ -30,12 +32,9 @@ export default function Page() {
         <PersonasSection />
       </Suspense>
 
-      <section>
-        <h2 className="text-2xl font-bold mb-6">Em Alta</h2>
-        <Suspense fallback={<TrendingSkeleton />}>
-          <TrendingSection />
-        </Suspense>
-      </section>
+      <Suspense fallback={<TrendingSkeleton />}>
+        <TrendingSection />
+      </Suspense>
     </div>
   );
 }
