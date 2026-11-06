@@ -11,6 +11,12 @@ import { api } from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { useExploreStore } from "@/store/useExploreStore";
 import {
+  MobileRecoCarousel,
+  MobileSectionHeader,
+  MobileIconAction,
+  type MobileCardItem,
+} from "./mobile/mobile-kit";
+import {
   RefreshCw,
   Sparkles,
   EyeOff,
@@ -18,7 +24,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Tv,
-  Eye,
 } from "lucide-react";
 
 interface SeriesShowrunnerRecommendationsProps {
@@ -191,9 +196,6 @@ export function SeriesShowrunnerRecommendations({
   const [, setMetaVersion] = useState(0);
 
   const seenInCycleRef = useRef<Set<number>>(new Set());
-  const mobileStageRailRef = useRef<HTMLDivElement | null>(null);
-  const mobileDockRailRef = useRef<HTMLDivElement | null>(null);
-  const scrollRafRef = useRef<number | null>(null);
 
   const isRefreshingSeries = useExploreStore((state) => state.isRefreshingSeries);
   const refreshExploreBatch = useExploreStore((state) => state.refreshExploreBatch);
@@ -261,56 +263,6 @@ export function SeriesShowrunnerRecommendations({
     };
   }, [activeSeries]);
 
-  // Sincroniza o scroll do Dock inferior quando o slide ativo muda no mobile
-  useEffect(() => {
-    const dock = mobileDockRailRef.current;
-    if (!dock) return;
-    const activeChip = dock.children[safeActiveIdx] as HTMLElement | undefined;
-    if (!activeChip) return;
-
-    const targetLeft =
-      activeChip.offsetLeft - dock.clientWidth / 2 + activeChip.clientWidth / 2;
-    dock.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" });
-  }, [safeActiveIdx]);
-
-  // Navega programaticamente para um slide do Palco Mobile em O(1)
-  const scrollToMobileStageSlide = useCallback(
-    (index: number, behavior: ScrollBehavior = "smooth") => {
-      if (currentBatch.length === 0) return;
-      const clamped = ((index % currentBatch.length) + currentBatch.length) % currentBatch.length;
-      setActiveSlideIdx(clamped);
-
-      const rail = mobileStageRailRef.current;
-      if (rail && rail.clientWidth > 0) {
-        rail.scrollTo({
-          left: clamped * rail.clientWidth,
-          behavior,
-        });
-      }
-    },
-    [currentBatch.length]
-  );
-
-  // Listener passivo O(1) de swipe no Palco Mobile: calcula o índice pelo scrollLeft sem reflow caro
-  const handleMobileStageScroll = useCallback(() => {
-    if (scrollRafRef.current !== null) return;
-    scrollRafRef.current = window.requestAnimationFrame(() => {
-      scrollRafRef.current = null;
-      const rail = mobileStageRailRef.current;
-      if (!rail || rail.clientWidth <= 0) return;
-      const nextIdx = Math.round(rail.scrollLeft / rail.clientWidth);
-      setActiveSlideIdx((prev) => (prev !== nextIdx ? nextIdx : prev));
-    });
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (scrollRafRef.current !== null) {
-        window.cancelAnimationFrame(scrollRafRef.current);
-      }
-    };
-  }, []);
-
   const handleCycleBatch = useCallback(() => {
     if (totalBatches <= 1) return;
     const nextIdx = (safeBatchIndex + 1) % totalBatches;
@@ -322,9 +274,6 @@ export function SeriesShowrunnerRecommendations({
     setTimeout(() => {
       setBatchIndex(nextIdx);
       setActiveSlideIdx(0);
-      if (mobileStageRailRef.current) {
-        mobileStageRailRef.current.scrollTo({ left: 0, behavior: "instant" as ScrollBehavior });
-      }
       setIsTransitioning(false);
     }, 150);
   }, [safeBatchIndex, totalBatches]);
@@ -337,9 +286,6 @@ export function SeriesShowrunnerRecommendations({
     setTimeout(() => {
       setBatchIndex(prevIdx);
       setActiveSlideIdx(0);
-      if (mobileStageRailRef.current) {
-        mobileStageRailRef.current.scrollTo({ left: 0, behavior: "instant" as ScrollBehavior });
-      }
       setIsTransitioning(false);
     }, 150);
   }, [safeBatchIndex, totalBatches]);
@@ -356,9 +302,6 @@ export function SeriesShowrunnerRecommendations({
     setBatchIndex(0);
     setActiveSlideIdx(0);
     setHasCompletedCycle(false);
-    if (mobileStageRailRef.current) {
-      mobileStageRailRef.current.scrollTo({ left: 0, behavior: "instant" as ScrollBehavior });
-    }
     setIsTransitioning(false);
 
     if (result.count > 0) {
@@ -408,6 +351,25 @@ export function SeriesShowrunnerRecommendations({
     }, 300);
   }, []);
 
+  const mobileItems: MobileCardItem[] = currentBatch.map((item) => {
+    const cached = seriesStageMetaCache.get(item.id);
+    const pace = cached?.paceText || buildFallbackPace(item).paceText;
+    const bingeLabel = cached?.bingeLabel || buildFallbackPace(item).bingeLabel;
+    const year = extractSeriesYear(item) || cached?.yearText || "";
+    return {
+      id: item.id,
+      title: item.name || item.title || "Série",
+      mediaType: "tv",
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      release_date: item.first_air_date || item.release_date,
+      matchScore: item.match_score,
+      meta: [year, pace].filter(Boolean).join(" • "),
+      tag: bingeLabel,
+      tagHighlight: false,
+    };
+  });
+
   if (!seriesList || seriesList.length === 0 || currentBatch.length === 0 || !activeSeries) {
     return null;
   }
@@ -428,7 +390,32 @@ export function SeriesShowrunnerRecommendations({
   return (
     <section aria-label="Séries Recomendadas">
       {/* Cabeçalho da Seção + Controles de Lote */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+      <div className="lg:hidden">
+        <MobileSectionHeader
+          emoji="✨"
+          title="Séries Recomendadas"
+          subtitle="Escolhidas a dedo para o seu perfil."
+          action={
+            showFreshPoolAction ? (
+              <MobileIconAction
+                label={isRefreshingSeries ? "Gerando..." : "Novas séries"}
+                onClick={handleGenerateFreshSuggestions}
+                disabled={isRefreshingSeries}
+                spinning={isRefreshingSeries}
+              />
+            ) : (
+              <MobileIconAction
+                label="Próximo lote"
+                onClick={handleCycleBatch}
+                disabled={isRefreshingSeries}
+                icon={<RefreshCw className="w-5 h-5" />}
+              />
+            )
+          }
+        />
+      </div>
+
+      <div className="hidden lg:flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2.5 flex-wrap">
             <span>✨ Séries Recomendadas</span>
@@ -740,251 +727,19 @@ export function SeriesShowrunnerRecommendations({
         </div>
 
         {/* ====================================================================
-            VERSÃO MOBILE (< lg):
-            1. Palco Widescreen Deslizável (snap-x) no Topo + Setas ‹ / ›:
-               - Arrastar o palco pro lado (ou tocar ‹ / ›) troca a série a 60fps
-               - Tocar no título/card do palco leva direto para /tv/[id]
-            2. Dock de Mini-Pôsteres (#1–#5) Logo Abaixo:
-               - Tocar no PÔSTER abre /tv/[id] (respeitando o padrão do app)
-               - Tocar na cápsula separada "Palco" abaixo do pôster desliza o palco
-                 direto para aquela série em O(1) sem sair da tela!
+            VERSÃO MOBILE (< lg): carrossel de cards com peek + bottom sheet de ações
             ==================================================================== */}
-        <div className="flex flex-col gap-3 lg:hidden">
-          {/* Topo Mobile: Carrossel do Palco Widescreen com Swipe Nativo */}
-          <div className="relative">
-            <div
-              ref={mobileStageRailRef}
-              onScroll={handleMobileStageScroll}
-              className="flex overflow-x-auto snap-x snap-mandatory rounded-2xl border border-primary/40 shadow-xl scrollbar-none"
-            >
-              {currentBatch.map((item, idx) => {
-                const cached = seriesStageMetaCache.get(item.id);
-                const fallbackPace = buildFallbackPace(item);
-                const title = item.name || item.title || "Série";
-                const year = extractSeriesYear(item) || cached?.yearText || "";
-                const pace = cached?.paceText || fallbackPace.paceText;
-                const bingeLabel = cached?.bingeLabel || fallbackPace.bingeLabel;
-                const overview = item.overview?.trim() || cached?.overview || "";
-                const rankNumber = safeBatchIndex * BATCH_SIZE + idx + 1;
-
-                return (
-                  <article
-                    key={item.id}
-                    className={cn(
-                      "w-full shrink-0 snap-center relative min-h-[255px] sm:min-h-[320px] bg-zinc-950 p-4 sm:p-6 flex flex-col justify-end isolate",
-                      hiddenIds.has(item.id) && "opacity-0 scale-95 pointer-events-none"
-                    )}
-                  >
-                    {/* Backdrop */}
-                    <div className="absolute inset-0 -z-20">
-                      <PosterImage
-                        src={item.backdrop_path}
-                        fallbackSrc={item.poster_path}
-                        alt={title}
-                        title={title}
-                        type="tv"
-                        tmdbSize="w780"
-                      />
-                    </div>
-
-                    {/* Scrim */}
-                    <div
-                      className="absolute inset-0 -z-10 pointer-events-none"
-                      style={{
-                        background:
-                          "linear-gradient(180deg, rgba(4,8,18,0.22) 0%, rgba(4,8,18,0.65) 45%, rgba(4,8,18,0.97) 100%)",
-                      }}
-                    />
-
-                    {/* Topo do Slide */}
-                    <div className="absolute top-3 left-3.5 right-3.5 flex items-center justify-between gap-2 z-10">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="px-2.5 py-1 rounded-full bg-black/75 border border-white/15 backdrop-blur-md text-[11px] font-extrabold text-amber-400">
-                          #{rankNumber}/{safeBatchIndex * BATCH_SIZE + currentBatch.length}
-                        </span>
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/35 backdrop-blur-md text-[11px] font-bold text-emerald-200">
-                          {bingeLabel}
-                        </span>
-                      </div>
-
-                      <CompatibilityRing score={item.match_score} />
-                    </div>
-
-                    {/* Corpo do Slide */}
-                    <div className="relative z-10 text-white pt-11">
-                      <div className="flex items-center flex-wrap gap-1.5 text-[11px] text-zinc-300 font-medium mb-1">
-                        <span>Série</span>
-                        {year && (
-                          <>
-                            <span className="opacity-50">•</span>
-                            <span>{year}</span>
-                          </>
-                        )}
-                        {pace && (
-                          <>
-                            <span className="opacity-50">•</span>
-                            <span className="truncate">{pace}</span>
-                          </>
-                        )}
-                      </div>
-
-                      <Link href={`/tv/${item.id}`} prefetch={false} className="block">
-                        <h3 className="text-lg sm:text-2xl font-extrabold leading-tight tracking-tight mb-1.5 line-clamp-1 drop-shadow-md">
-                          {title}
-                        </h3>
-                      </Link>
-
-                      {overview && (
-                        <p className="text-xs text-zinc-300 line-clamp-2 mb-2.5 leading-relaxed">
-                          {overview}
-                        </p>
-                      )}
-
-                      {item.match_tags && item.match_tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                          {item.match_tags.slice(0, 2).map((tag, tIdx) => (
-                            <span
-                              key={tIdx}
-                              className={cn(
-                                "inline-flex items-center px-2 py-0.5 rounded-lg text-[10.5px] font-semibold border max-w-full truncate",
-                                isHighlightedTag(tag)
-                                  ? "bg-amber-500/15 border-amber-400/35 text-amber-200"
-                                  : "bg-white/10 border-white/15 text-zinc-100"
-                              )}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Barra de Ações + Setas de Troca Rápida do Palco */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <AddToListButton
-                            tmdb_id={item.id}
-                            media_type="tv"
-                            title={title}
-                            poster_path={item.poster_path}
-                            backdrop_path={item.backdrop_path}
-                            release_date={item.first_air_date || item.release_date}
-                            showLabel
-                            addLabel="Quero Ver"
-                          />
-
-                          <Link
-                            href={`/tv/${item.id}`}
-                            prefetch={false}
-                            className="inline-flex items-center gap-1 h-10 px-3 rounded-xl text-xs font-semibold bg-white/12 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md"
-                          >
-                            <span>Abrir</span>
-                            <ArrowUpRight className="w-3.5 h-3.5 opacity-80" />
-                          </Link>
-
-                          <button
-                            type="button"
-                            onClick={(e) => handleDismiss(item, e)}
-                            className="w-9 h-9 rounded-full bg-black/60 text-zinc-300 hover:text-red-400 border border-white/20 inline-flex items-center justify-center"
-                            title="Não tenho interesse"
-                          >
-                            <EyeOff className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        {currentBatch.length > 1 && (
-                          <div className="inline-flex items-center gap-1 bg-black/65 border border-white/15 rounded-xl p-1 backdrop-blur-md">
-                            <button
-                              type="button"
-                              onClick={() => scrollToMobileStageSlide(safeActiveIdx - 1)}
-                              className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-white hover:bg-white/15 active:scale-95 transition-all"
-                              aria-label="Série anterior no palco"
-                            >
-                              <ChevronLeft className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => scrollToMobileStageSlide(safeActiveIdx + 1)}
-                              className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-white hover:bg-white/15 active:scale-95 transition-all"
-                              aria-label="Próxima série no palco"
-                            >
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Base Mobile: Dock Horizontal de Mini-Pôsteres (#1–#5) Sincronizado
-              - Tocar na IMAGEM do pôster -> Abre a página da série (/tv/[id])
-              - Tocar no botão cápsula "Palco" -> Foca essa série no palco acima sem sair da tela */}
-          <div
-            ref={mobileDockRailRef}
-            className="flex overflow-x-auto snap-x snap-mandatory gap-2.5 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none"
-          >
-            {currentBatch.map((item, idx) => {
-              const isCurrent = idx === safeActiveIdx;
-              const title = item.name || item.title || "Série";
-              const rankNumber = safeBatchIndex * BATCH_SIZE + idx + 1;
-
-              return (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "w-[82px] sm:w-[104px] shrink-0 snap-start rounded-xl p-1.5 border transition-all duration-200 flex flex-col gap-1.5",
-                    isCurrent
-                      ? "bg-primary/15 border-primary shadow-md"
-                      : "bg-card border-border/80 opacity-80 hover:opacity-100"
-                  )}
-                >
-                  {/* Zona 1: Link direto para a página da série (comportamento padrão de pôster) */}
-                  <Link
-                    href={`/tv/${item.id}`}
-                    prefetch={false}
-                    className="relative w-full aspect-[2/3] rounded-lg overflow-hidden border border-border/60 block group"
-                    title={`Abrir página de ${title}`}
-                  >
-                    <PosterImage
-                      src={item.poster_path}
-                      fallbackSrc={item.backdrop_path}
-                      alt={title}
-                      title={title}
-                      type="tv"
-                      tmdbSize="w185"
-                    />
-                    <span className="absolute top-1 left-1 z-20 px-1.5 py-0.5 rounded bg-black/80 text-white text-[9.5px] font-extrabold backdrop-blur-sm">
-                      #{rankNumber}
-                    </span>
-                    <span className="absolute bottom-1 right-1 z-20 px-1 py-0.5 rounded bg-primary text-primary-foreground text-[9.5px] font-extrabold shadow">
-                      {Math.round(item.match_score)}%
-                    </span>
-                  </Link>
-
-                  {/* Zona 2: Cápsula exclusiva de troca do Palco em O(1) (não navega para outra rota) */}
-                  <button
-                    type="button"
-                    onClick={() => scrollToMobileStageSlide(idx)}
-                    className={cn(
-                      "w-full py-1 px-1.5 rounded-lg text-[10px] font-bold inline-flex items-center justify-center gap-1 transition-colors",
-                      isCurrent
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-secondary hover:bg-accent text-muted-foreground hover:text-foreground"
-                    )}
-                    aria-pressed={isCurrent}
-                    title={`Exibir ${title} no palco acima`}
-                  >
-                    <Eye className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{isCurrent ? "No Palco" : "Palco"}</span>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <MobileRecoCarousel
+          items={mobileItems}
+          rankOffset={safeBatchIndex * BATCH_SIZE}
+          resetKey={`${safeBatchIndex}-${currentBatch[0]?.id ?? 0}`}
+          onActiveChange={setActiveSlideIdx}
+          onDismiss={(mi) => {
+            const src = seriesList.find((m) => m.id === mi.id);
+            if (src) handleDismiss(src, { preventDefault() {}, stopPropagation() {} } as React.MouseEvent);
+          }}
+          hiddenIds={hiddenIds}
+        />
       </div>
     </section>
   );

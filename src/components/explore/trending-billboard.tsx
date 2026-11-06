@@ -9,7 +9,14 @@ import {
   ChevronRight,
   Sparkles,
   TrendingUp,
+  MoreHorizontal,
 } from "lucide-react";
+import {
+  MobileActionSheet,
+  MobileSectionHeader,
+  MobileSegmented,
+  type MobileCardItem,
+} from "./mobile/mobile-kit";
 import { cn } from "@/lib/utils";
 import { TrendingItem } from "@/types/trending";
 import { PosterImage } from "@/components/shared/PosterImage";
@@ -38,6 +45,8 @@ export const TrendingBillboard = memo(function TrendingBillboard({
 }: TrendingBillboardProps) {
   const [mediaFilter, setMediaFilter] = useState<"all" | "movie" | "tv">("all");
   const trackRef = useRef<HTMLDivElement | null>(null);
+  const [sheetItem, setSheetItem] = useState<MobileCardItem | null>(null);
+  const closeSheet = useCallback(() => setSheetItem(null), []);
 
   // Filtra e limita ao Top 10 da categoria selecionada
   const top10Items = useMemo(() => {
@@ -66,7 +75,103 @@ export const TrendingBillboard = memo(function TrendingBillboard({
   }, []);
 
   return (
-    <section className="mb-12 flex flex-col gap-5">
+    <>
+    {/* ===== MOBILE (< lg): Top 10 estilo streaming com numeração outline ===== */}
+    <section className="lg:hidden mb-10">
+      <MobileSectionHeader
+        emoji="🔥"
+        title="Em Alta"
+        badge="Top 10 Brasil"
+        subtitle="As obras mais assistidas e comentadas esta semana."
+      />
+      <MobileSegmented
+        value={mediaFilter}
+        onChange={setMediaFilter}
+        options={[
+          { value: "all", label: "Geral" },
+          { value: "movie", label: `Filmes ${movieCount}` },
+          { value: "tv", label: `Séries ${tvCount}` },
+        ]}
+        className="mb-4"
+      />
+
+      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 scroll-px-4 pb-1 overscroll-x-contain">
+        {top10Items.map((item, idx) => {
+          const rank = idx + 1;
+          const title = item.title || item.name || "Sem título";
+          const mt = (item.media_type === "tv" ? "tv" : "movie") as "movie" | "tv";
+          const year = extractYear(item);
+          const color =
+            rank === 1 ? "#f59e0b" : rank === 2 ? "#cbd5e1" : rank === 3 ? "#d97706" : "rgba(148,163,184,0.75)";
+          return (
+            <article key={`m-${mt}-${item.id}`} className="shrink-0 snap-start w-[56%] max-w-[230px]">
+              <div className="relative">
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute left-0 bottom-2 font-black leading-none tracking-tighter select-none text-transparent",
+                    rank >= 10 ? "text-[72px]" : "text-[96px]"
+                  )}
+                  style={{ WebkitTextStroke: `3px ${color}` }}
+                >
+                  {rank}
+                </span>
+                <div className="relative ml-auto w-[68%] aspect-[2/3] rounded-2xl overflow-hidden bg-zinc-900 border border-border shadow-lg">
+                  <PosterImage
+                    src={item.poster_path}
+                    fallbackSrc={item.backdrop_path}
+                    alt={title}
+                    title={title}
+                    type={mt}
+                    tmdbSize="w342"
+                  />
+                  <Link
+                    href={mt === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`}
+                    prefetch={false}
+                    aria-label={`Abrir ${title}`}
+                    className="absolute inset-0 z-10"
+                  />
+                  <span className="absolute bottom-1.5 left-1.5 z-20 px-1.5 py-0.5 rounded-md bg-black/80 text-amber-400 text-[11px] font-extrabold flex items-center gap-1 pointer-events-none">
+                    <Star className="w-3 h-3 fill-amber-400" />
+                    {(item.vote_average / 2).toFixed(1)}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Mais opções para ${title}`}
+                    onClick={() =>
+                      setSheetItem({
+                        id: item.id,
+                        title,
+                        mediaType: mt,
+                        poster_path: item.poster_path,
+                        backdrop_path: item.backdrop_path,
+                        release_date: item.release_date || item.first_air_date,
+                        meta: [mt === "movie" ? "Filme" : "Série", year].filter(Boolean).join(" • "),
+                      })
+                    }
+                    className="absolute top-0 right-0 z-20 w-11 h-11 inline-flex items-center justify-center"
+                  >
+                    <span className="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white inline-flex items-center justify-center">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <div className="pt-2 pl-1">
+                <p className="text-[13px] font-bold line-clamp-1">{title}</p>
+                <p className="text-[11.5px] text-muted-foreground truncate mt-0.5">
+                  {[mt === "movie" ? "Filme" : "Série", year].filter(Boolean).join(" • ")}
+                </p>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <MobileActionSheet item={sheetItem} onClose={closeSheet} />
+    </section>
+
+    <section className="hidden lg:flex mb-12 flex-col gap-5">
       {/* Cabeçalho da Seção */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
@@ -264,5 +369,6 @@ export const TrendingBillboard = memo(function TrendingBillboard({
         })}
       </div>
     </section>
+    </>
   );
 });

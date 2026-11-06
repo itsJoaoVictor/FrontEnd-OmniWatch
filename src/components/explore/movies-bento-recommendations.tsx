@@ -19,6 +19,12 @@ import { api } from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { useExploreStore } from "@/store/useExploreStore";
 import { MovieDetailsResponse } from "@/types/details";
+import {
+  MobileRecoCarousel,
+  MobileSectionHeader,
+  MobileIconAction,
+  type MobileCardItem,
+} from "./mobile/mobile-kit";
 
 interface MoviesBentoRecommendationsProps {
   items: RecommendationItem[];
@@ -32,7 +38,7 @@ interface EnrichedBentoMeta {
 
 const BATCH_SIZE = 8;
 
-// Cache O(1) em memória + deduplicação de requests para enriquecer apenas os Top 3 do lote atual quando necessário
+// Cache O(1) em memória + deduplicação de requests para enriquecer apenas os filmes necessários
 const bentoMetaCache = new Map<number, EnrichedBentoMeta>();
 const inFlightMetaRequests = new Map<number, Promise<EnrichedBentoMeta | null>>();
 
@@ -141,6 +147,7 @@ function CompatibilityRing({ score }: { score: number }) {
 export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendationsProps) {
   const [moviesList, setMoviesList] = useState<RecommendationItem[]>(items);
   const [batchIndex, setBatchIndex] = useState(0);
+  const [activeSlideIdx, setActiveSlideIdx] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [hasCompletedCycle, setHasCompletedCycle] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
@@ -181,7 +188,10 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     return [...primarySlice, ...wrapFill];
   }, [moviesList, safeBatchIndex]);
 
-  // Registra os IDs exibidos no lote atual em O(B) (B <= 8) e enriquece apenas os Top 3 caso falte sinopse/duração
+  const safeActiveIdx =
+    currentBatch.length > 0 ? Math.min(activeSlideIdx, currentBatch.length - 1) : 0;
+
+  // Registra os IDs exibidos no lote atual em O(B) (B <= 8) e enriquece os Top 3
   useEffect(() => {
     currentBatch.forEach((m) => seenInCycleRef.current.add(m.id));
 
@@ -204,6 +214,25 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     };
   }, [currentBatch]);
 
+  // Enriquece sob demanda o filme em foco no palco mobile se necessário
+  useEffect(() => {
+    const activeMovie = currentBatch[safeActiveIdx];
+    if (!activeMovie) return;
+    const needsOverview = !activeMovie.overview || activeMovie.overview.trim() === "";
+    const needsRuntime = !activeMovie.runtime || activeMovie.runtime <= 0;
+    if ((needsOverview || needsRuntime) && !bentoMetaCache.has(activeMovie.id)) {
+      let cancelled = false;
+      fetchBentoMovieMeta(activeMovie.id).then((meta) => {
+        if (!cancelled && meta) {
+          setMetaVersion((v) => v + 1);
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [currentBatch, safeActiveIdx]);
+
   const handleCycleBatch = useCallback(() => {
     if (totalBatches <= 1) return;
     const nextIdx = (safeBatchIndex + 1) % totalBatches;
@@ -214,6 +243,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     setIsTransitioning(true);
     setTimeout(() => {
       setBatchIndex(nextIdx);
+      setActiveSlideIdx(0);
       setIsTransitioning(false);
     }, 150);
   }, [safeBatchIndex, totalBatches]);
@@ -225,13 +255,13 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     setIsTransitioning(true);
     setTimeout(() => {
       setBatchIndex(prevIdx);
+      setActiveSlideIdx(0);
       setIsTransitioning(false);
     }, 150);
   }, [safeBatchIndex, totalBatches]);
 
   const handleGenerateFreshSuggestions = useCallback(async () => {
     const excludeIds = Array.from(seenInCycleRef.current);
-    // Garante que todos os filmes do pool atual também contem como já vistos no ciclo
     moviesList.forEach((m) => {
       if (!excludeIds.includes(m.id)) excludeIds.push(m.id);
     });
@@ -240,6 +270,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     const result = await refreshExploreBatch("movie", excludeIds);
     seenInCycleRef.current.clear();
     setBatchIndex(0);
+    setActiveSlideIdx(0);
     setHasCompletedCycle(false);
     setIsTransitioning(false);
 
@@ -290,6 +321,30 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     }, 300);
   }, []);
 
+  const mobileItems: MobileCardItem[] = currentBatch.map((m) => {
+    const cached = bentoMetaCache.get(m.id);
+    const meta = [
+      extractYear(m),
+      formatMinutes(m.runtime) || cached?.runtimeText,
+      extractGenres(m, cached).slice(0, 2).join(", "),
+    ]
+      .filter(Boolean)
+      .join(" • ");
+    const tag = m.match_tags?.[0];
+    return {
+      id: m.id,
+      title: m.title || m.name || "Filme",
+      mediaType: "movie",
+      poster_path: m.poster_path,
+      backdrop_path: m.backdrop_path,
+      release_date: m.release_date,
+      matchScore: m.match_score,
+      meta,
+      tag,
+      tagHighlight: tag ? isHighlightedTag(tag) : false,
+    };
+  });
+
   if (!moviesList || moviesList.length === 0 || currentBatch.length === 0) {
     return null;
   }
@@ -308,8 +363,34 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
 
   return (
     <section aria-label="Filmes Recomendados">
-      {/* Cabeçalho da Seção + Controles de Lote */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+      {/* Cabeçalho Mobile: título + 1 única ação (44px) */}
+      <div className="lg:hidden">
+        <MobileSectionHeader
+          emoji="✨"
+          title="Filmes Recomendados"
+          subtitle="Escolhidos a dedo para o seu perfil."
+          action={
+            showFreshPoolAction ? (
+              <MobileIconAction
+                label={isRefreshingMovies ? "Gerando..." : "Novas sugestões"}
+                onClick={handleGenerateFreshSuggestions}
+                disabled={isRefreshingMovies}
+                spinning={isRefreshingMovies}
+              />
+            ) : (
+              <MobileIconAction
+                label="Próximo lote"
+                onClick={handleCycleBatch}
+                disabled={isRefreshingMovies}
+                icon={<RefreshCw className="w-5 h-5" />}
+              />
+            )
+          }
+        />
+      </div>
+
+      {/* Cabeçalho Desktop + Controles de Lote */}
+      <div className="hidden lg:flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2.5 flex-wrap">
             <span>✨ Filmes Recomendados</span>
@@ -379,7 +460,6 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
         </div>
       </div>
 
-      {/* Bento Assimétrico ("DNA Match") */}
       <div
         className={cn(
           "flex flex-col gap-4 transition-all duration-200",
@@ -388,275 +468,352 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
             : "opacity-100 translate-y-0"
         )}
       >
-        {/* Linha Superior: Spotlight #1 (7 colunas) + Pódio #2 e #3 (5 colunas) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Card #1 — Escolha Principal */}
-          <article
-            className={cn(
-              "lg:col-span-7 relative min-h-[250px] sm:min-h-[390px] md:min-h-[430px] rounded-2xl overflow-hidden border border-primary/35 hover:border-primary/70 bg-zinc-950 flex flex-col justify-end p-4 sm:p-5 md:p-7 isolate group shadow-xl transition-all duration-300",
-              hiddenIds.has(hero.id) && "opacity-0 scale-95 pointer-events-none"
-            )}
-          >
-            {/* Widescreen Backdrop */}
-            <div className="absolute inset-0 -z-20">
-              <PosterImage
-                src={hero.backdrop_path}
-                fallbackSrc={hero.poster_path}
-                alt={heroTitle}
-                title={heroTitle}
-                type="movie"
-                tmdbSize="w1280"
-                priority
-                className="transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-              />
-            </div>
-
-            {/* Scrim Cinematográfico */}
-            <div
-              className="absolute inset-0 -z-10 pointer-events-none"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(4,8,18,0.22) 0%, rgba(4,8,18,0.65) 46%, rgba(4,8,18,0.96) 100%)",
-              }}
-            />
-
-            {/* Topo do Spotlight */}
-            <div className="absolute top-4 left-4 right-4 md:top-5 md:left-6 md:right-6 flex items-center justify-between gap-3 z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/75 border border-white/15 backdrop-blur-md text-xs font-bold text-zinc-100">
-                <span className="text-amber-400 font-extrabold">
-                  #{safeBatchIndex * BATCH_SIZE + 1} ESCOLHA PRINCIPAL
-                </span>
-                <span className="hidden sm:inline opacity-40">|</span>
-                <span className="hidden sm:inline text-zinc-300 font-medium">Alta Sintonia</span>
-              </div>
-
-              <CompatibilityRing score={hero.match_score} />
-            </div>
-
-            {/* Conteúdo Principal do Spotlight */}
-            <div className="relative z-10 flex items-end gap-5 pt-11 sm:pt-14">
-              <Link
-                href={`/movie/${hero.id}`}
-                prefetch={false}
-                className="hidden sm:block w-28 aspect-[2/3] rounded-xl overflow-hidden border border-white/25 shadow-2xl shrink-0 hover:scale-[1.03] transition-transform"
-              >
+        {/* ====================================================================
+            LAYOUT DESKTOP EXCLUSIVO (hidden lg:flex flex-col gap-4)
+            Mantém 100% o Bento Grid consagrado com Hero (7 cols) + Duo (5 cols) + Shelf (5 cols)
+            ==================================================================== */}
+        <div className="hidden lg:flex flex-col gap-4">
+          {/* Linha Superior: Spotlight #1 (7 colunas) + Pódio #2 e #3 (5 colunas) */}
+          <div className="grid grid-cols-12 gap-4">
+            {/* Card #1 — Escolha Principal */}
+            <article
+              className={cn(
+                "col-span-7 relative min-h-[430px] rounded-2xl overflow-hidden border border-primary/35 hover:border-primary/70 bg-zinc-950 flex flex-col justify-end p-7 isolate group shadow-xl transition-all duration-300",
+                hiddenIds.has(hero.id) && "opacity-0 scale-95 pointer-events-none"
+              )}
+            >
+              {/* Widescreen Backdrop */}
+              <div className="absolute inset-0 -z-20">
                 <PosterImage
-                  src={hero.poster_path}
-                  fallbackSrc={hero.backdrop_path}
+                  src={hero.backdrop_path}
+                  fallbackSrc={hero.poster_path}
                   alt={heroTitle}
                   title={heroTitle}
                   type="movie"
-                  tmdbSize="w342"
+                  tmdbSize="w1280"
+                  priority
+                  className="transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                 />
-              </Link>
+              </div>
 
-              <div className="flex-1 min-w-0 text-white">
-                {/* Metadados Inline */}
-                <div className="flex items-center flex-wrap gap-2 text-xs text-zinc-300 font-medium mb-1.5">
-                  <span className="px-2 py-0.5 rounded-md bg-white/15 text-white text-[10px] font-bold uppercase tracking-wider">
-                    Filme
+              {/* Scrim Cinematográfico */}
+              <div
+                className="absolute inset-0 -z-10 pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(180deg, rgba(4,8,18,0.22) 0%, rgba(4,8,18,0.65) 46%, rgba(4,8,18,0.96) 100%)",
+                }}
+              />
+
+              {/* Topo do Spotlight */}
+              <div className="absolute top-5 left-6 right-6 flex items-center justify-between gap-3 z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/75 border border-white/15 backdrop-blur-md text-xs font-bold text-zinc-100">
+                  <span className="text-amber-400 font-extrabold">
+                    #{safeBatchIndex * BATCH_SIZE + 1} ESCOLHA PRINCIPAL
                   </span>
-                  {heroYear && <span>{heroYear}</span>}
-                  {heroRuntime && (
-                    <>
-                      <span className="opacity-50">•</span>
-                      <span>{heroRuntime}</span>
-                    </>
-                  )}
-                  {heroGenres.length > 0 && (
-                    <>
-                      <span className="opacity-50">•</span>
-                      <span className="truncate">{heroGenres.join(", ")}</span>
-                    </>
-                  )}
+                  <span className="opacity-40">|</span>
+                  <span className="text-zinc-300 font-medium">Alta Sintonia</span>
                 </div>
 
-                <Link href={`/movie/${hero.id}`} prefetch={false} className="block group/title">
-                  <h3 className="text-xl sm:text-2xl md:text-[28px] font-extrabold leading-tight tracking-tight mb-1.5 sm:mb-2 drop-shadow-md group-hover/title:text-primary transition-colors line-clamp-2">
-                    {heroTitle}
-                  </h3>
+                <CompatibilityRing score={hero.match_score} />
+              </div>
+
+              {/* Conteúdo Principal do Spotlight */}
+              <div className="relative z-10 flex items-end gap-5 pt-14">
+                <Link
+                  href={`/movie/${hero.id}`}
+                  prefetch={false}
+                  className="w-28 aspect-[2/3] rounded-xl overflow-hidden border border-white/25 shadow-2xl shrink-0 hover:scale-[1.03] transition-transform"
+                >
+                  <PosterImage
+                    src={hero.poster_path}
+                    fallbackSrc={hero.backdrop_path}
+                    alt={heroTitle}
+                    title={heroTitle}
+                    type="movie"
+                    tmdbSize="w342"
+                  />
                 </Link>
 
-                {heroOverview && (
-                  <p className="text-xs md:text-sm text-zinc-300 line-clamp-1 sm:line-clamp-2 mb-2.5 sm:mb-3.5 max-w-2xl leading-relaxed">
-                    {heroOverview}
-                  </p>
-                )}
-
-                {/* Bloco de Explicabilidade */}
-                {hero.match_tags && hero.match_tags.length > 0 && (
-                  <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.07] border border-white/15 backdrop-blur-md mb-3 sm:mb-4">
-                    <span className="hidden sm:block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
-                      Por que foi escolhido para você
+                <div className="flex-1 min-w-0 text-white">
+                  {/* Metadados Inline */}
+                  <div className="flex items-center flex-wrap gap-2 text-xs text-zinc-300 font-medium mb-1.5">
+                    <span className="px-2 py-0.5 rounded-md bg-white/15 text-white text-[10px] font-bold uppercase tracking-wider">
+                      Filme
                     </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {hero.match_tags.map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className={cn(
-                            "inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border",
-                            idx >= 2 && "hidden sm:inline-flex",
-                            isHighlightedTag(tag)
-                              ? "bg-amber-500/15 border-amber-400/35 text-amber-200"
-                              : "bg-white/10 border-white/15 text-zinc-100"
-                          )}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                    {heroYear && <span>{heroYear}</span>}
+                    {heroRuntime && (
+                      <>
+                        <span className="opacity-50">•</span>
+                        <span>{heroRuntime}</span>
+                      </>
+                    )}
+                    {heroGenres.length > 0 && (
+                      <>
+                        <span className="opacity-50">•</span>
+                        <span className="truncate">{heroGenres.join(", ")}</span>
+                      </>
+                    )}
                   </div>
-                )}
 
-                {/* Ações do Spotlight */}
-                <div className="flex items-center flex-wrap gap-2.5">
-                  <AddToListButton
-                    tmdb_id={hero.id}
-                    media_type="movie"
-                    title={heroTitle}
-                    poster_path={hero.poster_path}
-                    backdrop_path={hero.backdrop_path}
-                    release_date={hero.release_date}
-                    showLabel
-                    addLabel="Quero Assistir"
-                  />
-
-                  <Link
-                    href={`/movie/${hero.id}`}
-                    prefetch={false}
-                    className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl text-xs md:text-sm font-semibold bg-white/12 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md transition-colors"
-                  >
-                    <span>Ver Detalhes</span>
-                    <ArrowUpRight className="w-4 h-4 opacity-80" />
+                  <Link href={`/movie/${hero.id}`} prefetch={false} className="block group/title">
+                    <h3 className="text-2xl md:text-[28px] font-extrabold leading-tight tracking-tight mb-2 drop-shadow-md group-hover/title:text-primary transition-colors line-clamp-2">
+                      {heroTitle}
+                    </h3>
                   </Link>
 
-                  <button
-                    type="button"
-                    onClick={(e) => handleDismiss(hero, e)}
-                    className="w-10 h-10 rounded-full bg-black/60 hover:bg-red-500/20 text-zinc-300 hover:text-red-400 border border-white/20 hover:border-red-400/40 backdrop-blur-md inline-flex items-center justify-center transition-all"
-                    title="Não tenho interesse (ocultar por 6 meses)"
-                  >
-                    <EyeOff className="w-4 h-4" />
-                  </button>
+                  {heroOverview && (
+                    <p className="text-sm text-zinc-300 line-clamp-2 mb-3.5 max-w-2xl leading-relaxed">
+                      {heroOverview}
+                    </p>
+                  )}
+
+                  {/* Bloco de Explicabilidade */}
+                  {hero.match_tags && hero.match_tags.length > 0 && (
+                    <div className="p-3 rounded-xl bg-white/[0.07] border border-white/15 backdrop-blur-md mb-4">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                        Por que foi escolhido para você
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {hero.match_tags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border",
+                              isHighlightedTag(tag)
+                                ? "bg-amber-500/15 border-amber-400/35 text-amber-200"
+                                : "bg-white/10 border-white/15 text-zinc-100"
+                            )}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ações do Spotlight */}
+                  <div className="flex items-center flex-wrap gap-2.5">
+                    <AddToListButton
+                      tmdb_id={hero.id}
+                      media_type="movie"
+                      title={heroTitle}
+                      poster_path={hero.poster_path}
+                      backdrop_path={hero.backdrop_path}
+                      release_date={hero.release_date}
+                      showLabel
+                      addLabel="Quero Assistir"
+                    />
+
+                    <Link
+                      href={`/movie/${hero.id}`}
+                      prefetch={false}
+                      className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-semibold bg-white/12 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md transition-colors"
+                    >
+                      <span>Ver Detalhes</span>
+                      <ArrowUpRight className="w-4 h-4 opacity-80" />
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleDismiss(hero, e)}
+                      className="w-10 h-10 rounded-full bg-black/60 hover:bg-red-500/20 text-zinc-300 hover:text-red-400 border border-white/20 hover:border-red-400/40 backdrop-blur-md inline-flex items-center justify-center transition-all"
+                      title="Não tenho interesse (ocultar por 6 meses)"
+                    >
+                      <EyeOff className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </article>
+            </article>
 
-          {/* Coluna Lateral Direita: Pódio #2 e #3 (No mobile vira trilho horizontal snap com peek; no desktop mantém coluna Bento) */}
-          {duo.length > 0 && (
-            <div className="lg:col-span-5 flex overflow-x-auto snap-x snap-mandatory gap-3 pb-1 -mx-4 px-4 scrollbar-none sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-2 lg:flex lg:flex-col lg:gap-4 lg:overflow-visible">
-              {duo.map((item, idx) => {
-                const cached = bentoMetaCache.get(item.id);
+            {/* Coluna Lateral Direita: Pódio #2 e #3 */}
+            {duo.length > 0 && (
+              <div className="col-span-5 flex flex-col gap-4">
+                {duo.map((item, idx) => {
+                  const cached = bentoMetaCache.get(item.id);
+                  const title = item.title || item.name || "Filme";
+                  const year = extractYear(item);
+                  const runtime = formatMinutes(item.runtime) || cached?.runtimeText;
+                  const genres = extractGenres(item, cached);
+                  const overview = item.overview?.trim() || cached?.overview || "";
+                  const rankNumber = safeBatchIndex * BATCH_SIZE + idx + 2;
+                  const primaryTag = item.match_tags?.[0];
+                  const secondaryTag = item.match_tags?.[1];
+
+                  return (
+                    <article
+                      key={item.id}
+                      className={cn(
+                        "flex-1 relative rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/60 p-3.5 flex gap-3.5 isolate group transition-all duration-300 hover:-translate-y-0.5 shadow-md",
+                        hiddenIds.has(item.id) && "opacity-0 scale-95 pointer-events-none"
+                      )}
+                    >
+                      {/* Fundo Ambiente Sutil com Backdrop */}
+                      {item.backdrop_path && (
+                        <div className="absolute inset-0 -z-20 opacity-15 dark:opacity-20 pointer-events-none">
+                          <PosterImage
+                            src={item.backdrop_path}
+                            alt=""
+                            tmdbSize="w780"
+                            className="blur-[2px] group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-card via-card/90 to-card/75 pointer-events-none" />
+
+                      {/* Pôster Vertical 2:3 */}
+                      <Link
+                        href={`/movie/${item.id}`}
+                        prefetch={false}
+                        className="relative w-[104px] aspect-[2/3] rounded-xl overflow-hidden border border-border shrink-0"
+                      >
+                        <PosterImage
+                          src={item.poster_path}
+                          fallbackSrc={item.backdrop_path}
+                          alt={title}
+                          title={title}
+                          type="movie"
+                          tmdbSize="w342"
+                          className="group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <span className="absolute top-1.5 left-1.5 z-20 px-1.5 py-0.5 rounded-md bg-black/80 text-white text-[10px] font-extrabold backdrop-blur-sm">
+                          #{rankNumber}
+                        </span>
+                      </Link>
+
+                      {/* Corpo Editorial */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary text-primary-foreground text-xs font-extrabold shadow-sm">
+                              <Zap className="w-3 h-3 fill-current" />
+                              {Math.round(item.match_score)}% Match
+                            </span>
+                            <span className="text-[11px] text-muted-foreground font-semibold truncate">
+                              {[year, runtime].filter(Boolean).join(" • ")}
+                            </span>
+                          </div>
+
+                          <Link href={`/movie/${item.id}`} prefetch={false}>
+                            <h3 className="text-base font-extrabold leading-snug tracking-tight text-foreground hover:text-primary transition-colors line-clamp-1">
+                              {title}
+                            </h3>
+                          </Link>
+
+                          {genres.length > 0 && (
+                            <p className="text-xs text-muted-foreground truncate mb-1.5">
+                              {genres.join(" • ")}
+                            </p>
+                          )}
+
+                          {overview && (
+                            <p className="line-clamp-2 text-xs text-muted-foreground mb-2 leading-relaxed">
+                              {overview}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Rodapé: Motivos + Ações Rápidas */}
+                        <div className="flex items-center justify-between gap-2 pt-1 mt-auto">
+                          <div className="flex flex-wrap gap-1 min-w-0 overflow-hidden">
+                            {primaryTag && (
+                              <span
+                                className={cn(
+                                  "px-2 py-0.5 rounded-md text-[11px] font-semibold border truncate max-w-full",
+                                  isHighlightedTag(primaryTag)
+                                    ? "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-300"
+                                    : "bg-secondary border-border text-foreground"
+                                )}
+                                title={primaryTag}
+                              >
+                                {primaryTag}
+                              </span>
+                            )}
+                            {secondaryTag && (
+                              <span
+                                className="hidden xl:inline-block px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-secondary border border-border text-muted-foreground truncate"
+                                title={secondaryTag}
+                              >
+                                {secondaryTag}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <AddToListButton
+                              tmdb_id={item.id}
+                              media_type="movie"
+                              title={title}
+                              poster_path={item.poster_path}
+                              backdrop_path={item.backdrop_path}
+                              release_date={item.release_date}
+                              className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4"
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => handleDismiss(item, e)}
+                              className="w-8 h-8 rounded-full bg-secondary hover:bg-red-500/15 text-muted-foreground hover:text-red-400 border border-border hover:border-red-400/40 inline-flex items-center justify-center transition-colors"
+                              title="Não tenho interesse"
+                            >
+                              <EyeOff className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Prateleira Inferior: #4 a #8 (grade 5 colunas no desktop) */}
+          {shelf.length > 0 && (
+            <div className="grid grid-cols-5 gap-3.5">
+              {shelf.map((item, idx) => {
                 const title = item.title || item.name || "Filme";
                 const year = extractYear(item);
-                const runtime = formatMinutes(item.runtime) || cached?.runtimeText;
-                const genres = extractGenres(item, cached);
-                const overview = item.overview?.trim() || cached?.overview || "";
-                const rankNumber = safeBatchIndex * BATCH_SIZE + idx + 2;
-                const primaryTag = item.match_tags?.[0];
-                const secondaryTag = item.match_tags?.[1];
+                const genres = extractGenres(item);
+                const rankNumber = safeBatchIndex * BATCH_SIZE + idx + 4;
+                const leadReason = item.match_tags?.[0] || "✨ Compatível com você";
 
                 return (
                   <article
                     key={item.id}
                     className={cn(
-                      "w-[84vw] max-w-[330px] sm:w-auto sm:max-w-none shrink-0 snap-start lg:flex-1 relative rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/60 p-3 sm:p-3.5 flex gap-3 sm:gap-3.5 isolate group transition-all duration-300 hover:-translate-y-0.5 shadow-md",
-                      hiddenIds.has(item.id) && "opacity-0 scale-95 pointer-events-none"
+                      "rounded-2xl bg-card border border-border hover:border-primary/60 overflow-hidden flex flex-col group transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-lg",
+                      hiddenIds.has(item.id) && "opacity-0 scale-90 pointer-events-none"
                     )}
                   >
-                    {/* Fundo Ambiente Sutil com Backdrop */}
-                    {item.backdrop_path && (
-                      <div className="absolute inset-0 -z-20 opacity-15 dark:opacity-20 pointer-events-none">
-                        <PosterImage
-                          src={item.backdrop_path}
-                          alt=""
-                          tmdbSize="w780"
-                          className="blur-[2px] group-hover:scale-105 transition-transform duration-500"
-                        />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 -z-10 bg-gradient-to-r from-card via-card/90 to-card/75 pointer-events-none" />
-
-                    {/* Pôster Vertical 2:3 */}
                     <Link
                       href={`/movie/${item.id}`}
                       prefetch={false}
-                      className="relative w-24 sm:w-[104px] aspect-[2/3] rounded-xl overflow-hidden border border-border shrink-0"
+                      className="relative aspect-[16/10] overflow-hidden bg-zinc-900 block"
                     >
                       <PosterImage
-                        src={item.poster_path}
-                        fallbackSrc={item.backdrop_path}
+                        src={item.backdrop_path || item.poster_path}
+                        fallbackSrc={item.poster_path}
                         alt={title}
                         title={title}
                         type="movie"
-                        tmdbSize="w342"
-                        className="group-hover:scale-105 transition-transform duration-300"
+                        tmdbSize="w780"
+                        className="group-hover:scale-105 transition-transform duration-500"
                       />
-                      <span className="absolute top-1.5 left-1.5 z-20 px-1.5 py-0.5 rounded-md bg-black/80 text-white text-[10px] font-extrabold backdrop-blur-sm">
-                        #{rankNumber}
-                      </span>
-                    </Link>
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/75 z-10 pointer-events-none" />
 
-                    {/* Corpo Editorial */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary text-primary-foreground text-xs font-extrabold shadow-sm">
-                            <Zap className="w-3 h-3 fill-current" />
-                            {Math.round(item.match_score)}% Match
-                          </span>
-                          <span className="text-[11px] text-muted-foreground font-semibold truncate">
-                            {[year, runtime].filter(Boolean).join(" • ")}
-                          </span>
-                        </div>
+                      <div className="absolute top-2 left-2 right-2 z-20 flex items-center justify-between gap-1">
+                        <span className="px-2 py-0.5 rounded-md bg-primary/95 text-primary-foreground text-[11px] font-extrabold shadow">
+                          #{rankNumber} • {Math.round(item.match_score)}%
+                        </span>
 
-                        <Link href={`/movie/${item.id}`} prefetch={false}>
-                          <h3 className="text-base font-extrabold leading-snug tracking-tight text-foreground hover:text-primary transition-colors line-clamp-1">
-                            {title}
-                          </h3>
-                        </Link>
-
-                        {genres.length > 0 && (
-                          <p className="text-xs text-muted-foreground truncate mb-1.5">
-                            {genres.join(" • ")}
-                          </p>
-                        )}
-
-                        {overview && (
-                          <p className="hidden sm:line-clamp-2 text-xs text-muted-foreground mb-2 leading-relaxed">
-                            {overview}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Rodapé: Motivos + Ações Rápidas */}
-                      <div className="flex items-center justify-between gap-2 pt-1 mt-auto">
-                        <div className="flex flex-wrap gap-1 min-w-0 overflow-hidden">
-                          {primaryTag && (
-                            <span
-                              className={cn(
-                                "px-2 py-0.5 rounded-md text-[11px] font-semibold border truncate max-w-full",
-                                isHighlightedTag(primaryTag)
-                                  ? "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-300"
-                                  : "bg-secondary border-border text-foreground"
-                              )}
-                              title={primaryTag}
-                            >
-                              {primaryTag}
-                            </span>
-                          )}
-                          {secondaryTag && (
-                            <span
-                              className="hidden xl:inline-block px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-secondary border border-border text-muted-foreground truncate"
-                              title={secondaryTag}
-                            >
-                              {secondaryTag}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div
+                          className="flex items-center gap-1"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        >
                           <AddToListButton
                             tmdb_id={item.id}
                             media_type="movie"
@@ -664,17 +821,43 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
                             poster_path={item.poster_path}
                             backdrop_path={item.backdrop_path}
                             release_date={item.release_date}
-                            className="w-8 h-8 [&>svg]:w-4 [&>svg]:h-4"
+                            className="w-7 h-7 [&>svg]:w-3.5 [&>svg]:h-3.5"
                           />
                           <button
                             type="button"
                             onClick={(e) => handleDismiss(item, e)}
-                            className="w-8 h-8 rounded-full bg-secondary hover:bg-red-500/15 text-muted-foreground hover:text-red-400 border border-border hover:border-red-400/40 inline-flex items-center justify-center transition-colors"
+                            className="w-7 h-7 rounded-full bg-black/65 hover:bg-red-500/25 text-zinc-200 hover:text-red-400 border border-white/20 backdrop-blur-md inline-flex items-center justify-center transition-colors"
                             title="Não tenho interesse"
                           >
                             <EyeOff className="w-3.5 h-3.5" />
                           </button>
                         </div>
+                      </div>
+                    </Link>
+
+                    <div className="p-3 flex flex-col gap-1.5 flex-1">
+                      <Link href={`/movie/${item.id}`} prefetch={false}>
+                        <h4 className="text-sm font-bold leading-snug text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                          {title}
+                        </h4>
+                      </Link>
+
+                      {(year || genres.length > 0) && (
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {[year, genres.slice(0, 2).join(", ")].filter(Boolean).join(" • ")}
+                        </p>
+                      )}
+
+                      <div
+                        className={cn(
+                          "mt-auto px-2 py-1 rounded-md text-[10.5px] font-semibold border truncate",
+                          isHighlightedTag(leadReason)
+                            ? "bg-amber-500/12 border-amber-500/25 text-amber-600 dark:text-amber-300"
+                            : "bg-secondary border-border text-foreground"
+                        )}
+                        title={leadReason}
+                      >
+                        {leadReason}
                       </div>
                     </div>
                   </article>
@@ -684,103 +867,21 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
           )}
         </div>
 
-        {/* Prateleira Inferior: #4 a #8 (Trilho horizontal snap no mobile/tablet; grade 5 colunas no desktop) */}
-        {shelf.length > 0 && (
-          <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-1 -mx-4 px-4 scrollbar-none lg:mx-0 lg:px-0 lg:pb-0 lg:grid lg:grid-cols-5 lg:gap-3.5 lg:overflow-visible">
-            {shelf.map((item, idx) => {
-              const title = item.title || item.name || "Filme";
-              const year = extractYear(item);
-              const genres = extractGenres(item);
-              const rankNumber = safeBatchIndex * BATCH_SIZE + idx + 4;
-              const leadReason = item.match_tags?.[0] || "✨ Compatível com você";
-
-              return (
-                <article
-                  key={item.id}
-                  className={cn(
-                    "w-[64vw] max-w-[235px] sm:w-[215px] sm:max-w-none lg:w-auto shrink-0 snap-start rounded-2xl bg-card border border-border hover:border-primary/60 overflow-hidden flex flex-col group transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-lg",
-                    hiddenIds.has(item.id) && "opacity-0 scale-90 pointer-events-none"
-                  )}
-                >
-                  <Link
-                    href={`/movie/${item.id}`}
-                    prefetch={false}
-                    className="relative aspect-[16/10] overflow-hidden bg-zinc-900 block"
-                  >
-                    <PosterImage
-                      src={item.backdrop_path || item.poster_path}
-                      fallbackSrc={item.poster_path}
-                      alt={title}
-                      title={title}
-                      type="movie"
-                      tmdbSize="w780"
-                      className="group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/75 z-10 pointer-events-none" />
-
-                    <div className="absolute top-2 left-2 right-2 z-20 flex items-center justify-between gap-1">
-                      <span className="px-2 py-0.5 rounded-md bg-primary/95 text-primary-foreground text-[11px] font-extrabold shadow">
-                        #{rankNumber} • {Math.round(item.match_score)}%
-                      </span>
-
-                      <div
-                        className="flex items-center gap-1"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                      >
-                        <AddToListButton
-                          tmdb_id={item.id}
-                          media_type="movie"
-                          title={title}
-                          poster_path={item.poster_path}
-                          backdrop_path={item.backdrop_path}
-                          release_date={item.release_date}
-                          className="w-7 h-7 [&>svg]:w-3.5 [&>svg]:h-3.5"
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => handleDismiss(item, e)}
-                          className="w-7 h-7 rounded-full bg-black/65 hover:bg-red-500/25 text-zinc-200 hover:text-red-400 border border-white/20 backdrop-blur-md inline-flex items-center justify-center transition-colors"
-                          title="Não tenho interesse"
-                        >
-                          <EyeOff className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </Link>
-
-                  <div className="p-3 flex flex-col gap-1.5 flex-1">
-                    <Link href={`/movie/${item.id}`} prefetch={false}>
-                      <h4 className="text-xs md:text-sm font-bold leading-snug text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                        {title}
-                      </h4>
-                    </Link>
-
-                    {(year || genres.length > 0) && (
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {[year, genres.slice(0, 2).join(", ")].filter(Boolean).join(" • ")}
-                      </p>
-                    )}
-
-                    <div
-                      className={cn(
-                        "mt-auto px-2 py-1 rounded-md text-[10.5px] font-semibold border truncate",
-                        isHighlightedTag(leadReason)
-                          ? "bg-amber-500/12 border-amber-500/25 text-amber-600 dark:text-amber-300"
-                          : "bg-secondary border-border text-foreground"
-                      )}
-                      title={leadReason}
-                    >
-                      {leadReason}
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
+        {/* ====================================================================
+            LAYOUT MOBILE (< lg): carrossel de cards com peek + bottom sheet de ações
+            ==================================================================== */}
+        <MobileRecoCarousel
+          items={mobileItems}
+          rankOffset={safeBatchIndex * BATCH_SIZE}
+          resetKey={`${safeBatchIndex}-${currentBatch[0]?.id ?? 0}`}
+          topLabel={(i) => (i === 0 ? "ESCOLHA PRINCIPAL" : "")}
+          onActiveChange={setActiveSlideIdx}
+          onDismiss={(mi) => {
+            const src = moviesList.find((m) => m.id === mi.id);
+            if (src) handleDismiss(src, { preventDefault() {}, stopPropagation() {} } as React.MouseEvent);
+          }}
+          hiddenIds={hiddenIds}
+        />
       </div>
     </section>
   );

@@ -15,6 +15,7 @@ import {
   Sparkles,
   ArrowRightLeft,
   EyeOff,
+  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RecommendationItem } from "@/types/recommendation";
@@ -24,6 +25,13 @@ import { useMyListStore } from "@/store/useMyListStore";
 import { useExploreStore } from "@/store/useExploreStore";
 import { api } from "@/lib/axios";
 import { toast } from "@/components/ui/toast";
+import {
+  MobileActionSheet,
+  MobileSectionHeader,
+  MobileSegmented,
+  routeFor,
+  type MobileCardItem,
+} from "./mobile/mobile-kit";
 
 interface UpcomingTimelineRadarProps {
   movies: RecommendationItem[];
@@ -122,6 +130,204 @@ function enrichItems(
       };
     })
     .sort((a, b) => a.releaseTimestamp - b.releaseTimestamp);
+}
+
+const PT_MONTHS_LONG = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+function groupLabel(item: EnrichedRadarItem): string {
+  if (item.daysUntil < 0) return "Já estreou";
+  if (item.daysUntil <= 7) return "Esta semana";
+  if (item.daysUntil <= 30) return "Próximos 30 dias";
+  return `${PT_MONTHS_LONG[item.parsedDate.getMonth()]} ${item.year}`;
+}
+
+const AGENDA_PAGE = 6;
+
+interface MobileAgendaProps {
+  all: EnrichedRadarItem[];
+  movies: EnrichedRadarItem[];
+  series: EnrichedRadarItem[];
+  myListItems: Record<number, unknown>;
+  onToggleRadar: (item: EnrichedRadarItem, e: React.MouseEvent) => void;
+  onDismiss: (item: EnrichedRadarItem, e: React.MouseEvent) => void;
+}
+
+const fakeEvent = { preventDefault() {}, stopPropagation() {} } as React.MouseEvent;
+
+/** Agenda mobile (< lg): lista vertical agrupada por período, ações de 44px e bottom sheet. */
+function MobileAgenda({ all, movies, series, myListItems, onToggleRadar, onDismiss }: MobileAgendaProps) {
+  const [filter, setFilter] = useState<"all" | "movie" | "tv">("all");
+  const [visible, setVisible] = useState(AGENDA_PAGE);
+  const [sheetItem, setSheetItem] = useState<MobileCardItem | null>(null);
+  const closeSheet = useCallback(() => setSheetItem(null), []);
+
+  const list = filter === "movie" ? movies : filter === "tv" ? series : all;
+  const shown = list.slice(0, visible);
+
+  const groups = useMemo(() => {
+    const out: { label: string; items: EnrichedRadarItem[] }[] = [];
+    for (const it of shown) {
+      const label = groupLabel(it);
+      const last = out[out.length - 1];
+      if (last && last.label === label) last.items.push(it);
+      else out.push({ label, items: [it] });
+    }
+    return out;
+  }, [shown]);
+
+  const toCard = (it: EnrichedRadarItem): MobileCardItem => ({
+    id: it.id,
+    title: it.title || it.name || "Sem título",
+    mediaType: it.media_type === "movie" ? "movie" : "tv",
+    poster_path: it.poster_path,
+    backdrop_path: it.backdrop_path,
+    release_date: it.release_date || it.first_air_date,
+    matchScore: it.match_score,
+    meta: `${it.media_type === "movie" ? "Filme" : "Série"} • ${it.formattedDate}`,
+  });
+
+  return (
+    <section className="lg:hidden mb-10">
+      <MobileSectionHeader
+        emoji="🗓️"
+        title="Próximas Estreias"
+        badge={String(all.length)}
+        subtitle="Filmes e séries que chegam em breve, na ordem de estreia."
+      />
+
+      <MobileSegmented
+        value={filter}
+        onChange={(v) => {
+          setFilter(v);
+          setVisible(AGENDA_PAGE);
+        }}
+        options={[
+          { value: "all", label: `Todos ${all.length}` },
+          { value: "movie", label: `Filmes ${movies.length}` },
+          { value: "tv", label: `Séries ${series.length}` },
+        ]}
+        className="mb-4"
+      />
+
+      {list.length === 0 ? (
+        <div className="py-8 text-center text-sm text-muted-foreground bg-secondary/30 rounded-2xl border border-dashed border-border">
+          Nenhum lançamento nesta categoria.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5">
+          {groups.map((g) => (
+            <div key={g.label}>
+              <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground mb-2 px-1 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                {g.label}
+              </h3>
+              <ul className="flex flex-col rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border/70">
+                {g.items.map((it) => {
+                  const card = toCard(it);
+                  const saved = Boolean(myListItems[it.id]);
+                  return (
+                    <li key={`${it.media_type}-${it.id}`} className="flex items-stretch gap-3 p-3">
+                      <Link
+                        href={routeFor(card)}
+                        prefetch={false}
+                        className="relative w-16 aspect-[2/3] rounded-xl overflow-hidden border border-border bg-zinc-900 shrink-0"
+                      >
+                        <PosterImage
+                          src={it.poster_path}
+                          fallbackSrc={it.backdrop_path}
+                          alt={card.title}
+                          title={card.title}
+                          type={card.mediaType}
+                          tmdbSize="w185"
+                        />
+                        <span
+                          className={cn(
+                            "absolute inset-x-0 bottom-0 py-1 text-center leading-none backdrop-blur-sm",
+                            it.imminent ? "bg-sky-500/90 text-white" : "bg-black/75 text-white"
+                          )}
+                        >
+                          <span className="block text-[15px] font-black">{it.day}</span>
+                          <span className="block text-[9px] font-bold tracking-wider">{it.month}</span>
+                        </span>
+                      </Link>
+
+                      <Link href={routeFor(card)} prefetch={false} className="flex-1 min-w-0 py-0.5 flex flex-col justify-center">
+                        <span className="text-[11px] font-semibold text-sky-400 mb-0.5 truncate">
+                          {it.urgencyLabel}
+                        </span>
+                        <h4 className="text-[15px] font-extrabold leading-snug line-clamp-2">{card.title}</h4>
+                        <span className="text-[11.5px] text-muted-foreground mt-1 truncate">
+                          {card.mediaType === "movie" ? "Filme" : "Série"}
+                          {typeof it.match_score === "number" && ` • ${Math.round(it.match_score)}% match`}
+                        </span>
+                      </Link>
+
+                      <div className="flex flex-col justify-between shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => onToggleRadar(it, e)}
+                          aria-label={saved ? "Remover do Radar" : "Aguardar estreia"}
+                          aria-pressed={saved}
+                          className={cn(
+                            "w-11 h-11 rounded-xl inline-flex items-center justify-center border transition active:scale-95",
+                            saved
+                              ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-500"
+                              : "bg-primary/10 border-primary/35 text-primary"
+                          )}
+                        >
+                          {saved ? <Check className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSheetItem(card)}
+                          aria-label={`Mais opções para ${card.title}`}
+                          className="w-11 h-11 rounded-xl inline-flex items-center justify-center text-muted-foreground active:bg-accent/60"
+                        >
+                          <MoreHorizontal className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+
+          {visible < list.length && (
+            <button
+              type="button"
+              onClick={() => setVisible((v) => v + AGENDA_PAGE + 2)}
+              className="min-h-12 rounded-2xl bg-secondary border border-border text-sm font-bold active:scale-[0.98] transition"
+            >
+              Ver mais ({list.length - visible})
+            </button>
+          )}
+        </div>
+      )}
+
+      <MobileActionSheet
+        item={sheetItem}
+        onClose={closeSheet}
+        onDismiss={(mi) => {
+          const src = list.find((x) => x.id === mi.id);
+          if (src) onDismiss(src, fakeEvent);
+        }}
+      />
+    </section>
+  );
 }
 
 export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
@@ -451,7 +657,16 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
   const seriesCount = enrichedSeries.length;
 
   return (
-    <section className="mb-12 flex flex-col gap-5">
+    <>
+    <MobileAgenda
+      all={enrichedAll}
+      movies={enrichedMovies}
+      series={enrichedSeries}
+      myListItems={myListItems}
+      onToggleRadar={handleToggleRadar}
+      onDismiss={handleDismiss}
+    />
+    <section className="hidden lg:flex mb-12 flex-col gap-5">
       {/* Cabeçalho da Seção */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
@@ -550,5 +765,6 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
         )
       )}
     </section>
+    </>
   );
 });

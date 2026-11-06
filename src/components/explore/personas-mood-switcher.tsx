@@ -17,6 +17,11 @@ import { AddToListButton } from "@/components/shared/AddToListButton";
 import { api } from "@/lib/axios";
 import { toast } from "@/components/ui/toast";
 import { useExploreStore } from "@/store/useExploreStore";
+import {
+  MobilePosterRail,
+  MobileSectionHeader,
+  type MobileCardItem,
+} from "./mobile/mobile-kit";
 
 interface PersonasMoodSwitcherProps {
   personas: PersonaCarousel[];
@@ -136,7 +141,99 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
   const isLeadDismissing = leadItem ? dismissedIds.has(leadItem.id) : false;
 
   return (
-    <section className="mb-12 flex flex-col gap-6">
+    <>
+    {/* ===== MOBILE (< lg): chips de faceta + trilho de pôsteres ===== */}
+    <section className="lg:hidden mb-10">
+      <MobileSectionHeader
+        emoji="🎭"
+        title="Suas Facetas de Gosto"
+        badge={`${personas.length}`}
+        subtitle="Escolha um humor e veja sugestões afinadas com o seu histórico."
+      />
+
+      <div
+        role="tablist"
+        aria-label="Facetas de gosto"
+        className="flex gap-2 overflow-x-auto scrollbar-none snap-x -mx-4 px-4 scroll-px-4 pb-1 mb-4"
+      >
+        {personas.map((p) => {
+          const isActive = p.id === currentPersona.id;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => handleSelectPersona(p.id)}
+              className={cn(
+                "snap-start shrink-0 min-h-11 pl-3 pr-4 rounded-full border inline-flex items-center gap-2 text-sm font-bold transition-all active:scale-95",
+                isActive
+                  ? "bg-primary text-primary-foreground border-primary shadow-md"
+                  : "bg-card text-foreground border-border"
+              )}
+            >
+              <span className="text-lg leading-none">{p.emoji}</span>
+              <span className="whitespace-nowrap">{p.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        className={cn(
+          "transition-all duration-200",
+          isTransitioning ? "opacity-35 translate-y-1 pointer-events-none" : "opacity-100 translate-y-0"
+        )}
+      >
+        <div className="mb-4 px-1">
+          {currentPersona.tagline && (
+            <p className="text-sm font-semibold text-primary italic leading-snug">&ldquo;{currentPersona.tagline}&rdquo;</p>
+          )}
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            {currentPersona.top_genres.slice(0, 3).join(" • ")} • baseada em{" "}
+            <strong className="text-foreground">{currentPersona.item_count} obras</strong> que você assistiu
+            {currentPersona.sample_titles && currentPersona.sample_titles.length > 0 && (
+              <>
+                {" "}
+                (ex.: {currentPersona.sample_titles.slice(0, 2).join(", ")})
+              </>
+            )}
+          </p>
+        </div>
+
+        {recommendations.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground bg-secondary/30 rounded-2xl border border-dashed border-border">
+            Você já explorou ou dispensou todas as sugestões desta faceta.
+          </div>
+        ) : (
+          <MobilePosterRail
+            featureFirst
+            items={recommendations.slice(0, 10).map<MobileCardItem>((it) => {
+              const mt = it.media_type === "tv" ? "tv" : "movie";
+              const tag = it.match_tags?.[0];
+              return {
+                id: it.id,
+                title: it.title || it.name || "Sem título",
+                mediaType: mt,
+                poster_path: it.poster_path,
+                backdrop_path: it.backdrop_path,
+                release_date: it.release_date || it.first_air_date,
+                matchScore: it.match_score,
+                meta: [mt === "movie" ? "Filme" : "Série", extractYear(it)].filter(Boolean).join(" • "),
+                tag,
+              };
+            })}
+            hiddenIds={dismissedIds}
+            onDismiss={(mi) => {
+              const src = recommendations.find((r) => r.id === mi.id);
+              if (src) handleDismiss(src, { preventDefault() {}, stopPropagation() {} } as React.MouseEvent);
+            }}
+          />
+        )}
+      </div>
+    </section>
+
+    <section className="hidden lg:flex mb-12 flex-col gap-6">
       {/* Cabeçalho da Seção */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
@@ -498,5 +595,6 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
         )}
       </div>
     </section>
+    </>
   );
 });
