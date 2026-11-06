@@ -273,10 +273,12 @@ export function MobileRecoCarousel({
   const railRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const [active, setActive] = useState(0);
+  const activeRef = useRef(0);
   const [sheetItem, setSheetItem] = useState<MobileCardItem | null>(null);
   const closeSheet = useCallback(() => setSheetItem(null), []);
 
   useEffect(() => {
+    activeRef.current = 0;
     onActiveChange?.(0);
     railRef.current?.scrollTo({ left: 0, behavior: "instant" as ScrollBehavior });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -305,10 +307,11 @@ export function MobileRecoCarousel({
           best = i;
         }
       }
-      setActive((prev) => {
-        if (prev !== best) onActiveChange?.(best);
-        return best;
-      });
+      if (best !== activeRef.current) {
+        activeRef.current = best;
+        setActive(best);
+        onActiveChange?.(best);
+      }
     });
   }, [onActiveChange]);
 
