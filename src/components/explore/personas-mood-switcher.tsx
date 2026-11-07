@@ -17,6 +17,7 @@ import { AddToListButton } from "@/components/shared/AddToListButton";
 import { api } from "@/lib/axios";
 import { toast } from "@/components/ui/toast";
 import { useExploreStore } from "@/store/useExploreStore";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import {
   MobilePosterRail,
   MobileSectionHeader,
@@ -60,7 +61,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
-  const subRailRef = useRef<HTMLDivElement | null>(null);
+  const subRailRef = useDragScroll<HTMLDivElement>("x");
 
   const currentPersona = useMemo(() => {
     return personas.find((p) => p.id === activePersonaId) || personas[0];
@@ -131,7 +132,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
   );
 
   const leadItem = recommendations[0];
-  const secondaryItems = recommendations.slice(1, 5);
+  const secondaryItems = recommendations.slice(1);
 
   const leadMediaType = (leadItem?.media_type === "tv" ? "tv" : "movie") as "movie" | "tv";
   const leadTitle = leadItem?.title || leadItem?.name || "Sem título";
@@ -504,7 +505,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
             {/* Trilho Responsivo (Grid no Desktop / Snap-x no Mobile) */}
             <div
               ref={subRailRef}
-              className="flex lg:grid lg:grid-cols-4 gap-3.5 overflow-x-auto hide-scrollbar snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0 py-1"
+              className="flex gap-3.5 overflow-x-auto hide-scrollbar snap-x snap-mandatory scroll-smooth -mx-4 px-4 sm:mx-0 sm:px-0 py-1"
             >
               {secondaryItems.map((item) => {
                 const itemMediaType = (item.media_type === "tv" ? "tv" : "movie") as "movie" | "tv";
@@ -518,7 +519,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
                   <article
                     key={`${itemMediaType}-${item.id}`}
                     className={cn(
-                      "flex-[0_0_68%] sm:flex-[0_0_45%] lg:flex-1 snap-start rounded-xl overflow-hidden border border-border bg-card-elevated hover:border-primary/60 transition-all duration-300 flex flex-col justify-between group shadow-sm hover:shadow-md",
+                      "flex-[0_0_68%] sm:flex-[0_0_45%] lg:flex-[0_0_calc((100%-2.625rem)/4)] snap-start rounded-xl overflow-hidden border border-border bg-card-elevated hover:border-primary/60 transition-all duration-300 flex flex-col justify-between group shadow-sm hover:shadow-md",
                       isItemDismissing && "opacity-0 scale-95 pointer-events-none"
                     )}
                   >

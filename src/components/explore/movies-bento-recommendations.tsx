@@ -18,6 +18,7 @@ import { toast } from "@/components/ui/toast";
 import { api } from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { useExploreStore } from "@/store/useExploreStore";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { MovieDetailsResponse } from "@/types/details";
 import {
   MobileRecoCarousel,
@@ -34,6 +35,42 @@ interface EnrichedBentoMeta {
   overview: string | null;
   runtimeText: string | null;
   genres: string[];
+}
+
+/** Prateleira desktop continua: rolagem horizontal com snap e setas (sem troca de lote). */
+function DesktopShelf({ children }: { children: React.ReactNode }) {
+  const ref = useDragScroll<HTMLDivElement>("x");
+  const scrollBy = (dir: 1 | -1) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: "smooth" });
+  };
+  return (
+    <div className="relative group/shelf">
+      <div
+        ref={ref}
+        className="flex gap-3.5 overflow-x-auto snap-x snap-mandatory scroll-smooth cursor-grab pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {children}
+      </div>
+      <button
+        type="button"
+        onClick={() => scrollBy(-1)}
+        aria-label="Rolar para a esquerda"
+        className="absolute left-0 top-[35%] -translate-x-1/2 z-30 w-9 h-9 rounded-full bg-background/90 border border-border shadow-md inline-flex items-center justify-center opacity-0 group-hover/shelf:opacity-100 transition-opacity hover:border-primary/60"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => scrollBy(1)}
+        aria-label="Rolar para a direita"
+        className="absolute right-0 top-[35%] translate-x-1/2 z-30 w-9 h-9 rounded-full bg-background/90 border border-border shadow-md inline-flex items-center justify-center opacity-0 group-hover/shelf:opacity-100 transition-opacity hover:border-primary/60"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+    </div>
+  );
 }
 
 const BATCH_SIZE = 8;
@@ -349,9 +386,10 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     return null;
   }
 
-  const hero = currentBatch[0];
-  const duo = currentBatch.slice(1, 3);
-  const shelf = currentBatch.slice(3, 8);
+  // Desktop: lista continua (sem lotes) - destaque #1, podio #2/#3 e prateleira rolavel com o restante
+  const hero = moviesList[0];
+  const duo = moviesList.slice(1, 3);
+  const shelf = moviesList.slice(3);
 
   const heroCached = bentoMetaCache.get(hero.id);
   const heroTitle = hero.title || hero.name || "Filme";
@@ -401,51 +439,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {totalBatches > 1 && (
-            <div className="inline-flex items-center rounded-xl bg-secondary/80 border border-border p-0.5 shadow-sm">
-              <button
-                type="button"
-                onClick={handlePrevBatch}
-                disabled={isRefreshingMovies}
-                className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all active:scale-95 disabled:opacity-40"
-                title="Voltar ao lote anterior"
-                aria-label="Voltar ao lote anterior"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-
-              <span className="font-mono text-xs text-muted-foreground px-2 py-0.5 select-none font-medium whitespace-nowrap">
-                Lote {safeBatchIndex + 1}/{totalBatches}
-                <span className="hidden sm:inline"> • {moviesList.length} sugestões</span>
-              </span>
-
-              <button
-                type="button"
-                onClick={handleCycleBatch}
-                disabled={isRefreshingMovies}
-                className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all active:scale-95 disabled:opacity-40"
-                title="Avançar para o próximo lote"
-                aria-label="Avançar para o próximo lote"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {totalBatches > 1 && (
-            <button
-              type="button"
-              onClick={handleCycleBatch}
-              disabled={isRefreshingMovies}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-semibold bg-secondary hover:bg-accent text-foreground border border-border hover:border-primary/40 transition-all active:scale-[0.98] disabled:opacity-50"
-              title="Alternar para o próximo lote de sugestões já calculadas"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-primary" />
-              <span>Alternar Lote</span>
-            </button>
-          )}
-
-          {showFreshPoolAction && (
+          {(
             <button
               type="button"
               onClick={handleGenerateFreshSuggestions}
@@ -637,7 +631,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
                   const runtime = formatMinutes(item.runtime) || cached?.runtimeText;
                   const genres = extractGenres(item, cached);
                   const overview = item.overview?.trim() || cached?.overview || "";
-                  const rankNumber = safeBatchIndex * BATCH_SIZE + idx + 2;
+                  const rankNumber = idx + 2;
                   const primaryTag = item.match_tags?.[0];
                   const secondaryTag = item.match_tags?.[1];
 
@@ -770,19 +764,19 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
 
           {/* Prateleira Inferior: #4 a #8 (grade 5 colunas no desktop) */}
           {shelf.length > 0 && (
-            <div className="grid grid-cols-5 gap-3.5">
+            <DesktopShelf>
               {shelf.map((item, idx) => {
                 const title = item.title || item.name || "Filme";
                 const year = extractYear(item);
                 const genres = extractGenres(item);
-                const rankNumber = safeBatchIndex * BATCH_SIZE + idx + 4;
+                const rankNumber = idx + 4;
                 const leadReason = item.match_tags?.[0] || "✨ Compatível com você";
 
                 return (
                   <article
                     key={item.id}
                     className={cn(
-                      "rounded-2xl bg-card border border-border hover:border-primary/60 overflow-hidden flex flex-col group transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-lg",
+                      "shrink-0 snap-start w-[calc((100%-3.5rem)/5)] rounded-2xl bg-card border border-border hover:border-primary/60 overflow-hidden flex flex-col group transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-lg",
                       hiddenIds.has(item.id) && "opacity-0 scale-90 pointer-events-none"
                     )}
                   >
@@ -863,7 +857,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
                   </article>
                 );
               })}
-            </div>
+            </DesktopShelf>
           )}
         </div>
 

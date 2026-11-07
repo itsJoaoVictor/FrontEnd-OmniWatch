@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/toast";
 import { api } from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { useExploreStore } from "@/store/useExploreStore";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import {
   MobileRecoCarousel,
   MobileSectionHeader,
@@ -204,6 +205,8 @@ export function SeriesShowrunnerRecommendations({
     setSeriesList(items);
   }, [items]);
 
+  const trackRef = useDragScroll<HTMLDivElement>("y");
+
   const totalBatches = useMemo(() => {
     if (seriesList.length === 0) return 0;
     return Math.max(1, Math.ceil(seriesList.length / BATCH_SIZE));
@@ -234,9 +237,10 @@ export function SeriesShowrunnerRecommendations({
     return [...primarySlice, ...wrapFill];
   }, [seriesList, safeBatchIndex]);
 
+  // Desktop: foco sobre a lista continua (sem lotes)
   const safeActiveIdx =
-    currentBatch.length > 0 ? Math.min(activeSlideIdx, currentBatch.length - 1) : 0;
-  const activeSeries = currentBatch[safeActiveIdx] || currentBatch[0];
+    seriesList.length > 0 ? Math.min(activeSlideIdx, seriesList.length - 1) : 0;
+  const activeSeries = seriesList[safeActiveIdx] || seriesList[0];
 
   // Registra IDs vistos no lote atual em O(B) (B <= 5)
   useEffect(() => {
@@ -385,7 +389,7 @@ export function SeriesShowrunnerRecommendations({
   const activeBingeLabel = activeCached?.bingeLabel || activeFallbackPace.bingeLabel;
   const activeGenres = extractSeriesGenres(activeSeries, activeCached);
   const activeOverview = activeSeries.overview?.trim() || activeCached?.overview || "";
-  const activeRankNumber = safeBatchIndex * BATCH_SIZE + safeActiveIdx + 1;
+  const activeRankNumber = safeActiveIdx + 1;
 
   return (
     <section aria-label="Séries Recomendadas">
@@ -426,51 +430,7 @@ export function SeriesShowrunnerRecommendations({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {totalBatches > 1 && (
-            <div className="inline-flex items-center rounded-xl bg-secondary/80 border border-border p-0.5 shadow-sm">
-              <button
-                type="button"
-                onClick={handlePrevBatch}
-                disabled={isRefreshingSeries}
-                className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all active:scale-95 disabled:opacity-40"
-                title="Voltar ao lote anterior"
-                aria-label="Voltar ao lote anterior"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-
-              <span className="font-mono text-xs text-muted-foreground px-2 py-0.5 select-none font-medium whitespace-nowrap">
-                Lote {safeBatchIndex + 1}/{totalBatches}
-                <span className="hidden sm:inline"> • {seriesList.length} sugestões</span>
-              </span>
-
-              <button
-                type="button"
-                onClick={handleCycleBatch}
-                disabled={isRefreshingSeries}
-                className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all active:scale-95 disabled:opacity-40"
-                title="Avançar para o próximo lote"
-                aria-label="Avançar para o próximo lote"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {totalBatches > 1 && (
-            <button
-              type="button"
-              onClick={handleCycleBatch}
-              disabled={isRefreshingSeries}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-semibold bg-secondary hover:bg-accent text-foreground border border-border hover:border-primary/40 transition-all active:scale-[0.98] disabled:opacity-50"
-              title="Alternar para o próximo lote de séries já calculadas"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-primary" />
-              <span>Alternar Lote</span>
-            </button>
-          )}
-
-          {showFreshPoolAction && (
+          {(
             <button
               type="button"
               onClick={handleGenerateFreshSuggestions}
@@ -499,15 +459,15 @@ export function SeriesShowrunnerRecommendations({
             ==================================================================== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-4 min-h-[430px]">
           {/* Coluna Esquerda: Tracklist #1 a #5 */}
-          <div className="lg:col-span-5 flex flex-col gap-2.5">
-            {currentBatch.map((item, idx) => {
+          <div ref={trackRef} className="lg:col-span-5 flex flex-col gap-2.5 lg:max-h-[520px] overflow-y-auto pr-1 scroll-smooth [scrollbar-width:thin]">
+            {seriesList.map((item, idx) => {
               const isCurrent = idx === safeActiveIdx;
               const cached = seriesStageMetaCache.get(item.id);
               const fallbackPace = buildFallbackPace(item);
               const title = item.name || item.title || "Série";
               const year = extractSeriesYear(item) || cached?.yearText;
               const pace = cached?.paceText || fallbackPace.paceText;
-              const rankNumber = safeBatchIndex * BATCH_SIZE + idx + 1;
+              const rankNumber = idx + 1;
 
               return (
                 <div
