@@ -127,8 +127,8 @@ export function RecentVibeSection() {
         <MobileSectionHeader
           emoji="⚡"
           title="Na Sua Vibe Recente"
-          badge="21 dias"
-          subtitle="Sintonizado com o clima das obras que você curtiu recentemente."
+          badge="Últimos 30 dias"
+          subtitle="Baseado no que você assistiu ou está assistindo nos últimos 30 dias."
         />
         <MobilePosterRail
           items={mobileItems}
@@ -147,13 +147,13 @@ export function RecentVibeSection() {
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/12 border border-amber-500/25 text-amber-500 text-[11px] font-bold tracking-wider uppercase mb-2">
               <Flame className="w-3.5 h-3.5" />
-              Sintonia de Curto Prazo
+              Últimos 30 Dias
             </div>
             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
               <span>⚡ Na Sua Vibe Recente</span>
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Descobertas guiadas pelo estilo, ritmo e gêneros que você mais assistiu nas últimas semanas.
+              Descobertas guiadas apenas pelo que você concluiu ou está assistindo nos últimos 30 dias.
             </p>
           </div>
         </div>
