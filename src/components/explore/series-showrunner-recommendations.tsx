@@ -22,8 +22,6 @@ import {
   Sparkles,
   EyeOff,
   ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
   Tv,
 } from "lucide-react";
 
@@ -277,18 +275,6 @@ export function SeriesShowrunnerRecommendations({
     setIsTransitioning(true);
     setTimeout(() => {
       setBatchIndex(nextIdx);
-      setActiveSlideIdx(0);
-      setIsTransitioning(false);
-    }, 150);
-  }, [safeBatchIndex, totalBatches]);
-
-  const handlePrevBatch = useCallback(() => {
-    if (totalBatches <= 1) return;
-    const prevIdx = (safeBatchIndex - 1 + totalBatches) % totalBatches;
-
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setBatchIndex(prevIdx);
       setActiveSlideIdx(0);
       setIsTransitioning(false);
     }, 150);

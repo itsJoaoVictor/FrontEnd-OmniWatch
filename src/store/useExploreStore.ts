@@ -18,11 +18,13 @@ interface FeedResponse {
 interface ExploreStoreState {
   // Dados cacheados
   exploreItems: RecommendationItem[];
+  recentVibeItems: RecommendationItem[];
   upcomingData: UpcomingRecommendations;
   personasData: PersonaCarousel[];
 
   // Estados de carregamento inicial (cold start)
   isLoadingExplore: boolean;
+  isLoadingRecentVibe: boolean;
   isLoadingUpcoming: boolean;
   isLoadingPersonas: boolean;
   isRefreshingMovies: boolean;
@@ -58,13 +60,17 @@ interface ExploreStoreState {
 // Promessa em voo para deduplicação absoluta no frontend (Single-Flight Pattern)
 let inflightFeedPromise: Promise<void> | null = null;
 const inflightRefreshPromises: Record<string, Promise<{ refreshed: boolean; count: number }> | null> = {};
+let autoHealTimer: ReturnType<typeof setTimeout> | null = null;
+let autoHealAttempts = 0;
 
 export const useExploreStore = create<ExploreStoreState>((set, get) => ({
   exploreItems: [],
+  recentVibeItems: [],
   upcomingData: { movies: [], series: [] },
   personasData: [],
 
   isLoadingExplore: true,
+  isLoadingRecentVibe: true,
   isLoadingUpcoming: true,
   isLoadingPersonas: true,
   isRefreshingMovies: false,
@@ -84,6 +90,7 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
     const state = get();
     const hasData =
       state.exploreItems.length > 0 ||
+      state.recentVibeItems.length > 0 ||
       state.personasData.length > 0 ||
       state.upcomingData.movies.length > 0 ||
       state.upcomingData.series.length > 0;
@@ -98,6 +105,7 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
     if (!hasData) {
       set({
         isLoadingExplore: true,
+        isLoadingRecentVibe: true,
         isLoadingUpcoming: true,
         isLoadingPersonas: true,
       });
@@ -108,12 +116,16 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
         const res = await api.get<FeedResponse>("/api/recommendations/feed");
         if (res.data) {
           const up = res.data.upcoming || { movies: [], series: [] };
+          const upMovies = up.movies || [];
+          const upSeries = up.series || up.tv || [];
+          const vibe = res.data.recent_vibe || [];
           const nowTs = Date.now();
           set({
             exploreItems: res.data.explore || [],
+            recentVibeItems: vibe,
             upcomingData: {
-              movies: up.movies || [],
-              series: up.series || up.tv || [],
+              movies: upMovies,
+              series: upSeries,
             },
             personasData: res.data.personas || [],
             lastFetchedFeed: nowTs,
@@ -121,12 +133,26 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
             lastFetchedUpcoming: nowTs,
             lastFetchedPersonas: nowTs,
           });
+
+          // Se o backend sinalizou recálculo de cura em andamento (seção vazia em aquecimento), reconsulta silenciosamente
+          const missingSection = vibe.length === 0 || (upMovies.length === 0 && upSeries.length === 0);
+          if (res.data.is_stale && missingSection && autoHealAttempts < 3) {
+            autoHealAttempts += 1;
+            if (autoHealTimer) clearTimeout(autoHealTimer);
+            autoHealTimer = setTimeout(() => {
+              autoHealTimer = null;
+              get().fetchFeed(true);
+            }, 9000);
+          } else if (!missingSection) {
+            autoHealAttempts = 0;
+          }
         }
       } catch (error) {
         console.error("Erro ao carregar feed unificado de recomendações:", error);
       } finally {
         set({
           isLoadingExplore: false,
+          isLoadingRecentVibe: false,
           isLoadingUpcoming: false,
           isLoadingPersonas: false,
         });
@@ -202,6 +228,7 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
   dismissItem: (itemId: number) => {
     set((state) => ({
       exploreItems: state.exploreItems.filter((i) => i.id !== itemId),
+      recentVibeItems: state.recentVibeItems.filter((i) => i.id !== itemId),
       upcomingData: {
         movies: state.upcomingData.movies.filter((i) => i.id !== itemId),
         series: state.upcomingData.series.filter((i) => i.id !== itemId),
@@ -214,11 +241,18 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
   },
 
   clearStore: () => {
+    if (autoHealTimer) {
+      clearTimeout(autoHealTimer);
+      autoHealTimer = null;
+    }
+    autoHealAttempts = 0;
     set({
       exploreItems: [],
+      recentVibeItems: [],
       upcomingData: { movies: [], series: [] },
       personasData: [],
       isLoadingExplore: true,
+      isLoadingRecentVibe: true,
       isLoadingUpcoming: true,
       isLoadingPersonas: true,
       isRefreshingMovies: false,

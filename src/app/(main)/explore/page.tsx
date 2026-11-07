@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { TrendingSection } from "@/components/explore/trending-section";
 import { TrendingSkeleton } from "@/components/explore/trending-skeleton";
 import { RecommendationsSection } from "@/components/explore/recommendations-section";
+import { RecentVibeSection } from "@/components/explore/recent-vibe-section";
 import { UpcomingSection } from "@/components/explore/upcoming-section";
 import { PersonasSection } from "@/components/explore/personas-section";
 import { TogetherBanner } from "@/components/explore/together-banner";
@@ -22,6 +23,10 @@ export default function Page() {
 
       <Suspense fallback={<TrendingSkeleton />}>
         <RecommendationsSection />
+      </Suspense>
+
+      <Suspense fallback={<TrendingSkeleton />}>
+        <RecentVibeSection />
       </Suspense>
 
       <Suspense fallback={<TrendingSkeleton />}>
