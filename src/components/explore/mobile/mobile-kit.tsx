@@ -12,6 +12,7 @@ import { ArrowUpRight, EyeOff, MoreHorizontal, Sparkles, Zap } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { PosterImage } from "@/components/shared/PosterImage";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 export interface MobileCardItem {
   id: number;
@@ -270,7 +271,7 @@ export function MobileRecoCarousel({
   onDismiss,
   hiddenIds,
 }: MobileRecoCarouselProps) {
-  const railRef = useRef<HTMLDivElement | null>(null);
+  const railRef = useDragScroll<HTMLDivElement>("x");
   const rafRef = useRef<number | null>(null);
   const [active, setActive] = useState(0);
   const activeRef = useRef(0);
@@ -313,7 +314,7 @@ export function MobileRecoCarousel({
         onActiveChange?.(best);
       }
     });
-  }, [onActiveChange]);
+  }, [onActiveChange, railRef]);
 
   if (items.length === 0) return null;
 
@@ -322,7 +323,7 @@ export function MobileRecoCarousel({
       <div
         ref={railRef}
         onScroll={handleScroll}
-        className="relative flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 pb-1 scroll-px-4 overscroll-x-contain"
+        className="relative flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 pb-1 scroll-px-4 overscroll-x-contain cursor-grab active:cursor-grabbing"
       >
         {items.map((item, idx) => {
           const rank = rankOffset + idx + 1;
@@ -425,18 +426,34 @@ export function MobileRecoCarousel({
         })}
       </div>
 
-      {/* Indicador de página */}
-      <div className="flex items-center justify-center gap-1.5 mt-3 pointer-events-none" aria-hidden>
-        {items.map((it, i) => (
-          <span
-            key={it.id}
-            className={cn(
-              "h-1.5 rounded-full transition-all duration-300",
-              i === active ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/35"
-            )}
-          />
-        ))}
-      </div>
+      {/* Indicador de página / progresso contínuo */}
+      {items.length <= 10 ? (
+        <div className="flex items-center justify-center gap-1.5 mt-3 pointer-events-none" aria-hidden>
+          {items.map((it, i) => (
+            <span
+              key={it.id}
+              className={cn(
+                "h-1.5 rounded-full transition-all duration-300",
+                i === active ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/35"
+              )}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center justify-center gap-2.5 mt-3 px-2 pointer-events-none" aria-hidden>
+          <div className="w-28 h-1.5 rounded-full bg-muted-foreground/20 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{
+                width: `${Math.min(100, Math.max(8, ((active + 1) / items.length) * 100))}%`,
+              }}
+            />
+          </div>
+          <span className="text-[11px] font-bold tabular-nums text-muted-foreground">
+            {Math.min(active + 1, items.length)} / {items.length}
+          </span>
+        </div>
+      )}
 
       <MobileActionSheet item={sheetItem} onClose={closeSheet} onDismiss={onDismiss} />
     </div>
@@ -456,6 +473,7 @@ interface MobilePosterRailProps {
 }
 
 export function MobilePosterRail({ items, onDismiss, featureFirst, hiddenIds }: MobilePosterRailProps) {
+  const railRef = useDragScroll<HTMLDivElement>("x");
   const [sheetItem, setSheetItem] = useState<MobileCardItem | null>(null);
   const closeSheet = useCallback(() => setSheetItem(null), []);
 
@@ -463,7 +481,10 @@ export function MobilePosterRail({ items, onDismiss, featureFirst, hiddenIds }: 
 
   return (
     <div className="lg:hidden">
-      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 scroll-px-4 pb-1 overscroll-x-contain">
+      <div
+        ref={railRef}
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 scroll-px-4 pb-1 overscroll-x-contain cursor-grab active:cursor-grabbing"
+      >
         {items.map((item, idx) => {
           const featured = featureFirst && idx === 0;
           return (

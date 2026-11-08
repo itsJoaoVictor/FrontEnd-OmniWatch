@@ -1,14 +1,11 @@
 "use client";
 
-import { memo, useState, useMemo, useRef, useCallback } from "react";
+import { memo, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
-  Flame,
   Star,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
-  TrendingUp,
   MoreHorizontal,
 } from "lucide-react";
 import {
@@ -21,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { TrendingItem } from "@/types/trending";
 import { PosterImage } from "@/components/shared/PosterImage";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 interface TrendingBillboardProps {
   items: TrendingItem[];
@@ -44,7 +42,8 @@ export const TrendingBillboard = memo(function TrendingBillboard({
   items,
 }: TrendingBillboardProps) {
   const [mediaFilter, setMediaFilter] = useState<"all" | "movie" | "tv">("all");
-  const trackRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useDragScroll<HTMLDivElement>("x");
+  const mobileTrackRef = useDragScroll<HTMLDivElement>("x");
   const [sheetItem, setSheetItem] = useState<MobileCardItem | null>(null);
   const closeSheet = useCallback(() => setSheetItem(null), []);
 
@@ -72,7 +71,7 @@ export const TrendingBillboard = memo(function TrendingBillboard({
     if (!trackRef.current) return;
     const step = Math.max(260, Math.round(trackRef.current.clientWidth * 0.72));
     trackRef.current.scrollBy({ left: direction * step, behavior: "smooth" });
-  }, []);
+  }, [trackRef]);
 
   return (
     <>
@@ -95,7 +94,10 @@ export const TrendingBillboard = memo(function TrendingBillboard({
         className="mb-4"
       />
 
-      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 scroll-px-4 pb-1 overscroll-x-contain">
+      <div
+        ref={mobileTrackRef}
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 scroll-px-4 pb-1 overscroll-x-contain cursor-grab active:cursor-grabbing"
+      >
         {top10Items.map((item, idx) => {
           const rank = idx + 1;
           const title = item.title || item.name || "Sem título";

@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   EyeOff,
-  RefreshCw,
   Sparkles,
   ArrowUpRight,
   Zap,
@@ -72,8 +71,6 @@ function DesktopShelf({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-const BATCH_SIZE = 8;
 
 // Cache O(1) em memória + deduplicação de requests para enriquecer apenas os filmes necessários
 const bentoMetaCache = new Map<number, EnrichedBentoMeta>();
@@ -182,12 +179,10 @@ function CompatibilityRing({ score }: { score: number }) {
 }
 
 export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendationsProps) {
-  const [moviesList, setMoviesList] = useState<RecommendationItem[]>(items);
-  const [batchIndex, setBatchIndex] = useState(0);
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [hasCompletedCycle, setHasCompletedCycle] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
+  const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
   const [, setMetaVersion] = useState(0);
 
   const isRefreshingMovies = useExploreStore((s) => s.isRefreshingMovies);
@@ -196,43 +191,19 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
   // Conjunto O(1) de IDs já visualizados neste ciclo para alimentar a renovação sem repetição
   const seenInCycleRef = useRef<Set<number>>(new Set());
 
-  useEffect(() => {
-    setMoviesList(items);
-  }, [items]);
-
-  const totalBatches = Math.max(1, Math.ceil(moviesList.length / BATCH_SIZE));
-  const safeBatchIndex = batchIndex % totalBatches;
-  const isOnLastBatch = safeBatchIndex === totalBatches - 1;
-
-  // Fatia em O(1) os 8 filmes do lote ativo (preenchendo a cauda sem duplicar caso o último lote tenha < 8)
-  const currentBatch = useMemo(() => {
-    if (moviesList.length === 0) return [];
-    if (moviesList.length <= BATCH_SIZE) return moviesList;
-
-    const start = safeBatchIndex * BATCH_SIZE;
-    const primarySlice = moviesList.slice(start, start + BATCH_SIZE);
-    if (primarySlice.length === BATCH_SIZE) return primarySlice;
-
-    const needed = BATCH_SIZE - primarySlice.length;
-    const primaryIds = new Set(primarySlice.map((m) => m.id));
-    const wrapFill: RecommendationItem[] = [];
-    for (const m of moviesList) {
-      if (!primaryIds.has(m.id)) {
-        wrapFill.push(m);
-        if (wrapFill.length >= needed) break;
-      }
-    }
-    return [...primarySlice, ...wrapFill];
-  }, [moviesList, safeBatchIndex]);
+  const moviesList = useMemo(
+    () => items.filter((i) => !dismissedIds.has(i.id)),
+    [items, dismissedIds]
+  );
 
   const safeActiveIdx =
-    currentBatch.length > 0 ? Math.min(activeSlideIdx, currentBatch.length - 1) : 0;
+    moviesList.length > 0 ? Math.min(activeSlideIdx, moviesList.length - 1) : 0;
 
-  // Registra os IDs exibidos no lote atual em O(B) (B <= 8) e enriquece os Top 3
+  // Registra os IDs exibidos na lista atual e enriquece os Top 3
   useEffect(() => {
-    currentBatch.forEach((m) => seenInCycleRef.current.add(m.id));
+    moviesList.forEach((m) => seenInCycleRef.current.add(m.id));
 
-    const topThree = currentBatch.slice(0, 3);
+    const topThree = moviesList.slice(0, 3);
     let active = true;
     topThree.forEach((m) => {
       const needsOverview = !m.overview || m.overview.trim() === "";
@@ -249,11 +220,11 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     return () => {
       active = false;
     };
-  }, [currentBatch]);
+  }, [moviesList]);
 
   // Enriquece sob demanda o filme em foco no palco mobile se necessário
   useEffect(() => {
-    const activeMovie = currentBatch[safeActiveIdx];
+    const activeMovie = moviesList[safeActiveIdx];
     if (!activeMovie) return;
     const needsOverview = !activeMovie.overview || activeMovie.overview.trim() === "";
     const needsRuntime = !activeMovie.runtime || activeMovie.runtime <= 0;
@@ -268,34 +239,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
         cancelled = true;
       };
     }
-  }, [currentBatch, safeActiveIdx]);
-
-  const handleCycleBatch = useCallback(() => {
-    if (totalBatches <= 1) return;
-    const nextIdx = (safeBatchIndex + 1) % totalBatches;
-    if (nextIdx === totalBatches - 1 || nextIdx === 0) {
-      setHasCompletedCycle(true);
-    }
-
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setBatchIndex(nextIdx);
-      setActiveSlideIdx(0);
-      setIsTransitioning(false);
-    }, 150);
-  }, [safeBatchIndex, totalBatches]);
-
-  const handlePrevBatch = useCallback(() => {
-    if (totalBatches <= 1) return;
-    const prevIdx = (safeBatchIndex - 1 + totalBatches) % totalBatches;
-
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setBatchIndex(prevIdx);
-      setActiveSlideIdx(0);
-      setIsTransitioning(false);
-    }, 150);
-  }, [safeBatchIndex, totalBatches]);
+  }, [moviesList, safeActiveIdx]);
 
   const handleGenerateFreshSuggestions = useCallback(async () => {
     const excludeIds = Array.from(seenInCycleRef.current);
@@ -306,9 +250,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     setIsTransitioning(true);
     const result = await refreshExploreBatch("movie", excludeIds);
     seenInCycleRef.current.clear();
-    setBatchIndex(0);
     setActiveSlideIdx(0);
-    setHasCompletedCycle(false);
     setIsTransitioning(false);
 
     if (result.count > 0) {
@@ -349,7 +291,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
 
     setTimeout(() => {
       useExploreStore.getState().dismissItem(item.id);
-      setMoviesList((prev) => prev.filter((i) => i.id !== item.id));
+      setDismissedIds((prev) => new Set(prev).add(item.id));
       setHiddenIds((prev) => {
         const next = new Set(prev);
         next.delete(item.id);
@@ -358,7 +300,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     }, 300);
   }, []);
 
-  const mobileItems: MobileCardItem[] = currentBatch.map((m) => {
+  const mobileItems: MobileCardItem[] = moviesList.map((m) => {
     const cached = bentoMetaCache.get(m.id);
     const meta = [
       extractYear(m),
@@ -382,7 +324,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
     };
   });
 
-  if (!moviesList || moviesList.length === 0 || currentBatch.length === 0) {
+  if (!moviesList || moviesList.length === 0) {
     return null;
   }
 
@@ -397,32 +339,22 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
   const heroRuntime = formatMinutes(hero.runtime) || heroCached?.runtimeText;
   const heroGenres = extractGenres(hero, heroCached);
   const heroOverview = hero.overview?.trim() || heroCached?.overview || "";
-  const showFreshPoolAction = isOnLastBatch || hasCompletedCycle || totalBatches <= 1;
 
   return (
     <section aria-label="Filmes Recomendados">
-      {/* Cabeçalho Mobile: título + 1 única ação (44px) */}
+      {/* Cabeçalho Mobile: título + botão contínuo de novas sugestões */}
       <div className="lg:hidden">
         <MobileSectionHeader
           emoji="✨"
           title="Filmes Recomendados"
           subtitle="Escolhidos a dedo para o seu perfil."
           action={
-            showFreshPoolAction ? (
-              <MobileIconAction
-                label={isRefreshingMovies ? "Gerando..." : "Novas sugestões"}
-                onClick={handleGenerateFreshSuggestions}
-                disabled={isRefreshingMovies}
-                spinning={isRefreshingMovies}
-              />
-            ) : (
-              <MobileIconAction
-                label="Próximo lote"
-                onClick={handleCycleBatch}
-                disabled={isRefreshingMovies}
-                icon={<RefreshCw className="w-5 h-5" />}
-              />
-            )
+            <MobileIconAction
+              label={isRefreshingMovies ? "Gerando..." : "Novas sugestões"}
+              onClick={handleGenerateFreshSuggestions}
+              disabled={isRefreshingMovies}
+              spinning={isRefreshingMovies}
+            />
           }
         />
       </div>
@@ -503,7 +435,7 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
               <div className="absolute top-5 left-6 right-6 flex items-center justify-between gap-3 z-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/75 border border-white/15 backdrop-blur-md text-xs font-bold text-zinc-100">
                   <span className="text-amber-400 font-extrabold">
-                    #{safeBatchIndex * BATCH_SIZE + 1} ESCOLHA PRINCIPAL
+                    #1 ESCOLHA PRINCIPAL
                   </span>
                   <span className="opacity-40">|</span>
                   <span className="text-zinc-300 font-medium">Alta Sintonia</span>
@@ -866,8 +798,8 @@ export function MoviesBentoRecommendations({ items }: MoviesBentoRecommendations
             ==================================================================== */}
         <MobileRecoCarousel
           items={mobileItems}
-          rankOffset={safeBatchIndex * BATCH_SIZE}
-          resetKey={`${safeBatchIndex}-${currentBatch[0]?.id ?? 0}`}
+          rankOffset={0}
+          resetKey={moviesList[0]?.id ?? 0}
           topLabel={(i) => (i === 0 ? "ESCOLHA PRINCIPAL" : "")}
           onActiveChange={setActiveSlideIdx}
           onDismiss={(mi) => {

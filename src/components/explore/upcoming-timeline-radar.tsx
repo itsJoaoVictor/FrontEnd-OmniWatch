@@ -1,15 +1,10 @@
 "use client";
 
-import { memo, useMemo, useRef, useState, useCallback } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import {
-  Calendar,
   ChevronLeft,
   ChevronRight,
-  Clock,
-  Film,
-  Flame,
-  Tv,
   Check,
   Bell,
   Sparkles,
@@ -23,6 +18,7 @@ import { PosterImage } from "@/components/shared/PosterImage";
 import { parseReleaseDate } from "@/lib/dateUtils";
 import { useMyListStore } from "@/store/useMyListStore";
 import { useExploreStore } from "@/store/useExploreStore";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { api } from "@/lib/axios";
 import { toast } from "@/components/ui/toast";
 import {
@@ -154,8 +150,6 @@ function groupLabel(item: EnrichedRadarItem): string {
   return `${PT_MONTHS_LONG[item.parsedDate.getMonth()]} ${item.year}`;
 }
 
-const AGENDA_PAGE = 6;
-
 interface MobileAgendaProps {
   all: EnrichedRadarItem[];
   movies: EnrichedRadarItem[];
@@ -167,26 +161,24 @@ interface MobileAgendaProps {
 
 const fakeEvent = { preventDefault() {}, stopPropagation() {} } as React.MouseEvent;
 
-/** Agenda mobile (< lg): lista vertical agrupada por período, ações de 44px e bottom sheet. */
+/** Agenda mobile (< lg): lista vertical contínua agrupada por período, ações de 44px e bottom sheet. */
 function MobileAgenda({ all, movies, series, myListItems, onToggleRadar, onDismiss }: MobileAgendaProps) {
   const [filter, setFilter] = useState<"all" | "movie" | "tv">("all");
-  const [visible, setVisible] = useState(AGENDA_PAGE);
   const [sheetItem, setSheetItem] = useState<MobileCardItem | null>(null);
   const closeSheet = useCallback(() => setSheetItem(null), []);
 
   const list = filter === "movie" ? movies : filter === "tv" ? series : all;
-  const shown = list.slice(0, visible);
 
   const groups = useMemo(() => {
     const out: { label: string; items: EnrichedRadarItem[] }[] = [];
-    for (const it of shown) {
+    for (const it of list) {
       const label = groupLabel(it);
       const last = out[out.length - 1];
       if (last && last.label === label) last.items.push(it);
       else out.push({ label, items: [it] });
     }
     return out;
-  }, [shown]);
+  }, [list]);
 
   const toCard = (it: EnrichedRadarItem): MobileCardItem => ({
     id: it.id,
@@ -210,10 +202,7 @@ function MobileAgenda({ all, movies, series, myListItems, onToggleRadar, onDismi
 
       <MobileSegmented
         value={filter}
-        onChange={(v) => {
-          setFilter(v);
-          setVisible(AGENDA_PAGE);
-        }}
+        onChange={setFilter}
         options={[
           { value: "all", label: `Todos ${all.length}` },
           { value: "movie", label: `Filmes ${movies.length}` },
@@ -305,16 +294,6 @@ function MobileAgenda({ all, movies, series, myListItems, onToggleRadar, onDismi
               </ul>
             </div>
           ))}
-
-          {visible < list.length && (
-            <button
-              type="button"
-              onClick={() => setVisible((v) => v + AGENDA_PAGE + 2)}
-              className="min-h-12 rounded-2xl bg-secondary border border-border text-sm font-bold active:scale-[0.98] transition"
-            >
-              Ver mais ({list.length - visible})
-            </button>
-          )}
         </div>
       )}
 
@@ -327,6 +306,25 @@ function MobileAgenda({ all, movies, series, myListItems, onToggleRadar, onDismi
         }}
       />
     </section>
+  );
+}
+
+function RadarHorizontalContainer({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
+  const ref = useDragScroll<HTMLDivElement>("x");
+  return (
+    <div
+      id={id}
+      ref={ref}
+      className="flex items-stretch overflow-x-auto scroll-smooth snap-x snap-mandatory pt-2 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar cursor-grab active:cursor-grabbing"
+    >
+      {children}
+    </div>
   );
 }
 
@@ -488,10 +486,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
         </div>
 
         {/* Trilho Horizontal Conectado */}
-        <div
-          id={railId}
-          className="flex items-stretch overflow-x-auto scroll-smooth snap-x snap-mandatory pt-2 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar cursor-grab active:cursor-grabbing"
-        >
+        <RadarHorizontalContainer id={railId}>
           {itemsList.map((item, idx) => {
             const isLast = idx === itemsList.length - 1;
             const isSaved = Boolean(myListItems[item.id]);
@@ -647,7 +642,7 @@ export const UpcomingTimelineRadar = memo(function UpcomingTimelineRadar({
               </div>
             );
           })}
-        </div>
+        </RadarHorizontalContainer>
       </div>
     );
   };

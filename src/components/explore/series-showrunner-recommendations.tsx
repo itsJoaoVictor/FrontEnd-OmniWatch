@@ -18,7 +18,6 @@ import {
   type MobileCardItem,
 } from "./mobile/mobile-kit";
 import {
-  RefreshCw,
   Sparkles,
   EyeOff,
   ArrowUpRight,
@@ -36,8 +35,6 @@ interface SeriesStageMeta {
   genres: string[];
   yearText: string;
 }
-
-const BATCH_SIZE = 5;
 
 // Cache em memória O(1) para enriquecer apenas a série ativa no Palco (1 requisição sob demanda com debounce)
 const seriesStageMetaCache = new Map<number, SeriesStageMeta>();
@@ -186,12 +183,10 @@ function CompatibilityRing({ score }: { score: number }) {
 export function SeriesShowrunnerRecommendations({
   items,
 }: SeriesShowrunnerRecommendationsProps) {
-  const [seriesList, setSeriesList] = useState<RecommendationItem[]>(items);
-  const [batchIndex, setBatchIndex] = useState(0);
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
-  const [hasCompletedCycle, setHasCompletedCycle] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
+  const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
   const [, setMetaVersion] = useState(0);
 
   const seenInCycleRef = useRef<Set<number>>(new Set());
@@ -199,51 +194,22 @@ export function SeriesShowrunnerRecommendations({
   const isRefreshingSeries = useExploreStore((state) => state.isRefreshingSeries);
   const refreshExploreBatch = useExploreStore((state) => state.refreshExploreBatch);
 
-  useEffect(() => {
-    setSeriesList(items);
-  }, [items]);
+  const seriesList = useMemo(
+    () => items.filter((i) => !dismissedIds.has(i.id)),
+    [items, dismissedIds]
+  );
 
   const trackRef = useDragScroll<HTMLDivElement>("y");
 
-  const totalBatches = useMemo(() => {
-    if (seriesList.length === 0) return 0;
-    return Math.max(1, Math.ceil(seriesList.length / BATCH_SIZE));
-  }, [seriesList.length]);
-
-  const safeBatchIndex = totalBatches > 0 ? batchIndex % totalBatches : 0;
-  const isOnLastBatch = totalBatches > 1 && safeBatchIndex === totalBatches - 1;
-
-  // Fatiamento O(1) do lote atual de 5 séries
-  const currentBatch = useMemo(() => {
-    if (seriesList.length === 0) return [];
-    const start = safeBatchIndex * BATCH_SIZE;
-    const primarySlice = seriesList.slice(start, start + BATCH_SIZE);
-
-    if (primarySlice.length >= BATCH_SIZE || seriesList.length <= BATCH_SIZE) {
-      return primarySlice;
-    }
-
-    const needed = BATCH_SIZE - primarySlice.length;
-    const primaryIds = new Set(primarySlice.map((s) => s.id));
-    const wrapFill: RecommendationItem[] = [];
-    for (const s of seriesList) {
-      if (!primaryIds.has(s.id)) {
-        wrapFill.push(s);
-        if (wrapFill.length >= needed) break;
-      }
-    }
-    return [...primarySlice, ...wrapFill];
-  }, [seriesList, safeBatchIndex]);
-
-  // Desktop: foco sobre a lista continua (sem lotes)
+  // Desktop e Mobile: foco sobre a lista continua (sem lotes)
   const safeActiveIdx =
     seriesList.length > 0 ? Math.min(activeSlideIdx, seriesList.length - 1) : 0;
   const activeSeries = seriesList[safeActiveIdx] || seriesList[0];
 
-  // Registra IDs vistos no lote atual em O(B) (B <= 5)
+  // Registra IDs vistos na lista atual
   useEffect(() => {
-    currentBatch.forEach((s) => seenInCycleRef.current.add(s.id));
-  }, [currentBatch]);
+    seriesList.forEach((s) => seenInCycleRef.current.add(s.id));
+  }, [seriesList]);
 
   // Enriquecimento preguiçoso APENAS para a única série em foco no Palco (com debounce de 160ms)
   useEffect(() => {
@@ -265,21 +231,6 @@ export function SeriesShowrunnerRecommendations({
     };
   }, [activeSeries]);
 
-  const handleCycleBatch = useCallback(() => {
-    if (totalBatches <= 1) return;
-    const nextIdx = (safeBatchIndex + 1) % totalBatches;
-    if (nextIdx === totalBatches - 1 || nextIdx === 0) {
-      setHasCompletedCycle(true);
-    }
-
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setBatchIndex(nextIdx);
-      setActiveSlideIdx(0);
-      setIsTransitioning(false);
-    }, 150);
-  }, [safeBatchIndex, totalBatches]);
-
   const handleGenerateFreshSuggestions = useCallback(async () => {
     const excludeIds = Array.from(seenInCycleRef.current);
     seriesList.forEach((s) => {
@@ -289,9 +240,7 @@ export function SeriesShowrunnerRecommendations({
     setIsTransitioning(true);
     const result = await refreshExploreBatch("tv", excludeIds);
     seenInCycleRef.current.clear();
-    setBatchIndex(0);
     setActiveSlideIdx(0);
-    setHasCompletedCycle(false);
     setIsTransitioning(false);
 
     if (result.count > 0) {
@@ -332,7 +281,7 @@ export function SeriesShowrunnerRecommendations({
 
     setTimeout(() => {
       useExploreStore.getState().dismissItem(item.id);
-      setSeriesList((prev) => prev.filter((i) => i.id !== item.id));
+      setDismissedIds((prev) => new Set(prev).add(item.id));
       setHiddenIds((prev) => {
         const next = new Set(prev);
         next.delete(item.id);
@@ -341,7 +290,7 @@ export function SeriesShowrunnerRecommendations({
     }, 300);
   }, []);
 
-  const mobileItems: MobileCardItem[] = currentBatch.map((item) => {
+  const mobileItems: MobileCardItem[] = seriesList.map((item) => {
     const cached = seriesStageMetaCache.get(item.id);
     const pace = cached?.paceText || buildFallbackPace(item).paceText;
     const bingeLabel = cached?.bingeLabel || buildFallbackPace(item).bingeLabel;
@@ -360,11 +309,9 @@ export function SeriesShowrunnerRecommendations({
     };
   });
 
-  if (!seriesList || seriesList.length === 0 || currentBatch.length === 0 || !activeSeries) {
+  if (!seriesList || seriesList.length === 0 || !activeSeries) {
     return null;
   }
-
-  const showFreshPoolAction = isOnLastBatch || hasCompletedCycle || totalBatches <= 1;
 
   // Dados resolvidos da série em foco para o Palco Desktop
   const activeCached = seriesStageMetaCache.get(activeSeries.id);
@@ -379,28 +326,19 @@ export function SeriesShowrunnerRecommendations({
 
   return (
     <section aria-label="Séries Recomendadas">
-      {/* Cabeçalho da Seção + Controles de Lote */}
+      {/* Cabeçalho Mobile + ação contínua de novas séries */}
       <div className="lg:hidden">
         <MobileSectionHeader
           emoji="✨"
           title="Séries Recomendadas"
           subtitle="Escolhidas a dedo para o seu perfil."
           action={
-            showFreshPoolAction ? (
-              <MobileIconAction
-                label={isRefreshingSeries ? "Gerando..." : "Novas séries"}
-                onClick={handleGenerateFreshSuggestions}
-                disabled={isRefreshingSeries}
-                spinning={isRefreshingSeries}
-              />
-            ) : (
-              <MobileIconAction
-                label="Próximo lote"
-                onClick={handleCycleBatch}
-                disabled={isRefreshingSeries}
-                icon={<RefreshCw className="w-5 h-5" />}
-              />
-            )
+            <MobileIconAction
+              label={isRefreshingSeries ? "Gerando..." : "Novas séries"}
+              onClick={handleGenerateFreshSuggestions}
+              disabled={isRefreshingSeries}
+              spinning={isRefreshingSeries}
+            />
           }
         />
       </div>
@@ -677,8 +615,8 @@ export function SeriesShowrunnerRecommendations({
             ==================================================================== */}
         <MobileRecoCarousel
           items={mobileItems}
-          rankOffset={safeBatchIndex * BATCH_SIZE}
-          resetKey={`${safeBatchIndex}-${currentBatch[0]?.id ?? 0}`}
+          rankOffset={0}
+          resetKey={seriesList[0]?.id ?? 0}
           onActiveChange={setActiveSlideIdx}
           onDismiss={(mi) => {
             const src = seriesList.find((m) => m.id === mi.id);

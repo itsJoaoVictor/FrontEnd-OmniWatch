@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback, useMemo, useRef } from "react";
+import { memo, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   Sparkles,
@@ -62,6 +62,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
   const subRailRef = useDragScroll<HTMLDivElement>("x");
+  const mobileTabsRef = useDragScroll<HTMLDivElement>("x");
 
   const currentPersona = useMemo(() => {
     return personas.find((p) => p.id === activePersonaId) || personas[0];
@@ -79,7 +80,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
         }
       }, 140);
     },
-    [activePersonaId]
+    [activePersonaId, subRailRef]
   );
 
   const scrollSubRail = (direction: -1 | 1) => {
@@ -153,9 +154,10 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
       />
 
       <div
+        ref={mobileTabsRef}
         role="tablist"
         aria-label="Facetas de gosto"
-        className="flex gap-2 overflow-x-auto scrollbar-none snap-x -mx-4 px-4 scroll-px-4 pb-1 mb-4"
+        className="flex gap-2 overflow-x-auto scrollbar-none snap-x -mx-4 px-4 scroll-px-4 pb-1 mb-4 cursor-grab active:cursor-grabbing"
       >
         {personas.map((p) => {
           const isActive = p.id === currentPersona.id;
@@ -209,7 +211,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
         ) : (
           <MobilePosterRail
             featureFirst
-            items={recommendations.slice(0, 10).map<MobileCardItem>((it) => {
+            items={recommendations.map<MobileCardItem>((it) => {
               const mt = it.media_type === "tv" ? "tv" : "movie";
               const tag = it.match_tags?.[0];
               return {
@@ -318,7 +320,7 @@ export const PersonasMoodSwitcher = memo(function PersonasMoodSwitcher({
             </div>
             {currentPersona.tagline && (
               <p className="text-xs sm:text-sm font-medium text-primary italic mb-1">
-                "{currentPersona.tagline}"
+                &ldquo;{currentPersona.tagline}&rdquo;
               </p>
             )}
             <p className="text-xs sm:text-[13px] text-muted-foreground">
