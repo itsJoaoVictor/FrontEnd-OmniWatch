@@ -5,6 +5,7 @@ import { BellRing, Smartphone, X, Check, Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { pushNotificationService } from "@/services/pushNotificationService";
+import { useUserStore } from "@/store/useUserStore";
 import { cn } from "@/lib/utils";
 
 const DISMISSED_KEY = "omniwatch_push_prompt_dismissed_until";
@@ -12,8 +13,13 @@ const DISMISSED_KEY = "omniwatch_push_prompt_dismissed_until";
 export function PushNotificationPrompt() {
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const user = useUserStore((state) => state.user);
+  const isInitialized = useUserStore((state) => state.isInitialized);
 
   useEffect(() => {
+    // Só sincroniza ou exibe prompt se o usuário estiver autenticado no app
+    if (!isInitialized || !user) return;
+
     // 1. Verifica se Web Push é suportado no aparelho/navegador
     if (!pushNotificationService.isSupported()) return;
 

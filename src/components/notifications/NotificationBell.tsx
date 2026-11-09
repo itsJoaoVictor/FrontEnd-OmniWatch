@@ -29,6 +29,7 @@ export function NotificationBell() {
   const [isPushSupported, setIsPushSupported] = useState(false);
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
   const [isTogglingPush, setIsTogglingPush] = useState(false);
+  const [isTestingPush, setIsTestingPush] = useState(false);
 
   useEffect(() => {
     setIsPushSupported(pushNotificationService.isSupported());
@@ -83,6 +84,37 @@ export function NotificationBell() {
       });
     } finally {
       setIsTogglingPush(false);
+    }
+  };
+
+  const handleSendTestPush = async () => {
+    setIsTestingPush(true);
+    try {
+      await pushNotificationService.syncSubscription().catch(() => {});
+      const res = await pushNotificationService.sendTestPush();
+      if (res.success) {
+        setIsPushSubscribed(true);
+        toast.add({
+          title: "Push disparado! 🚀",
+          description: "Bloqueie a tela ou feche o app para ver a notificação na barra do celular.",
+          type: "success",
+        });
+      } else {
+        toast.add({
+          title: "Atenção",
+          description: res.message,
+          type: "error",
+        });
+      }
+    } catch (err) {
+      console.error("Erro no teste de push:", err);
+      toast.add({
+        title: "Erro",
+        description: "Falha ao disparar push de teste.",
+        type: "error",
+      });
+    } finally {
+      setIsTestingPush(false);
     }
   };
 
@@ -230,6 +262,21 @@ export function NotificationBell() {
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
+              {isPushSubscribed && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSendTestPush();
+                  }}
+                  disabled={isTestingPush}
+                  className="text-[11px] px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium transition-colors"
+                  title="Disparar notificação de teste para este aparelho"
+                >
+                  {isTestingPush ? <Loader2 className="w-3 h-3 animate-spin" /> : "Testar"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={(e) => {
