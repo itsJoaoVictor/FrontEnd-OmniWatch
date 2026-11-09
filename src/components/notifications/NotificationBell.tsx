@@ -38,7 +38,12 @@ export function NotificationBell() {
 
   useEffect(() => {
     if (open && pushNotificationService.isSupported()) {
-      pushNotificationService.isSubscribed().then(setIsPushSubscribed);
+      pushNotificationService.isSubscribed().then((sub) => {
+        setIsPushSubscribed(sub);
+        if (sub) {
+          pushNotificationService.syncSubscription().catch(() => {});
+        }
+      });
     }
   }, [open]);
 
@@ -85,8 +90,12 @@ export function NotificationBell() {
   const handleSendTestPush = async () => {
     setIsTestingPush(true);
     try {
+      // Garante sincronização da inscrição local com o servidor antes do disparo de teste
+      await pushNotificationService.syncSubscription().catch(() => {});
+
       const res = await pushNotificationService.sendTestPush();
       if (res.success) {
+        setIsPushSubscribed(true);
         toast.add({
           title: "Enviado! 🚀",
           description: res.message,

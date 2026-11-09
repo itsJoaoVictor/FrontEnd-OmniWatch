@@ -33,11 +33,44 @@ export const pushNotificationService = {
   async isSubscribed(): Promise<boolean> {
     if (!this.isSupported()) return false;
     try {
-      const reg = await navigator.serviceWorker.ready;
+      if (Notification.permission !== 'granted') return false;
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) return false;
       const sub = await reg.pushManager.getSubscription();
       return Boolean(sub);
     } catch (e) {
       console.error('Erro ao verificar inscrição push:', e);
+      return false;
+    }
+  },
+
+  async syncSubscription(): Promise<boolean> {
+    if (!this.isSupported() || Notification.permission !== 'granted') return false;
+    try {
+      let reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        reg = await navigator.serviceWorker.register('/sw.js');
+      }
+      await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) return false;
+
+      const subJson = sub.toJSON();
+      if (!subJson.endpoint || !subJson.keys?.p256dh || !subJson.keys?.auth) {
+        return false;
+      }
+
+      await api.post('/api/notifications/push-subscription', {
+        endpoint: subJson.endpoint,
+        keys: {
+          p256dh: subJson.keys.p256dh,
+          auth: subJson.keys.auth,
+        },
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+      });
+      return true;
+    } catch (err) {
+      console.warn('Falha ao sincronizar inscrição push com o servidor:', err);
       return false;
     }
   },
@@ -53,12 +86,11 @@ export const pushNotificationService = {
 
     try {
       // 2. Garante registro do Service Worker
-      let reg: ServiceWorkerRegistration;
-      try {
-        reg = await navigator.serviceWorker.ready;
-      } catch {
+      let reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
         reg = await navigator.serviceWorker.register('/sw.js');
       }
+      await navigator.serviceWorker.ready;
 
       // 3. Obtém a chave pública VAPID
       let vapidKey = FALLBACK_VAPID_PUBLIC_KEY;
@@ -73,11 +105,25 @@ export const pushNotificationService = {
 
       const applicationServerKey = urlBase64ToUint8Array(vapidKey);
 
-      // 4. Cria a inscrição no PushManager
-      const subscription = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: applicationServerKey as any,
-      });
+      // 4. Cria ou renova a inscrição no PushManager
+      let subscription = await reg.pushManager.getSubscription();
+      try {
+        subscription = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey as any,
+        });
+      } catch (subErr) {
+        // Se houver conflito de chaves anteriores, desfaz a inscrição antiga e cria uma nova limpa
+        if (subscription) {
+          await subscription.unsubscribe().catch(() => {});
+          subscription = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey as any,
+          });
+        } else {
+          throw subErr;
+        }
+      }
 
       const subJson = subscription.toJSON();
       if (!subJson.endpoint || !subJson.keys?.p256dh || !subJson.keys?.auth) {
