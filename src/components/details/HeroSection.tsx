@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Star, ListPlus, Globe, Play, Tv } from "lucide-react";
+import { Star, ListPlus, Globe, Play, Tv, Send } from "lucide-react";
 import { GenreItem, CrewItem, WatchProviderItem, UniverseRef } from "@/types/details";
 import Link from "next/link";
 import { AddToListButton } from "@/components/shared/AddToListButton";
 import { FavoriteButton } from "@/components/shared/FavoriteButton";
 import { SaveToCustomListModal } from "@/components/custom_lists/SaveToCustomListModal";
+import { RecommendToFriendModal } from "@/components/shared/RecommendToFriendModal";
 import { MatchScoreBadge } from "./MatchScoreBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UserRatingBadge } from "@/components/shared/UserRatingBadge";
@@ -49,6 +50,7 @@ export function HeroSection({
   hasVideos = false,
 }: HeroSectionProps) {
   const [customListModalOpen, setCustomListModalOpen] = useState(false);
+  const [recommendModalOpen, setRecommendModalOpen] = useState(false);
   const imageUrl = "https://image.tmdb.org/t/p/w1280";
 
   const handleScrollToTrailers = () => {
@@ -201,6 +203,16 @@ export function HeroSection({
                 <ListPlus className="w-5 h-5 text-primary" />
               </button>
 
+              <button
+                type="button"
+                onClick={() => setRecommendModalOpen(true)}
+                className="w-11 h-11 rounded-xl flex items-center justify-center bg-card hover:bg-accent text-foreground border border-border shadow-xs transition-all hover:scale-105 cursor-pointer"
+                title="Recomendar a um Amigo"
+                aria-label="Recomendar a um Amigo"
+              >
+                <Send className="w-5 h-5 text-primary" />
+              </button>
+
               <FavoriteButton
                 tmdb_id={tmdbId}
                 size="lg"
@@ -264,6 +276,19 @@ export function HeroSection({
           poster_path: posterPath,
           backdrop_path: backdropPath,
           release_date: releaseDate,
+        }}
+      />
+
+      <RecommendToFriendModal
+        isOpen={recommendModalOpen}
+        onClose={() => setRecommendModalOpen(false)}
+        media={{
+          tmdbId,
+          mediaType,
+          title,
+          posterPath,
+          releaseDate,
+          voteAverage,
         }}
       />
     </div>

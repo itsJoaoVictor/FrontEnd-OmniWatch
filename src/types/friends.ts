@@ -58,3 +58,54 @@ export interface FriendFeedResponse {
   has_more: boolean;
   next_cursor?: string | null;
 }
+
+export type IneligibleReason = 'ALREADY_WATCHED' | 'ALREADY_IN_LIST' | 'PENDING_RECOMMENDATION';
+
+export interface FriendEligibilityItem {
+  id: string;
+  name: string;
+  username: string | null;
+  email: string | null;
+  is_eligible: boolean;
+  ineligible_reason: IneligibleReason | null;
+}
+
+export interface SendRecommendationPayload {
+  recipient_ids: string[];
+  tmdb_id: number;
+  media_type: 'movie' | 'tv';
+  media_title: string;
+  media_poster_path?: string | null;
+  media_release_date?: string | null;
+  media_vote_average?: number | null;
+  message?: string | null;
+}
+
+export interface FriendRecommendationItem {
+  id: string;
+  sender: {
+    id: string;
+    name: string;
+    username: string | null;
+    email?: string | null;
+  };
+  recipient: {
+    id: string;
+    name: string;
+    username: string | null;
+    email?: string | null;
+  };
+  media_type: 'movie' | 'tv';
+  tmdb_id: number;
+  media_title: string;
+  media_poster_path: string | null;
+  media_release_date: string | null;
+  media_vote_average: number | null;
+  message: string | null;
+  status: 'pending' | 'accepted' | 'dismissed';
+  created_at: string;
+  updated_at: string;
+  in_user_list: boolean;
+  user_list_status: string | null;
+}
+

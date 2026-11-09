@@ -20,6 +20,7 @@ import {
   Crown,
   ChevronLeft,
   ChevronRight,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -30,6 +31,7 @@ import { getTogetherRecommendations } from "@/services/recommendationService";
 import { TogetherRecommendationItem } from "@/types/recommendation";
 import { PosterImage } from "@/components/shared/PosterImage";
 import { AddToListButton } from "@/components/shared/AddToListButton";
+import { RecommendToFriendModal } from "@/components/shared/RecommendToFriendModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +83,29 @@ export default function TogetherPage() {
   const [hasGenerated, setHasGenerated] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
+  const [recommendModalMedia, setRecommendModalMedia] = useState<{
+    tmdbId: number;
+    mediaType: "movie" | "tv";
+    title: string;
+    posterPath?: string | null;
+    releaseDate?: string | null;
+    voteAverage?: number | null;
+  } | null>(null);
+
+  const handleOpenRecommendModal = (
+    item: TogetherRecommendationItem,
+    mType: "movie" | "tv",
+    mTitle: string
+  ) => {
+    setRecommendModalMedia({
+      tmdbId: item.id,
+      mediaType: mType,
+      title: mTitle,
+      posterPath: item.poster_path,
+      releaseDate: item.release_date || item.first_air_date,
+      voteAverage: item.vote_average,
+    });
+  };
 
   const saveScrollPosition = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -679,6 +704,16 @@ export default function TogetherPage() {
                         <ArrowRight className="w-4 h-4" />
                       </Button>
                     </Link>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleOpenRecommendModal(leadItem, leadMediaType, leadTitle)}
+                      className="font-semibold gap-1.5 text-xs md:text-sm border-zinc-700 hover:bg-zinc-800 text-zinc-200 cursor-pointer"
+                      title={friendName ? `Sugerir para ${friendName}` : "Sugerir a um amigo"}
+                    >
+                      <Send className="w-3.5 h-3.5 text-primary" />
+                      <span>Sugerir a {friendName ? friendName.split(" ")[0] : "Amigo"}</span>
+                    </Button>
                     <button
                       type="button"
                       onClick={() => handleDismiss(leadItem)}
@@ -710,6 +745,7 @@ export default function TogetherPage() {
                 hiddenIds={hiddenIds}
                 saveScrollPosition={saveScrollPosition}
                 handleDismiss={handleDismiss}
+                handleOpenRecommendModal={handleOpenRecommendModal}
               />
             )}
 
@@ -725,6 +761,7 @@ export default function TogetherPage() {
                 hiddenIds={hiddenIds}
                 saveScrollPosition={saveScrollPosition}
                 handleDismiss={handleDismiss}
+                handleOpenRecommendModal={handleOpenRecommendModal}
               />
             )}
 
@@ -747,6 +784,7 @@ export default function TogetherPage() {
               hiddenIds={hiddenIds}
               saveScrollPosition={saveScrollPosition}
               handleDismiss={handleDismiss}
+              handleOpenRecommendModal={handleOpenRecommendModal}
             />
           </div>
         </div>
@@ -770,6 +808,16 @@ export default function TogetherPage() {
           </Button>
         </div>
       )}
+
+      {recommendModalMedia && (
+        <RecommendToFriendModal
+          isOpen={Boolean(recommendModalMedia)}
+          onClose={() => setRecommendModalMedia(null)}
+          media={recommendModalMedia}
+          initialFriendId={selectedFriendId}
+          initialFriendName={friendName}
+        />
+      )}
     </div>
   );
 }
@@ -787,6 +835,7 @@ function TogetherRail({
   hiddenIds,
   saveScrollPosition,
   handleDismiss,
+  handleOpenRecommendModal,
 }: {
   title: string;
   subtitle: string;
@@ -797,6 +846,11 @@ function TogetherRail({
   hiddenIds: Set<number>;
   saveScrollPosition: () => void;
   handleDismiss: (item: TogetherRecommendationItem) => void;
+  handleOpenRecommendModal: (
+    item: TogetherRecommendationItem,
+    mType: "movie" | "tv",
+    mTitle: string
+  ) => void;
 }) {
   const trackRef = useRef<HTMLDivElement | null>(null);
 
@@ -964,16 +1018,26 @@ function TogetherRail({
                   </div>
                 </div>
 
-                {/* Ações: Adicionar à Lista + Dispensar */}
+                {/* Ações: Adicionar à Lista + Sugerir ao Amigo + Dispensar */}
                 <div className="pt-1.5 border-t border-border/60 flex items-center justify-between gap-1 mt-auto">
-                  <button
-                    type="button"
-                    onClick={() => handleDismiss(item)}
-                    className="p-1 rounded-md text-muted-foreground hover:text-red-400 hover:bg-secondary transition-colors cursor-pointer"
-                    title="Não tenho interesse"
-                  >
-                    <EyeOff className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleDismiss(item)}
+                      className="p-1 rounded-md text-muted-foreground hover:text-red-400 hover:bg-secondary transition-colors cursor-pointer"
+                      title="Não tenho interesse"
+                    >
+                      <EyeOff className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenRecommendModal(item, mediaType, displayTitle)}
+                      className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-secondary transition-colors cursor-pointer"
+                      title={friendName ? `Sugerir para ${friendName}` : "Sugerir a um amigo"}
+                    >
+                      <Send className="w-3.5 h-3.5 text-primary" />
+                    </button>
+                  </div>
                   <AddToListButton
                     tmdb_id={item.id}
                     media_type={mediaType}

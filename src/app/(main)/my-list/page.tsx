@@ -21,11 +21,13 @@ import {
 import { UserFollowedUniverse, UniverseSuggestion } from '@/types/universes';
 import { FollowedUniverseCard } from '@/components/universes/FollowedUniverseCard';
 import { UniverseSuggestionCard } from '@/components/universes/UniverseSuggestionCard';
-import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff, ArrowUpDown, LayoutGrid, Film, Tv, Bookmark, Check } from 'lucide-react';
+import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff, ArrowUpDown, LayoutGrid, Film, Tv, Bookmark, Check, Send } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
 import { cn } from '@/lib/utils';
+import { RecommendationsTab } from '@/components/library/RecommendationsTab';
+import { friendsService } from '@/services/friendsService';
 
-const VALID_TABS = ['all', 'movie', 'tv', 'collections', 'universes'] as const;
+const VALID_TABS = ['all', 'movie', 'tv', 'collections', 'universes', 'recommendations'] as const;
 type MediaTabType = (typeof VALID_TABS)[number];
 
 const VALID_SORTS = ['recent', 'rating_desc', 'rating_asc', 'release_date_desc', 'release_date_asc', 'title_asc', 'title_desc'] as const;
@@ -71,6 +73,7 @@ function MyListContent() {
     return VALID_PROGRESS.includes(progressParam as any) ? (progressParam as ProgressFilterType) : 'all';
   });
   const [favoriteFilter, setFavoriteFilter] = useState<boolean>(() => favoriteParam);
+  const [pendingRecsCount, setPendingRecsCount] = useState<number>(0);
 
   // Collections & Suggestions state
   const [collections, setCollections] = useState<UserFollowedCollection[]>([]);
@@ -238,6 +241,10 @@ function MyListContent() {
     const timer = setTimeout(() => {
       loadSuggestions();
       loadUniverseSuggestions();
+      friendsService
+        .getReceivedRecommendations('pending')
+        .then((recs) => setPendingRecsCount(recs.length))
+        .catch(() => {});
     }, 300);
     return () => clearTimeout(timer);
   }, [loadSuggestions, loadUniverseSuggestions]);
@@ -717,38 +724,40 @@ function MyListContent() {
         </div>
 
         {/* Campo de Busca Redesenhado */}
-        <div className="w-full sm:w-80 md:w-96">
-          <FilterSearchInput
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder={
-              mediaTab === 'collections'
-                ? "Buscar coleções..."
-                : mediaTab === 'universes'
-                ? "Buscar universos..."
-                : mediaTab === 'movie'
-                ? "Buscar filmes na biblioteca..."
-                : mediaTab === 'tv'
-                ? "Buscar séries na biblioteca..."
-                : "Buscar na biblioteca..."
-            }
-            showCount={Boolean(searchQuery.trim())}
-            resultCount={
-              mediaTab === 'collections'
-                ? filteredCollections.length
-                : mediaTab === 'universes'
-                ? filteredUniverses.length
-                : filteredItems.length
-            }
-            totalCount={
-              mediaTab === 'collections'
-                ? collections.length
-                : mediaTab === 'universes'
-                ? universes.length
-                : baseItems.length
-            }
-          />
-        </div>
+        {mediaTab !== 'recommendations' && (
+          <div className="w-full sm:w-80 md:w-96">
+            <FilterSearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder={
+                mediaTab === 'collections'
+                  ? "Buscar coleções..."
+                  : mediaTab === 'universes'
+                  ? "Buscar universos..."
+                  : mediaTab === 'movie'
+                  ? "Buscar filmes na biblioteca..."
+                  : mediaTab === 'tv'
+                  ? "Buscar séries na biblioteca..."
+                  : "Buscar na biblioteca..."
+              }
+              showCount={Boolean(searchQuery.trim())}
+              resultCount={
+                mediaTab === 'collections'
+                  ? filteredCollections.length
+                  : mediaTab === 'universes'
+                  ? filteredUniverses.length
+                  : filteredItems.length
+              }
+              totalCount={
+                mediaTab === 'collections'
+                  ? collections.length
+                  : mediaTab === 'universes'
+                  ? universes.length
+                  : baseItems.length
+              }
+            />
+          </div>
+        )}
       </div>
 
       <Tabs
@@ -837,6 +846,26 @@ function MyListContent() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger
+            value="recommendations"
+            className="min-h-[44px] text-xs sm:text-sm font-medium cursor-pointer flex items-center gap-1.5"
+            role="tab"
+            aria-label="Ver indicações de amigos"
+            aria-selected={mediaTab === 'recommendations'}
+            aria-controls="panel-recommendations"
+            id="tab-recommendations"
+          >
+            <Send className="w-4 h-4" />
+            <span>Indicações</span>
+            {pendingRecsCount > 0 && (
+              <span
+                title={`${pendingRecsCount} indicações pendentes de amigos`}
+                className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-primary/20 text-primary border border-primary/30"
+              >
+                {pendingRecsCount}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -844,6 +873,7 @@ function MyListContent() {
       {!isSuggestionsBannerDismissed &&
         mediaTab !== 'collections' &&
         mediaTab !== 'universes' &&
+        mediaTab !== 'recommendations' &&
         (suggestions.length > 0 || universeSuggestions.length > 0) && (
           <div className="mb-6 p-3 sm:p-3.5 bg-gradient-to-r from-amber-500/10 via-purple-500/5 to-transparent border border-amber-500/25 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-in fade-in duration-300">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -904,7 +934,11 @@ function MyListContent() {
           </div>
         )}
 
-      {mediaTab === 'universes' ? (
+      {mediaTab === 'recommendations' ? (
+        <div id="panel-recommendations" role="tabpanel" aria-labelledby="tab-recommendations">
+          <RecommendationsTab onPendingCountChange={setPendingRecsCount} />
+        </div>
+      ) : mediaTab === 'universes' ? (
         <div className="space-y-8">
           {/* Seção de Sugestões de Universos (Sólido, adaptativo ao tema, com limite de 6 cards) */}
           {(filteredUniverseSuggestions.length > 0 || dismissedUniverses.length > 0) && (

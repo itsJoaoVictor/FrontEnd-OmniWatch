@@ -4,6 +4,9 @@ import {
   FriendRequestsResponse,
   UserSearchResult,
   FriendFeedResponse,
+  FriendEligibilityItem,
+  SendRecommendationPayload,
+  FriendRecommendationItem,
 } from '@/types/friends';
 
 export const friendsService = {
@@ -73,6 +76,45 @@ export const friendsService = {
       params.friend = friend;
     }
     const res = await api.get<FriendFeedResponse>('/api/friends/feed', { params });
+    return res.data;
+  },
+
+  async getRecommendationEligibility(
+    tmdbId: number,
+    mediaType: 'movie' | 'tv'
+  ): Promise<FriendEligibilityItem[]> {
+    const res = await api.get<FriendEligibilityItem[]>('/api/friends/recommendations/eligibility', {
+      params: { tmdb_id: tmdbId, media_type: mediaType },
+    });
+    return res.data;
+  },
+
+  async sendRecommendation(
+    payload: SendRecommendationPayload
+  ): Promise<FriendRecommendationItem[]> {
+    const res = await api.post<FriendRecommendationItem[]>('/api/friends/recommendations', payload);
+    return res.data;
+  },
+
+  async getReceivedRecommendations(
+    status: 'pending' | 'history' = 'pending',
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<FriendRecommendationItem[]> {
+    const res = await api.get<FriendRecommendationItem[]>('/api/friends/recommendations/received', {
+      params: { status, limit, offset },
+    });
+    return res.data;
+  },
+
+  async updateRecommendationStatus(
+    recommendationId: string,
+    status: 'accepted' | 'dismissed'
+  ): Promise<FriendRecommendationItem> {
+    const res = await api.patch<FriendRecommendationItem>(
+      `/api/friends/recommendations/${recommendationId}/status`,
+      { status }
+    );
     return res.data;
   },
 };

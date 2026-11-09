@@ -82,8 +82,17 @@ export function NotificationBell() {
     }
     setOpen(false);
 
-    const isFriendRequest = notification.title.toLowerCase().includes('amizade') || notification.title.toLowerCase().includes('amigo');
-    if (isFriendRequest) {
+    const isRecommendation =
+      notification.title.toLowerCase().includes('indica') ||
+      notification.title.toLowerCase().includes('recomenda');
+    const isFriendRequest =
+      !isRecommendation &&
+      (notification.title.toLowerCase().includes('amizade') ||
+        notification.title.toLowerCase().includes('amigo'));
+
+    if (isRecommendation) {
+      router.push('/my-list?tab=recommendations');
+    } else if (isFriendRequest) {
       fetchPendingCount();
       router.push('/friends');
     } else if (notification.media_id) {
