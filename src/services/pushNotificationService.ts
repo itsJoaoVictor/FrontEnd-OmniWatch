@@ -2,7 +2,7 @@ import { api } from '@/lib/axios';
 
 const FALLBACK_VAPID_PUBLIC_KEY =
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
-  'BG-l02lg8CBtYAiPePx30IlSZcQ5RaFVFMoEHCXTyQR_qb6wQzDXiSydzkMcITHvaHNuUYxjOqAWdD3uKRTYoOE';
+  'BCu50BtTZ5m557ZRl68C1114ZY7pwkRAzdXFDdEcPFQRI5E2udRK9ko0XkyOdcO4tDnTId3xUqcR9nFjRjqixho';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
