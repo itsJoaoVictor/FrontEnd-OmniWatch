@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Bell, UserPlus, Trash2, CheckCheck } from 'lucide-react';
+import { Bell, UserPlus, Trash2, CheckCheck, Smartphone, Check, Loader2, BellRing } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { pushNotificationService } from '@/services/pushNotificationService';
+import { toast } from '@/components/ui/toast';
+import { cn } from '@/lib/utils';
 
 interface NotificationItem {
   id: string;
@@ -23,6 +26,90 @@ export function NotificationBell() {
   const { fetchPendingCount } = useFriendsStore();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
+  const [isPushSupported, setIsPushSupported] = useState(false);
+  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+  const [isTogglingPush, setIsTogglingPush] = useState(false);
+  const [isTestingPush, setIsTestingPush] = useState(false);
+
+  useEffect(() => {
+    setIsPushSupported(pushNotificationService.isSupported());
+    pushNotificationService.isSubscribed().then(setIsPushSubscribed);
+  }, []);
+
+  useEffect(() => {
+    if (open && pushNotificationService.isSupported()) {
+      pushNotificationService.isSubscribed().then(setIsPushSubscribed);
+    }
+  }, [open]);
+
+  const handleTogglePush = async () => {
+    setIsTogglingPush(true);
+    try {
+      if (isPushSubscribed) {
+        await pushNotificationService.unsubscribe();
+        setIsPushSubscribed(false);
+        toast.add({
+          title: "Notificações desativadas",
+          description: "Você não receberá mais notificações push neste aparelho.",
+          type: "info",
+        });
+      } else {
+        const success = await pushNotificationService.subscribe();
+        if (success) {
+          setIsPushSubscribed(true);
+          toast.add({
+            title: "Notificações ativadas! 🔔",
+            description: "Você receberá notificações na barra do seu celular e navegador.",
+            type: "success",
+          });
+        } else {
+          toast.add({
+            title: "Permissão não concedida",
+            description: "Permita notificações nas configurações do seu navegador para ativar.",
+            type: "error",
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao alterar push:", err);
+      toast.add({
+        title: "Erro",
+        description: "Falha ao configurar notificações push.",
+        type: "error",
+      });
+    } finally {
+      setIsTogglingPush(false);
+    }
+  };
+
+  const handleSendTestPush = async () => {
+    setIsTestingPush(true);
+    try {
+      const res = await pushNotificationService.sendTestPush();
+      if (res.success) {
+        toast.add({
+          title: "Enviado! 🚀",
+          description: res.message,
+          type: "success",
+        });
+      } else {
+        toast.add({
+          title: "Atenção",
+          description: res.message,
+          type: "error",
+        });
+      }
+    } catch (err) {
+      console.error("Erro no teste de push:", err);
+      toast.add({
+        title: "Erro",
+        description: "Não foi possível disparar notificação de teste.",
+        type: "error",
+      });
+    } finally {
+      setIsTestingPush(false);
+    }
+  };
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -151,6 +238,64 @@ export function NotificationBell() {
             </div>
           )}
         </div>
+
+        {/* Banner de Push Notifications no Celular / Navegador */}
+        {isPushSupported && (
+          <div className="p-2.5 bg-zinc-950/80 border-b border-zinc-800 text-xs flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Smartphone className="w-4 h-4 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="font-semibold text-zinc-200 truncate">
+                  {isPushSubscribed ? "Notificações push ativas" : "Alertas no Celular (Push)"}
+                </p>
+                <p className="text-[10px] text-zinc-400 truncate">
+                  {isPushSubscribed ? "Recebendo avisos na barra" : "Receba indicações na barra do celular"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isPushSubscribed && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSendTestPush();
+                  }}
+                  disabled={isTestingPush}
+                  className="text-[11px] px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium transition-colors"
+                  title="Disparar notificação de teste para este aparelho"
+                >
+                  {isTestingPush ? <Loader2 className="w-3 h-3 animate-spin" /> : "Testar"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleTogglePush();
+                }}
+                disabled={isTogglingPush}
+                className={cn(
+                  "text-[11px] font-semibold px-2 py-0.5 rounded transition-colors flex items-center gap-1",
+                  isPushSubscribed
+                    ? "bg-zinc-800/80 hover:bg-red-500/20 text-zinc-400 hover:text-red-400"
+                    : "bg-primary text-black hover:bg-primary/90"
+                )}
+              >
+                {isTogglingPush ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : isPushSubscribed ? (
+                  "Desativar"
+                ) : (
+                  "Ativar"
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="max-h-[360px] overflow-y-auto divide-y divide-zinc-800/40">
           {notifications.length === 0 ? (

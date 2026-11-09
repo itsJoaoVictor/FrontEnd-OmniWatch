@@ -24,7 +24,8 @@ import {
   Film,
   Tv,
   Users,
-  AlertCircle
+  AlertCircle,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -237,7 +238,10 @@ export function RecommendToFriendModal({
                 </span>
                 {year && <span>• {year}</span>}
                 {typeof media.voteAverage === "number" && media.voteAverage > 0 && (
-                  <span>• ★ {media.voteAverage.toFixed(1)}</span>
+                  <span className="flex items-center gap-1 text-amber-400 font-medium">
+                    • <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    {(media.voteAverage / 2).toFixed(1)}
+                  </span>
                 )}
               </div>
             </div>

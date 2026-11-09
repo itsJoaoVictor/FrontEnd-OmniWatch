@@ -16,7 +16,8 @@ import {
   Loader2,
   EyeOff,
   Sparkles,
-  Inbox
+  Inbox,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -274,7 +275,10 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
                         {year && <span>• {year}</span>}
                         {typeof rec.media_vote_average === "number" &&
                           rec.media_vote_average > 0 && (
-                            <span>• ★ {rec.media_vote_average.toFixed(1)}</span>
+                            <span className="flex items-center gap-1 text-amber-400 font-medium">
+                              • <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              {(rec.media_vote_average / 2).toFixed(1)}
+                            </span>
                           )}
                       </div>
 
