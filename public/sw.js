@@ -75,7 +75,17 @@ self.addEventListener('push', (event) => {
       : origin + (data.image.startsWith('/') ? '' : '/') + data.image;
   }
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    self.registration.showNotification(title, options).catch((err) => {
+      console.warn('showNotification falhou, tentando fallback simples:', err);
+      return self.registration.showNotification(title, {
+        body: options.body || 'Você tem uma nova notificação.',
+        icon: origin + '/icon-192x192.png',
+        badge: origin + '/icon-192x192.png',
+        data: options.data,
+      });
+    })
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
