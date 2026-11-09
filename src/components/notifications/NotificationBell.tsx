@@ -29,7 +29,6 @@ export function NotificationBell() {
   const [isPushSupported, setIsPushSupported] = useState(false);
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
   const [isTogglingPush, setIsTogglingPush] = useState(false);
-  const [isTestingPush, setIsTestingPush] = useState(false);
 
   useEffect(() => {
     setIsPushSupported(pushNotificationService.isSupported());
@@ -84,39 +83,6 @@ export function NotificationBell() {
       });
     } finally {
       setIsTogglingPush(false);
-    }
-  };
-
-  const handleSendTestPush = async () => {
-    setIsTestingPush(true);
-    try {
-      // Garante sincronização da inscrição local com o servidor antes do disparo de teste
-      await pushNotificationService.syncSubscription().catch(() => {});
-
-      const res = await pushNotificationService.sendTestPush();
-      if (res.success) {
-        setIsPushSubscribed(true);
-        toast.add({
-          title: "Enviado! 🚀",
-          description: res.message,
-          type: "success",
-        });
-      } else {
-        toast.add({
-          title: "Atenção",
-          description: res.message,
-          type: "error",
-        });
-      }
-    } catch (err) {
-      console.error("Erro no teste de push:", err);
-      toast.add({
-        title: "Erro",
-        description: "Não foi possível disparar notificação de teste.",
-        type: "error",
-      });
-    } finally {
-      setIsTestingPush(false);
     }
   };
 
@@ -264,21 +230,6 @@ export function NotificationBell() {
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              {isPushSubscribed && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSendTestPush();
-                  }}
-                  disabled={isTestingPush}
-                  className="text-[11px] px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium transition-colors"
-                  title="Disparar notificação de teste para este aparelho"
-                >
-                  {isTestingPush ? <Loader2 className="w-3 h-3 animate-spin" /> : "Testar"}
-                </button>
-              )}
               <button
                 type="button"
                 onClick={(e) => {
@@ -288,7 +239,7 @@ export function NotificationBell() {
                 }}
                 disabled={isTogglingPush}
                 className={cn(
-                  "text-[11px] font-semibold px-2 py-0.5 rounded transition-colors flex items-center gap-1",
+                  "text-[11px] font-semibold px-2.5 py-1 rounded transition-colors flex items-center gap-1",
                   isPushSubscribed
                     ? "bg-zinc-800/80 hover:bg-red-500/20 text-zinc-400 hover:text-red-400"
                     : "bg-primary text-black hover:bg-primary/90"

@@ -15,6 +15,14 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+function areUint8ArraysEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.byteLength !== b.byteLength) return false;
+  for (let i = 0; i < a.byteLength; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 export const pushNotificationService = {
   isSupported(): boolean {
     if (typeof window === 'undefined') return false;
@@ -52,7 +60,44 @@ export const pushNotificationService = {
         reg = await navigator.serviceWorker.register('/sw.js');
       }
       await navigator.serviceWorker.ready;
+
+      // 1. Obtém chave pública VAPID ativa do servidor
+      let targetVapidKey = FALLBACK_VAPID_PUBLIC_KEY;
+      try {
+        const res = await api.get<{ public_key: string }>('/api/notifications/push-key');
+        if (res.data?.public_key) {
+          targetVapidKey = res.data.public_key;
+        }
+      } catch (err) {
+        console.warn('Usando chave VAPID fallback na sincronização:', err);
+      }
+
+      const targetKeyArray = urlBase64ToUint8Array(targetVapidKey);
       let sub = await reg.pushManager.getSubscription();
+
+      // 2. Compara se a chave da inscrição local é idêntica à chave atual do servidor
+      let needsResubscribe = false;
+      if (sub && sub.options?.applicationServerKey) {
+        const currentKeyArray = new Uint8Array(sub.options.applicationServerKey);
+        if (!areUint8ArraysEqual(currentKeyArray, targetKeyArray)) {
+          // A chave do servidor mudou / foi rotacionada: renova a inscrição silenciosamente
+          needsResubscribe = true;
+        }
+      } else if (!sub) {
+        // Usuário concedeu permissão, mas o aparelho não tinha inscrição gerada
+        needsResubscribe = true;
+      }
+
+      if (needsResubscribe) {
+        if (sub) {
+          await sub.unsubscribe().catch(() => {});
+        }
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: targetKeyArray as any,
+        });
+      }
+
       if (!sub) return false;
 
       const subJson = sub.toJSON();
@@ -60,6 +105,7 @@ export const pushNotificationService = {
         return false;
       }
 
+      // 3. Salva ou atualiza a inscrição no banco de dados do servidor
       await api.post('/api/notifications/push-subscription', {
         endpoint: subJson.endpoint,
         keys: {

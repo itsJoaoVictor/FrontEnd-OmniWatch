@@ -17,8 +17,14 @@ export function PushNotificationPrompt() {
     // 1. Verifica se Web Push é suportado no aparelho/navegador
     if (!pushNotificationService.isSupported()) return;
 
-    // 2. Se a permissão já foi concedida ou bloqueada permanentemente, não incomoda
-    if (Notification.permission !== "default") return;
+    // 2. Se a permissão já foi concedida, garante silenciosamente a sincronização e renovação de chave em background
+    if (Notification.permission === "granted") {
+      pushNotificationService.syncSubscription().catch(() => {});
+      return;
+    }
+
+    // Se o usuário bloqueou expressamente, não exibe o prompt
+    if (Notification.permission === "denied") return;
 
     // 3. Verifica se o usuário dispensou recentemente (snooze de 7 dias)
     const dismissedUntil = localStorage.getItem(DISMISSED_KEY);
