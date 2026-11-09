@@ -193,7 +193,7 @@ export const useExploreStore = create<ExploreStoreState>((set, get) => ({
         }>("/api/recommendations/explore/refresh-batch", {
           media_type: mediaType,
           exclude_ids: excludeIds,
-          limit: 24,
+          limit: 25,
         });
 
         const nextItems = res.data?.items || [];

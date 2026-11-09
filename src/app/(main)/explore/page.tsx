@@ -30,11 +30,11 @@ export default function Page() {
       </Suspense>
 
       <Suspense fallback={<TrendingSkeleton />}>
-        <UpcomingSection />
+        <PersonasSection />
       </Suspense>
 
       <Suspense fallback={<TrendingSkeleton />}>
-        <PersonasSection />
+        <UpcomingSection />
       </Suspense>
 
       <Suspense fallback={<TrendingSkeleton />}>
