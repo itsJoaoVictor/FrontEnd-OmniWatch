@@ -47,15 +47,33 @@ self.addEventListener('push', (event) => {
   }
 
   const title = data.title || 'OmniWatch';
+  const origin = self.location.origin;
+
+  // Resolve URLs absolutas para ícone e badge para o Android carregar sempre sem falhas
+  let iconUrl = origin + '/icon-192x192.png';
+  if (data.icon) {
+    iconUrl = data.icon.startsWith('http')
+      ? data.icon
+      : origin + (data.icon.startsWith('/') ? '' : '/') + data.icon;
+  }
+
+  const badgeUrl = origin + '/icon-192x192.png';
+
   const options = {
     body: data.body || 'Você tem uma nova notificação no OmniWatch.',
-    icon: data.icon || '/icon-192x192.png',
-    badge: data.badge || '/icon-192x192.png',
+    icon: iconUrl,
+    badge: badgeUrl,
     vibrate: [120, 60, 120],
     data: data.data || { url: '/' },
     tag: data.tag || 'omniwatch-notification',
     renotify: true,
   };
+
+  if (data.image) {
+    options.image = data.image.startsWith('http')
+      ? data.image
+      : origin + (data.image.startsWith('/') ? '' : '/') + data.image;
+  }
 
   event.waitUntil(self.registration.showNotification(title, options));
 });
