@@ -131,14 +131,19 @@ export const ContinueWatchingTickets = memo(function ContinueWatchingTickets({
         continue;
       }
 
-      if (item.isUpToDate === true || saved?.is_up_to_date === true) {
-        continue;
-      }
-      if (saved?.next_episode?.is_released === false) {
-        continue;
-      }
-      if (saved?.next_episode?.air_date && isFutureDate(saved.next_episode.air_date)) {
-        continue;
+      const nextAirDate = saved?.next_episode?.air_date;
+      const isNextEpActuallyReleased = nextAirDate ? !isFutureDate(nextAirDate) : false;
+
+      if (!isNextEpActuallyReleased) {
+        if (item.isUpToDate === true || saved?.is_up_to_date === true) {
+          continue;
+        }
+        if (saved?.next_episode?.is_released === false) {
+          continue;
+        }
+        if (nextAirDate && isFutureDate(nextAirDate)) {
+          continue;
+        }
       }
 
       let currentSeason =

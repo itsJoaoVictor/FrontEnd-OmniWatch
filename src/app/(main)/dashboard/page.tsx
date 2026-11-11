@@ -72,6 +72,29 @@ export default function HomePage() {
       const newlyVerified = new Set<number>(verifiedShows);
       
       for (const item of tvWatching) {
+        const nextAirDate = item.next_episode?.air_date;
+        const isEpisodeActuallyReleased = nextAirDate ? !isFutureDate(nextAirDate) : false;
+
+        // Se o próximo episódio tem data de estreia igual ou anterior a hoje, nunca pode ser tratado como em dia
+        if (isEpisodeActuallyReleased) {
+          newlyVerified.add(item.tmdb_id);
+          if (item.next_episode?.season_number && item.next_episode?.episode_number) {
+            newCorrections[item.tmdb_id] = {
+              season: item.next_episode.season_number,
+              episode: item.next_episode.episode_number,
+            };
+          }
+          if (!foundPriority && nextAirDate) {
+            const airDate = parseReleaseDate(nextAirDate);
+            const diffHours = (Date.now() - airDate.getTime()) / (1000 * 60 * 60);
+            if (diffHours >= -24 && diffHours <= 48) {
+              setPriorityHeroId(item.tmdb_id);
+              foundPriority = true;
+            }
+          }
+          continue;
+        }
+
         // Se o backend já calculou e forneceu is_up_to_date, aproveitamos diretamente sem chamada extra
         if (item.is_up_to_date === true) {
           newUpToDate.add(item.tmdb_id);
@@ -241,11 +264,17 @@ export default function HomePage() {
     });
 
     const activeWatchingItems = watchingItems.filter(i => {
-      // Regra 1: Nunca exibir séries que estão em dia
-      if (i.is_up_to_date === true) return false;
       if (i.media_type === 'tv') {
+        const nextAirDate = i.next_episode?.air_date;
+        const isEpisodeActuallyReleased = nextAirDate ? !isFutureDate(nextAirDate) : false;
+
+        // Se o episódio já estreou no calendário civil, garante exibição imediata em Continuar Assistindo
+        if (isEpisodeActuallyReleased) return true;
+
+        // Regra 1: Nunca exibir séries que estão em dia
+        if (i.is_up_to_date === true) return false;
         if (i.next_episode?.is_released === false) return false;
-        if (i.next_episode?.air_date && isFutureDate(i.next_episode.air_date)) return false;
+        if (nextAirDate && isFutureDate(nextAirDate)) return false;
         if (i.is_up_to_date === false) return true;
         if (upToDateShows.has(i.tmdb_id)) return false;
         return verifiedShows.has(i.tmdb_id);
@@ -274,7 +303,11 @@ export default function HomePage() {
     const mapToMediaItem = (i: any): MediaItem => {
       let currentEpisode = null;
       let nextEpisodeToWatch = undefined;
-      const isUpToDate = i.is_up_to_date === true || upToDateShows.has(i.tmdb_id);
+      const nextAirDate = i.next_episode?.air_date;
+      const isEpisodeActuallyReleased = nextAirDate ? !isFutureDate(nextAirDate) : false;
+      const isUpToDate = isEpisodeActuallyReleased
+        ? false
+        : (i.is_up_to_date === true || upToDateShows.has(i.tmdb_id));
 
       if (i.media_type === 'tv' && i.status === 'watching') {
         if (isUpToDate) {

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Image from "next/image";
 import { Tv, Share2, CheckCircle2 } from "lucide-react";
-import { NetworkItem, EpisodeItem } from "@/types/details";
+import { NetworkItem, EpisodeItem, SeasonItem } from "@/types/details";
 import { formatReleaseDate } from "@/lib/dateUtils";
 import { useMyListStore } from "@/store/useMyListStore";
 import { toast } from "@/components/ui/toast";
@@ -18,6 +18,7 @@ interface TvTechnicalDetailsSidebarProps {
   lastEpisodeToAir: EpisodeItem | null;
   numberOfSeasons: number;
   numberOfEpisodes: number;
+  seasons?: SeasonItem[];
 }
 
 export function TvTechnicalDetailsSidebar({
@@ -28,10 +29,24 @@ export function TvTechnicalDetailsSidebar({
   lastEpisodeToAir,
   numberOfSeasons,
   numberOfEpisodes,
+  seasons,
 }: TvTechnicalDetailsSidebarProps) {
   const episodeProgress = useMyListStore((state) =>
     seriesId ? state.episodeProgress[seriesId] : undefined
   );
+
+  // Usa a soma das temporadas regulares se for maior que o contador agregado do TMDB (que pode ter delay de atualização)
+  const effectiveTotalEpisodes = useMemo(() => {
+    if (seasons && seasons.length > 0) {
+      const regularSeasonsTotal = seasons
+        .filter((s) => s.season_number > 0)
+        .reduce((acc, s) => acc + (s.episode_count || 0), 0);
+      if (regularSeasonsTotal > 0) {
+        return Math.max(regularSeasonsTotal, numberOfEpisodes);
+      }
+    }
+    return numberOfEpisodes;
+  }, [seasons, numberOfEpisodes]);
 
   // Calcula o total deduplicado de episódios assistidos na série toda
   const totalWatchedEpisodes = useMemo(() => {
@@ -44,11 +59,12 @@ export function TvTechnicalDetailsSidebar({
   }, [episodeProgress]);
 
   const completionPct =
-    numberOfEpisodes > 0
-      ? Math.min(100, Math.round((totalWatchedEpisodes / numberOfEpisodes) * 100))
+    effectiveTotalEpisodes > 0
+      ? Math.min(100, Math.round((totalWatchedEpisodes / effectiveTotalEpisodes) * 100))
       : 0;
 
-  const isAllCompleted = numberOfEpisodes > 0 && totalWatchedEpisodes >= numberOfEpisodes;
+  const isSeriesEnded = status === "Ended" || status === "Canceled";
+  const isAllCompleted = effectiveTotalEpisodes > 0 && totalWatchedEpisodes >= effectiveTotalEpisodes;
 
   // Tradução dos status de séries
   const statusTranslations: Record<string, string> = {
@@ -84,14 +100,14 @@ export function TvTechnicalDetailsSidebar({
   return (
     <div className="space-y-6">
       {/* Widget de Progresso Geral da Série */}
-      {seriesId && numberOfEpisodes > 0 && (
+      {seriesId && effectiveTotalEpisodes > 0 && (
         <aside className="bg-card text-card-foreground p-5 rounded-2xl border border-border shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <h3 className="font-bold text-sm text-foreground">Seu Progresso na Série</h3>
             {isAllCompleted ? (
               <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" />
-                <span>100% Concluída</span>
+                <span>{isSeriesEnded ? "100% Concluída" : "Em dia"}</span>
               </span>
             ) : totalWatchedEpisodes > 0 ? (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
@@ -108,7 +124,7 @@ export function TvTechnicalDetailsSidebar({
             <div className="flex justify-between items-center text-xs mb-1.5 font-medium">
               <span className="text-muted-foreground">Episódios assistidos</span>
               <span className="font-bold text-foreground">
-                {totalWatchedEpisodes} de {numberOfEpisodes}
+                {totalWatchedEpisodes} de {effectiveTotalEpisodes}
               </span>
             </div>
             <div className="w-full bg-secondary rounded-full h-2 overflow-hidden border border-border/40">

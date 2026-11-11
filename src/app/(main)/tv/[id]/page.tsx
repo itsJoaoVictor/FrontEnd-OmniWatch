@@ -95,6 +95,7 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
               lastEpisodeToAir={tv.last_episode_to_air}
               numberOfSeasons={tv.number_of_seasons}
               numberOfEpisodes={tv.number_of_episodes}
+              seasons={tv.seasons}
             />
           </div>
         </div>

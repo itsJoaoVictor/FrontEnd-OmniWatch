@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { api } from '@/lib/axios';
 import { resilientFetch } from '@/lib/resilient-fetch';
 import { toast } from '@/components/ui/toast';
+import { isFutureDate } from '@/lib/dateUtils';
 import {
   removeUpToDateShowFromCache,
   addUpToDateShowToCache,
@@ -78,6 +79,24 @@ interface MyListStore {
   toggleSeason: (tmdb_id: number, season: number, episodeCount: number, isWatched: boolean) => Promise<void>;
 }
 
+function reconcileTvItemDate(item: SavedItem): SavedItem {
+  if (
+    item.media_type === 'tv' &&
+    item.next_episode?.air_date &&
+    !isFutureDate(item.next_episode.air_date)
+  ) {
+    return {
+      ...item,
+      is_up_to_date: false,
+      next_episode: {
+        ...item.next_episode,
+        is_released: true,
+      },
+    };
+  }
+  return item;
+}
+
 function sanitizeItemsMap(
   raw: Record<string | number, SavedItem> | undefined | null
 ): Record<string | number, SavedItem> {
@@ -90,7 +109,7 @@ function sanitizeItemsMap(
     const tmdbId = Number(item.tmdb_id);
     if (!Number.isInteger(tmdbId) || tmdbId <= 0) continue;
     if (key === String(tmdbId)) {
-      sanitized[tmdbId] = item;
+      sanitized[tmdbId] = reconcileTvItemDate(item);
     }
   }
 
@@ -100,7 +119,7 @@ function sanitizeItemsMap(
     const tmdbId = Number(item.tmdb_id);
     if (!Number.isInteger(tmdbId) || tmdbId <= 0) continue;
     if (!sanitized[tmdbId]) {
-      sanitized[tmdbId] = item;
+      sanitized[tmdbId] = reconcileTvItemDate(item);
     }
   }
 
@@ -157,7 +176,7 @@ export const useMyListStore = create<MyListStore>()(
               const tmdbId = (!isNaN(parsedTmdbId) && parsedTmdbId > 0) ? parsedTmdbId : (typeof item.id === 'number' ? item.id : undefined);
               if (tmdbId) {
                 const mediaType = item.media?.media_type || item.media_type || 'movie';
-                const savedItem: SavedItem = {
+                const rawSavedItem: SavedItem = {
                   id: item.id?.toString() || String(tmdbId),
                   tmdb_id: tmdbId,
                   status: item.status || 'plan_to_watch',
@@ -173,12 +192,13 @@ export const useMyListStore = create<MyListStore>()(
                   is_up_to_date: item.is_up_to_date !== undefined ? item.is_up_to_date : null,
                   next_episode: item.next_episode || null,
                 };
+                const savedItem = reconcileTvItemDate(rawSavedItem);
                 itemsMap[tmdbId] = savedItem;
 
-                // Sincroniza o cache local com a resposta oficial do backend
-                if (item.is_up_to_date === true) {
+                // Sincroniza o cache local com a resposta oficial (reconciliada com a data civil local)
+                if (savedItem.is_up_to_date === true) {
                   addUpToDateShowToCache(tmdbId);
-                } else if (item.is_up_to_date === false) {
+                } else if (savedItem.is_up_to_date === false) {
                   removeUpToDateShowFromCache(tmdbId);
                 }
 
