@@ -23,10 +23,22 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { PosterImage } from "@/components/shared/PosterImage";
 import { AddToListButton } from "@/components/shared/AddToListButton";
-import { useMyListStore, ListStatus } from "@/store/useMyListStore";
+import { useMyListStore, SavedItem } from "@/store/useMyListStore";
 import { friendsService } from "@/services/friendsService";
 import { FriendRecommendationItem } from "@/types/friends";
 import { cn } from "@/lib/utils";
+
+function isRecommendationInList(
+  rec: FriendRecommendationItem,
+  itemsMap: Record<string | number, SavedItem>,
+  ignoreTemp = false
+): boolean {
+  if (rec.in_user_list) return true;
+  const savedItem = itemsMap[rec.tmdb_id];
+  if (!savedItem) return false;
+  if (ignoreTemp && savedItem.id?.startsWith("temp-")) return false;
+  return !savedItem.media_type || savedItem.media_type === rec.media_type;
+}
 
 interface RecommendationsTabProps {
   onPendingCountChange?: (count: number) => void;
@@ -44,10 +56,28 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
     setIsLoading(true);
     try {
       const data = await friendsService.getReceivedRecommendations(currentSubTab);
-      setRecommendations(data);
 
       if (currentSubTab === "pending") {
-        onPendingCountChange?.(data.length);
+        const currentStoreItems = useMyListStore.getState().items;
+        const alreadySaved = data.filter((rec) =>
+          isRecommendationInList(rec, currentStoreItems, true)
+        );
+        const stillPending = data.filter(
+          (rec) => !isRecommendationInList(rec, currentStoreItems, true)
+        );
+
+        if (alreadySaved.length > 0) {
+          await Promise.allSettled(
+            alreadySaved.map((rec) =>
+              friendsService.updateRecommendationStatus(rec.id, "accepted")
+            )
+          );
+        }
+
+        setRecommendations(stillPending);
+        onPendingCountChange?.(stillPending.length);
+      } else {
+        setRecommendations(data);
       }
     } catch (err) {
       console.error("Erro ao carregar recomendações:", err);
@@ -65,22 +95,27 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
     loadData(subTab);
   }, [subTab, loadData]);
 
-  // Ação rápida: Adicionar à Minha Lista como "plan_to_watch"
+  // Ação rápida: Adicionar à Minha Lista como "plan_to_watch" (ou confirmar aceite se já estiver na lista)
   const handleQuickAdd = async (rec: FriendRecommendationItem) => {
     setProcessingId(rec.id);
+    const alreadySaved = isRecommendationInList(rec, myItems);
     try {
-      await addToList(rec.tmdb_id, rec.media_type, {
-        title: rec.media_title,
-        poster_path: rec.media_poster_path,
-        release_date: rec.media_release_date,
-        status: "plan_to_watch",
-      });
+      if (!alreadySaved) {
+        await addToList(rec.tmdb_id, rec.media_type, {
+          title: rec.media_title,
+          poster_path: rec.media_poster_path,
+          release_date: rec.media_release_date,
+          status: "plan_to_watch",
+        });
+      }
 
       // Atualiza o status da recomendação para 'accepted'
       await friendsService.updateRecommendationStatus(rec.id, "accepted");
       toast.add({
-        title: "Adicionado à Lista",
-        description: `"${rec.media_title}" foi adicionado à sua lista!`,
+        title: alreadySaved ? "Indicação aceita" : "Adicionado à Lista",
+        description: alreadySaved
+          ? `"${rec.media_title}" já estava na sua lista e foi movido para o histórico.`
+          : `"${rec.media_title}" foi adicionado à sua lista!`,
         type: "success",
       });
 
@@ -207,7 +242,7 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {recommendations.map((rec) => {
-            const isSaved = !!myItems[rec.tmdb_id];
+            const isSaved = isRecommendationInList(rec, myItems);
             const year = rec.media_release_date
               ? rec.media_release_date.substring(0, 4)
               : null;
@@ -325,11 +360,11 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
                     <Button
                       size="sm"
                       onClick={() => handleQuickAdd(rec)}
-                      disabled={isProcessing || isSaved}
+                      disabled={isProcessing}
                       className={cn(
                         "text-xs font-medium h-8 px-3 rounded-lg flex items-center gap-1.5",
                         isSaved
-                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30"
                           : "bg-primary text-primary-foreground hover:bg-primary/90"
                       )}
                     >

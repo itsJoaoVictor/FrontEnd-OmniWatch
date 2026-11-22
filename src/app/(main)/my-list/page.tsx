@@ -243,7 +243,7 @@ function MyListContent() {
       loadUniverseSuggestions();
       friendsService
         .getReceivedRecommendations('pending')
-        .then((recs) => setPendingRecsCount(recs.length))
+        .then((recs) => setPendingRecsCount(recs.filter((r) => !r.in_user_list).length))
         .catch(() => {});
     }, 300);
     return () => clearTimeout(timer);
