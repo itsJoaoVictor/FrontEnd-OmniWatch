@@ -37,6 +37,8 @@ export interface MatchPillar {
   label: string;
   percent: number;
   status: "strong" | "moderate" | "novelty" | "low" | string;
+  impact?: "high" | "medium" | "low" | string;
+  impact_label?: string;
   description: string;
   chips: string[];
 }
@@ -52,6 +54,8 @@ export interface MatchAnchor {
   rewatch_count: number;
   ep_rewatches: number;
   reason_label: string;
+  shared_genres?: string[];
+  priority_note?: string | null;
 }
 
 export interface MatchPersonaScore {
@@ -71,6 +75,9 @@ export interface MatchFactor {
 
 export interface MatchScoreBreakdown {
   score: number;
+  base_score?: number;
+  base_source_label?: string;
+  net_adjustment?: number;
   tier_label: string;
   summary: string;
   is_preliminary: boolean;
@@ -210,6 +217,9 @@ export function MatchBreakdownSheet({
   const [failedBackdrop, setFailedBackdrop] = useState<string | null>(null);
   const hasAdjustments =
     breakdown.boosts.length > 0 || breakdown.restraints.length > 0;
+  const netAdjustment = breakdown.net_adjustment ?? 0;
+  const showAdjustmentsSection =
+    hasAdjustments || Math.abs(netAdjustment) >= 0.5;
   const showBackdrop = Boolean(backdropPath && failedBackdrop !== backdropPath);
 
   return (
@@ -311,7 +321,7 @@ export function MatchBreakdownSheet({
                       <p className="text-sm font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
                         {anchor.title}
                       </p>
-                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/80 border border-border/60 text-foreground/90 font-medium">
                           <AnchorReasonIcon anchor={anchor} />
                           {anchor.reason_label}
@@ -319,7 +329,17 @@ export function MatchBreakdownSheet({
                         <span className="text-muted-foreground font-semibold tabular-nums">
                           {anchor.similarity}% similar
                         </span>
+                        {anchor.priority_note && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-[10px] font-semibold">
+                            {anchor.priority_note}
+                          </span>
+                        )}
                       </div>
+                      {anchor.shared_genres && anchor.shared_genres.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          Em comum: {anchor.shared_genres.join(" · ")}
+                        </p>
+                      )}
                     </div>
 
                     <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
@@ -351,6 +371,18 @@ export function MatchBreakdownSheet({
                         <span className="text-sm font-semibold text-foreground truncate">
                           {pillar.label}
                         </span>
+                        {pillar.impact_label && (
+                          <span
+                            className={cn(
+                              "text-[10px] font-semibold px-1.5 py-0.5 rounded-md border shrink-0",
+                              pillar.impact === "high"
+                                ? "bg-primary/10 text-primary border-primary/20"
+                                : "bg-muted/60 text-muted-foreground border-border/60"
+                            )}
+                          >
+                            {pillar.impact_label}
+                          </span>
+                        )}
                       </div>
 
                       {isNovelty ? (
@@ -457,11 +489,45 @@ export function MatchBreakdownSheet({
           )}
 
           {/* Bloco 5: O que impulsionou vs. O que segurou a nota */}
-          {hasAdjustments && (
+          {showAdjustmentsSection && (
             <section className="space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 O que puxou e o que segurou a nota
               </h3>
+
+              {breakdown.base_score !== undefined && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-card/80 border border-border/80 px-3.5 py-2.5 text-xs">
+                  <span className="text-muted-foreground font-medium truncate">
+                    {breakdown.base_source_label || "Base do perfil"}
+                  </span>
+                  <div className="flex items-center gap-1.5 font-bold tabular-nums shrink-0">
+                    <span className="text-foreground">
+                      {Math.round(breakdown.base_score)}%
+                    </span>
+                    {Math.abs(netAdjustment) >= 0.1 && (
+                      <>
+                        <span className="text-muted-foreground font-normal">→</span>
+                        <span
+                          className={cn(
+                            "px-1.5 py-0.5 rounded-md text-[11px]",
+                            netAdjustment > 0
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
+                              : "bg-amber-500/15 text-amber-600 dark:text-amber-300"
+                          )}
+                        >
+                          {netAdjustment > 0
+                            ? `+${netAdjustment.toFixed(1).replace(".0", "")}%`
+                            : `${netAdjustment.toFixed(1).replace(".0", "")}%`}
+                        </span>
+                      </>
+                    )}
+                    <span className="text-muted-foreground font-normal">=</span>
+                    <span className="text-primary font-black">
+                      {Math.round(breakdown.score)}%
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 {breakdown.boosts.map((boost) => (
