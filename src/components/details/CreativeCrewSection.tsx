@@ -7,7 +7,9 @@ interface CreativeCrewSectionProps {
 }
 
 const JOB_TRANSLATIONS: Record<string, string> = {
+  Creator: "Criação",
   Director: "Direção",
+  "Series Director": "Direção da Série",
   Screenplay: "Roteiro",
   Writer: "Roteiro",
   Author: "História Original",
@@ -23,9 +25,12 @@ export function CreativeCrewSection({ crew }: CreativeCrewSectionProps) {
 
   // Filtra os cargos mais nobres da produção cinematográfica
   const priorityJobs = [
+    "Creator",
     "Director",
+    "Series Director",
     "Screenplay",
     "Writer",
+    "Executive Producer",
     "Original Music Composer",
     "Director of Photography",
     "Producer",

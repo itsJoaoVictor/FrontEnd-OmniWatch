@@ -12,7 +12,7 @@ import { ProgressFetcher } from "@/components/details/ProgressFetcher";
 async function getTvData(id: string): Promise<TvSeriesDetailsResponse | null> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/tv/${id}`, {
-      next: { revalidate: process.env.NODE_ENV === 'development' ? 0 : 3600 }
+      cache: "no-store",
     });
     if (!res.ok) {
       if (res.status === 404) return null;

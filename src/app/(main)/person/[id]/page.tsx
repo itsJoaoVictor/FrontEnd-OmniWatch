@@ -8,7 +8,7 @@ import { PersonDiscoverSection } from "@/components/person/PersonDiscoverSection
 async function getPersonData(id: string): Promise<PersonDetailsResponse | null> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/person/${id}`, {
-      next: { revalidate: process.env.NODE_ENV === 'development' ? 0 : 3600 }
+      cache: "no-store",
     });
     if (!res.ok) {
       if (res.status === 404) return null;

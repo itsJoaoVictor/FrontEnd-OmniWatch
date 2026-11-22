@@ -12,7 +12,7 @@ import { CollectionResponse } from "@/types/details";
 async function getMovieData(id: string): Promise<MovieDetailsResponse | null> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/movies/${id}`, {
-      next: { revalidate: process.env.NODE_ENV === 'development' ? 0 : 3600 }
+      cache: "no-store",
     });
     if (!res.ok) {
       if (res.status === 404) return null;
@@ -28,7 +28,7 @@ async function getMovieData(id: string): Promise<MovieDetailsResponse | null> {
 async function getCollectionData(collectionId: number): Promise<CollectionResponse | null> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/collections/${collectionId}`, {
-      next: { revalidate: process.env.NODE_ENV === 'development' ? 0 : 3600 }
+      cache: "no-store",
     });
     if (!res.ok) return null;
     return res.json();

@@ -3,9 +3,9 @@ import { TrendingBillboard } from "./trending-billboard";
 
 async function getTrendingData(): Promise<TrendingResponse> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  // Usando revalidate para armazenar o dado em cache no Next.js (ISR)
+  // Sem Data Cache local no Next.js: o backend já gerencia trending_cache
   const res = await fetch(`${apiUrl}/api/trending`, {
-    next: { revalidate: process.env.NODE_ENV === "development" ? 0 : 3600 },
+    cache: "no-store",
   });
 
   if (!res.ok) {

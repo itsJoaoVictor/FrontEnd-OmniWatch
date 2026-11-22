@@ -11,7 +11,7 @@ import { formatReleaseDate } from "@/lib/dateUtils";
 async function getEpisodeData(id: string, seasonNumber: string, episodeNumber: string): Promise<EpisodeDetailsResponse | null> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/tv/${id}/season/${seasonNumber}/episode/${episodeNumber}`, {
-      next: { revalidate: process.env.NODE_ENV === 'development' ? 0 : 3600 }
+      cache: "no-store",
     });
     if (!res.ok) {
       if (res.status === 404) return null;
