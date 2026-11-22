@@ -157,6 +157,8 @@ export function MatchScoreBadge({
         <MatchBreakdownSheet
           open={sheetOpen}
           onOpenChange={(open) => setOpenKey(open ? itemKey : null)}
+          tmdbId={tmdbId}
+          mediaType={mediaType}
           breakdown={data.breakdown}
           title={title}
           backdropPath={backdropPath}

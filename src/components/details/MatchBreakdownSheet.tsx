@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -30,6 +30,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { PosterImage } from "@/components/shared/PosterImage";
+import { api } from "@/lib/axios";
 import { cn } from "@/lib/utils";
 
 export interface MatchPillar {
@@ -97,12 +98,52 @@ export interface MatchScoreData {
   breakdown?: MatchScoreBreakdown | null;
 }
 
+interface MatchInsightResponse {
+  insight: string | null;
+  source: "llm" | "fallback" | "unavailable" | string;
+  cached: boolean;
+}
+
 interface MatchBreakdownSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  tmdbId: number;
+  mediaType: "movie" | "tv";
   breakdown: MatchScoreBreakdown;
   title?: string;
   backdropPath?: string | null;
+}
+
+const clientInsightCache = new Map<string, MatchInsightResponse>();
+
+const PILLAR_IMPORTANCE_WEIGHTS: Record<string, number> = {
+  semantic: 1.45,
+  genres: 1.3,
+  themes: 1.0,
+  talent: 0.95,
+  language: 0.55,
+};
+
+const PILLAR_SHORT_LABELS: Record<string, string> = {
+  semantic: "Atmosfera",
+  genres: "Gêneros",
+  themes: "Temas",
+  talent: "Elenco",
+  language: "Origem",
+};
+
+function renderFormattedInsight(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold text-foreground">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={idx}>{part}</span>;
+  });
 }
 
 function ScoreRing({ score }: { score: number }) {
@@ -210,11 +251,75 @@ function AnchorReasonIcon({ anchor }: { anchor: MatchAnchor }) {
 export function MatchBreakdownSheet({
   open,
   onOpenChange,
+  tmdbId,
+  mediaType,
   breakdown,
   title,
   backdropPath,
 }: MatchBreakdownSheetProps) {
   const [failedBackdrop, setFailedBackdrop] = useState<string | null>(null);
+  const [insightState, setInsightState] = useState<{
+    key: string;
+    data: MatchInsightResponse;
+  } | null>(null);
+
+  const anchorSig = breakdown.anchors
+    .slice(0, 3)
+    .map((a) => a.tmdb_id)
+    .join(",");
+  const insightKey = `${mediaType}-${tmdbId}-${Math.round(breakdown.score)}-${anchorSig}`;
+  const cachedInsight = clientInsightCache.get(insightKey);
+
+  useEffect(() => {
+    if (!open || clientInsightCache.has(insightKey)) {
+      return;
+    }
+
+    let cancelled = false;
+    api
+      .get<MatchInsightResponse>(
+        `/api/recommendations/score/${mediaType}/${tmdbId}/insight`
+      )
+      .then((res) => {
+        const payload: MatchInsightResponse =
+          res.status === 200 && res.data?.insight
+            ? res.data
+            : { insight: breakdown.summary, source: "fallback", cached: false };
+        clientInsightCache.set(insightKey, payload);
+        if (!cancelled) {
+          setInsightState({ key: insightKey, data: payload });
+        }
+      })
+      .catch(() => {
+        const fallback: MatchInsightResponse = {
+          insight: breakdown.summary,
+          source: "fallback",
+          cached: false,
+        };
+        if (!cancelled) {
+          setInsightState({ key: insightKey, data: fallback });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, insightKey, mediaType, tmdbId, breakdown.summary]);
+
+  const activeInsight =
+    cachedInsight ?? (insightState?.key === insightKey ? insightState.data : null);
+  const isInsightLoading = open && !activeInsight;
+
+  const primaryPersona = breakdown.personas.find((p) => p.is_primary);
+  const topPillars = [...breakdown.pillars]
+    .filter((p) => p.key in PILLAR_IMPORTANCE_WEIGHTS && p.status !== "novelty")
+    .sort(
+      (a, b) =>
+        b.percent * (PILLAR_IMPORTANCE_WEIGHTS[b.key] ?? 0.5) -
+        a.percent * (PILLAR_IMPORTANCE_WEIGHTS[a.key] ?? 0.5)
+    )
+    .slice(0, 2);
+
   const hasAdjustments =
     breakdown.boosts.length > 0 || breakdown.restraints.length > 0;
   const netAdjustment = breakdown.net_adjustment ?? 0;
@@ -258,18 +363,66 @@ export function MatchBreakdownSheet({
 
         {/* Corpo rolável */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 sm:px-6 py-5 space-y-6">
-          {/* Bloco 1: Resumo + Veredito humano */}
-          <section className="rounded-2xl bg-card/90 border border-border/80 p-4 shadow-xs space-y-3">
+          {/* Bloco 1: Resumo + Texto editorial sob demanda */}
+          <section className="rounded-2xl bg-card/90 border border-border/80 p-4 shadow-xs space-y-3.5">
             <div className="flex items-center gap-4">
               <ScoreRing score={breakdown.score} />
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
-                  {breakdown.tier_label}
-                </span>
-                <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">
-                  {breakdown.summary}
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
+                    {breakdown.tier_label}
+                  </span>
+                </div>
+
+                <p className="text-xs font-medium text-muted-foreground truncate">
+                  {primaryPersona
+                    ? `${primaryPersona.emoji} ${primaryPersona.name}`
+                    : "Baseado no seu perfil de gosto"}
                 </p>
+
+                {topPillars.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {topPillars.map((pillar) => (
+                      <span
+                        key={pillar.key}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/70 border border-border/60 text-[11px] font-semibold text-foreground/90 tabular-nums"
+                      >
+                        <span>{PILLAR_SHORT_LABELS[pillar.key] || pillar.label}</span>
+                        <span className="text-primary">{Math.round(pillar.percent)}%</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
+            </div>
+
+            <div className="border-t border-border/60 pt-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground">
+                  <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>Por que combina com você</span>
+                </div>
+                {activeInsight?.source === "llm" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                    IA
+                  </span>
+                )}
+              </div>
+
+              {isInsightLoading ? (
+                <div className="space-y-1.5 py-0.5" aria-busy="true">
+                  <div className="h-3 w-full rounded bg-muted animate-pulse" />
+                  <div className="h-3 w-[92%] rounded bg-muted animate-pulse" />
+                  <div className="h-3 w-[70%] rounded bg-muted animate-pulse" />
+                  <span className="sr-only">Gerando análise personalizada...</span>
+                </div>
+              ) : (
+                <p className="text-[13px] leading-relaxed text-foreground/90">
+                  {renderFormattedInsight(
+                    activeInsight?.insight || breakdown.summary
+                  )}
+                </p>
+              )}
             </div>
 
             {breakdown.is_preliminary && (
