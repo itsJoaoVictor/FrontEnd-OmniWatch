@@ -167,7 +167,13 @@ export function HeroSection({
 
             {/* Match Score de Afinidade */}
             <div className="mb-6">
-              <MatchScoreBadge tmdbId={tmdbId} mediaType={mediaType} />
+              <MatchScoreBadge
+                tmdbId={tmdbId}
+                mediaType={mediaType}
+                title={title}
+                posterPath={posterPath}
+                backdropPath={backdropPath}
+              />
             </div>
 
             {/* BARRA DE AÇÕES PRINCIPAIS CINEMATOGRÁFICAS */}

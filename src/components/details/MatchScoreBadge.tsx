@@ -1,57 +1,103 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity } from "lucide-react";
+import { Activity, ChevronRight } from "lucide-react";
 import { api } from "@/lib/axios";
-
-interface MatchScoreData {
-  match_score: number;
-  match_tags: string[];
-}
+import { cn } from "@/lib/utils";
+import {
+  MatchBreakdownSheet,
+  type MatchScoreData,
+} from "./MatchBreakdownSheet";
 
 interface MatchScoreBadgeProps {
   tmdbId: number;
   mediaType: "movie" | "tv";
+  title?: string;
+  posterPath?: string | null;
+  backdropPath?: string | null;
 }
 
-export function MatchScoreBadge({ tmdbId, mediaType }: MatchScoreBadgeProps) {
-  const [data, setData] = useState<MatchScoreData | null>(null);
-  const [loading, setLoading] = useState(true);
+export function MatchScoreBadge({
+  tmdbId,
+  mediaType,
+  title,
+  backdropPath,
+}: MatchScoreBadgeProps) {
+  const itemKey = `${mediaType}-${tmdbId}`;
+  const [state, setState] = useState<{
+    key: string;
+    data: MatchScoreData | null;
+  } | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchScore() {
-      try {
-        const res = await api.get<MatchScoreData>(`/api/recommendations/score/${mediaType}/${tmdbId}`);
+    let cancelled = false;
 
-        if (res.status === 200 && res.data) {
-          if (res.data.match_score > 0) {
-            setData(res.data);
-          }
+    async function fetchScore() {
+      let nextData: MatchScoreData | null = null;
+      try {
+        const res = await api.get<MatchScoreData>(
+          `/api/recommendations/score/${mediaType}/${tmdbId}`
+        );
+
+        if (res.status === 200 && res.data && res.data.match_score > 0) {
+          nextData = res.data;
         }
       } catch {
         // Ignora silenciosamente se o usuário não estiver autenticado ou não houver cálculo de score
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setState({ key: itemKey, data: nextData });
+        }
       }
     }
 
     fetchScore();
-  }, [tmdbId, mediaType]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tmdbId, mediaType, itemKey]);
+
+  const loading = state?.key !== itemKey;
+  const data = loading ? null : state?.data ?? null;
+  const sheetOpen = openKey === itemKey;
 
   if (loading || !data) return null;
 
-  return (
-    <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-primary/10 border border-primary/20 backdrop-blur-md max-w-xl shadow-xs">
-      <div className="flex flex-wrap items-center gap-2.5 mb-2">
-        <div className="bg-primary text-primary-foreground text-xs sm:text-sm font-bold px-3 py-1 rounded-full flex items-center shadow-xs">
-          <Activity className="w-3.5 h-3.5 mr-1.5" />
-          {Math.round(data.match_score)}% de Compatibilidade
+  const roundedScore = Math.max(0, Math.min(100, Math.round(data.match_score)));
+  const hasBreakdown = Boolean(data.breakdown);
+
+  const cardBody = (
+    <>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+          <div className="bg-primary text-primary-foreground text-xs sm:text-sm font-bold px-3 py-1 rounded-full flex items-center shadow-xs">
+            <Activity className="w-3.5 h-3.5 mr-1.5" />
+            <span className="tabular-nums">{roundedScore}% de Compatibilidade</span>
+          </div>
+          <span className="text-xs text-muted-foreground font-medium">
+            {data.is_preliminary
+              ? "Match Preliminar"
+              : "Baseado no seu perfil de gosto"}
+          </span>
         </div>
-        <span className="text-xs text-muted-foreground font-medium">
-          Baseado no seu perfil de gosto
-        </span>
+
+        {hasBreakdown && (
+          <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-primary shrink-0 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 group-hover:bg-primary/15 transition-colors">
+            <span>Ver análise</span>
+            <ChevronRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+          </span>
+        )}
       </div>
-      
+
+      <div className="h-1 w-full rounded-full bg-primary/15 overflow-hidden mb-2.5">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+          style={{ width: `${roundedScore}%` }}
+        />
+      </div>
+
       {data.match_tags && data.match_tags.length > 0 && (() => {
         const isHero =
           data.match_tags[0].startsWith("🍿") ||
@@ -83,6 +129,39 @@ export function MatchScoreBadge({ tmdbId, mediaType }: MatchScoreBadgeProps) {
           </div>
         );
       })()}
-    </div>
+    </>
+  );
+
+  const cardClassName = cn(
+    "mt-4 p-3.5 sm:p-4 rounded-2xl bg-primary/10 border border-primary/20 backdrop-blur-md max-w-xl w-full text-left shadow-xs",
+    hasBreakdown &&
+      "group cursor-pointer transition-all duration-200 hover:bg-primary/15 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  );
+
+  return (
+    <>
+      {hasBreakdown ? (
+        <button
+          type="button"
+          onClick={() => setOpenKey(itemKey)}
+          className={cardClassName}
+          aria-label={`Ver análise detalhada de ${roundedScore}% de compatibilidade`}
+        >
+          {cardBody}
+        </button>
+      ) : (
+        <div className={cardClassName}>{cardBody}</div>
+      )}
+
+      {data.breakdown && (
+        <MatchBreakdownSheet
+          open={sheetOpen}
+          onOpenChange={(open) => setOpenKey(open ? itemKey : null)}
+          breakdown={data.breakdown}
+          title={title}
+          backdropPath={backdropPath}
+        />
+      )}
+    </>
   );
 }
