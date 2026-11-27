@@ -189,6 +189,14 @@ export function HeroBanner({ data, spotlights = [] }: HeroBannerProps) {
         </span>
       );
     }
+    if (activeItem.heroReason === "just_premiered") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 text-xs font-semibold backdrop-blur-md">
+          <Sparkles className="w-3.5 h-3.5 fill-current" />
+          Estreou do seu Radar
+        </span>
+      );
+    }
     if (activeItem.heroReason === "trending_plan_to_watch") {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/25 text-primary border border-primary/30 text-xs font-semibold backdrop-blur-md">

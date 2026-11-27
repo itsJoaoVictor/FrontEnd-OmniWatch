@@ -36,6 +36,8 @@ export interface SavedItem {
   rewatch_count?: number;
   is_favorite?: boolean;
   last_watched_at?: string;
+  created_at?: string | null;
+  updated_at?: string | null;
   release_date?: string | null;
   is_up_to_date?: boolean | null;
   next_episode?: NextEpisodeData | null;
@@ -188,6 +190,8 @@ export const useMyListStore = create<MyListStore>()(
                   poster_path: item.media?.poster_path || item.poster_path,
                   backdrop_path: item.media?.backdrop_path || item.backdrop_path,
                   last_watched_at: item.last_watched_at,
+                  created_at: item.created_at ?? null,
+                  updated_at: item.updated_at ?? null,
                   release_date: item.media?.release_date ?? item.release_date ?? null,
                   is_up_to_date: item.is_up_to_date !== undefined ? item.is_up_to_date : null,
                   next_episode: item.next_episode || null,

@@ -6,6 +6,10 @@ import { TvQueueAccordion } from "@/components/home/TvQueueAccordion";
 import { ContinueWatchingTickets } from "@/components/home/ContinueWatchingTickets";
 import { ReleaseRadarTimeline } from "@/components/home/ReleaseRadarTimeline";
 import { MoviesQueueInspector } from "@/components/home/MoviesQueueInspector";
+import {
+  RecentlyPremieredShowcase,
+  RecentlyPremieredItem,
+} from "@/components/home/RecentlyPremieredShowcase";
 import { useMyListStore } from '@/store/useMyListStore';
 import { MediaItem } from "@/components/home/MediaCard";
 import { Button } from "@/components/ui/button";
@@ -26,12 +30,44 @@ import { cn } from '@/lib/utils';
 let cachedTrendingResults: any[] | null = null;
 let inFlightTrendingPromise: Promise<any[]> | null = null;
 
+const RECENTLY_PREMIERED_WINDOW_DAYS = 4;
+const DISMISSED_PREMIERES_STORAGE_KEY = 'omniwatch_dismissed_premieres_v1';
+
+function loadDismissedPremieres(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(DISMISSED_PREMIERES_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? new Set(parsed.filter((v) => typeof v === 'string')) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
 export default function HomePage() {
   const { items, isLoading, fetchMyList, episodeProgress, fetchProgress } = useMyListStore();
   const pendingCount = useFriendsStore((state) => state.pendingCount);
   const [isMounted, setIsMounted] = useState(false);
-  const [selectedSection, setSelectedSection] = useState<'all' | 'watching' | 'movies' | 'tv' | 'upcoming'>('all');
+  const [selectedSection, setSelectedSection] = useState<'all' | 'premieres' | 'watching' | 'movies' | 'tv' | 'upcoming'>('all');
+  const [dismissedPremieres, setDismissedPremieres] = useState<Set<string>>(() => loadDismissedPremieres());
   const fetchedProgressRef = useRef(new Set<number>());
+
+  const handleDismissPremiere = (dismissKey: string) => {
+    setDismissedPremieres((prev) => {
+      const next = new Set(prev);
+      next.add(dismissKey);
+      try {
+        window.localStorage.setItem(
+          DISMISSED_PREMIERES_STORAGE_KEY,
+          JSON.stringify(Array.from(next))
+        );
+      } catch {
+        // Ignore storage quota errors
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -244,7 +280,15 @@ export default function HomePage() {
   }, [items]);
 
   // Derived state from store
-    const { heroFeature, spotlights, continueWatching, moviesInQueue, tvInQueue, upcomingMedia } = useMemo(() => {
+  const {
+    heroFeature,
+    spotlights,
+    recentlyPremiered,
+    continueWatching,
+    moviesInQueue,
+    tvInQueue,
+    upcomingMedia,
+  } = useMemo(() => {
     const dedupedMap = new Map<string, typeof items[string]>();
     for (const [key, item] of Object.entries(items)) {
       if (!item || (!item.tmdb_id && !item.id)) continue;
@@ -255,6 +299,52 @@ export default function HomePage() {
       }
     }
     const itemsArray = Array.from(dedupedMap.values());
+
+    // Identifica títulos que estavam em "Aguardando Estreia" e estrearam recentemente (últimos 4 dias)
+    const nowLocal = new Date();
+    const todayNoon = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate(), 12, 0, 0);
+    const recentlyPremieredRaw: Array<{ item: typeof itemsArray[number]; daysSinceRelease: number; dismissKey: string }> = [];
+
+    for (const item of itemsArray) {
+      if (item.status !== 'plan_to_watch' && item.status !== 'upcoming') continue;
+      const relStr = item.release_date?.trim();
+      if (!relStr || relStr.length < 8) continue;
+
+      const relDate = parseReleaseDate(relStr);
+      if (isNaN(relDate.getTime())) continue;
+
+      const daysSinceRelease = Math.round((todayNoon.getTime() - relDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceRelease < 0 || daysSinceRelease > RECENTLY_PREMIERED_WINDOW_DAYS) continue;
+
+      const dismissKey = `${item.tmdb_id}:${relStr.slice(0, 10)}`;
+      if (dismissedPremieres.has(dismissKey)) continue;
+
+      // Verifica se o título estava sendo aguardado antes da estreia:
+      // 1) Ainda está com status 'upcoming' (no dia da estreia antes da promoção automática)
+      // 2) Foi adicionado à lista (created_at) ANTES da data de estreia (ou seja, entrou como Aguardando Estreia)
+      let wasAwaited = item.status === 'upcoming';
+      if (!wasAwaited && item.created_at) {
+        const createdParsed = new Date(item.created_at);
+        if (!isNaN(createdParsed.getTime())) {
+          const createdDayNoon = new Date(
+            createdParsed.getFullYear(),
+            createdParsed.getMonth(),
+            createdParsed.getDate(),
+            12,
+            0,
+            0
+          );
+          wasAwaited = createdDayNoon.getTime() < relDate.getTime();
+        }
+      }
+
+      if (wasAwaited) {
+        recentlyPremieredRaw.push({ item, daysSinceRelease, dismissKey });
+      }
+    }
+
+    recentlyPremieredRaw.sort((a, b) => a.daysSinceRelease - b.daysSinceRelease);
+    const freshPremiereCandidate = recentlyPremieredRaw.find((r) => r.daysSinceRelease <= 2)?.item || null;
     
     let watchingItems = itemsArray.filter(i => i.status === 'watching');
     watchingItems.sort((a, b) => {
@@ -289,6 +379,9 @@ export default function HomePage() {
     if (priorityHeroId && items[priorityHeroId]) {
       hero = items[priorityHeroId];
       heroReason = 'new_episode';
+    } else if (freshPremiereCandidate) {
+      hero = freshPremiereCandidate;
+      heroReason = 'just_premiered';
     } else if (trendingPlanToWatchId && items[trendingPlanToWatchId]) {
       hero = items[trendingPlanToWatchId];
       heroReason = 'trending_plan_to_watch';
@@ -360,6 +453,8 @@ export default function HomePage() {
     let description = 'Continue acompanhando a partir de onde você parou.';
     if (heroReason === 'new_episode') {
       description = 'Episódio fresquinho! Acabou de sair nas últimas 48 horas.';
+    } else if (heroReason === 'just_premiered') {
+      description = 'Estava no seu radar de Aguardando Estreia e acabou de ser lançado!';
     } else if (heroReason === 'trending_plan_to_watch') {
       description = 'Em alta no momento! Chegou a hora de tirar esse título da sua lista de "Quero Ver".';
     } else if (heroReason === 'upcoming') {
@@ -381,9 +476,32 @@ export default function HomePage() {
       heroReason: heroReason,
     } : null;
 
+    const mappedRecentlyPremiered: RecentlyPremieredItem[] = recentlyPremieredRaw.map(
+      ({ item, daysSinceRelease, dismissKey }) => ({
+        ...mapToMediaItem(item),
+        daysSinceRelease,
+        dismissKey,
+      })
+    );
+
     const mappedWatching = activeWatchingItems.map(mapToMediaItem);
     const spotlights = [
       ...(heroMediaItem ? [heroMediaItem] : []),
+      ...mappedRecentlyPremiered.slice(0, 2).map(item => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        coverHorizontal: item.coverHorizontal || '',
+        coverVertical: item.coverVertical,
+        description:
+          item.daysSinceRelease <= 0
+            ? 'Estreou hoje! Saiu direto do seu radar de Aguardando Estreia.'
+            : 'Estreou recentemente! Saiu direto do seu radar de Aguardando Estreia.',
+        currentEpisode: item.currentEpisode,
+        nextEpisodeToWatch: item.nextEpisodeToWatch,
+        release_date: item.release_date,
+        heroReason: 'just_premiered',
+      })),
       ...mappedWatching.map(item => ({
         id: item.id,
         title: item.title,
@@ -401,12 +519,13 @@ export default function HomePage() {
     return {
       heroFeature: heroMediaItem,
       spotlights: spotlights,
+      recentlyPremiered: mappedRecentlyPremiered,
       continueWatching: mappedWatching,
       moviesInQueue: itemsArray.filter(i => i.status === 'plan_to_watch' && i.media_type === 'movie').map(mapToMediaItem),
       tvInQueue: itemsArray.filter(i => i.status === 'plan_to_watch' && i.media_type === 'tv').map(mapToMediaItem),
       upcomingMedia: itemsArray.filter(i => i.status === 'upcoming').map(mapToMediaItem),
     };
-  }, [items, episodeProgress, priorityHeroId, trendingPlanToWatchId, correctedNextEpisodes, upToDateShows, verifiedShows]);
+  }, [items, episodeProgress, priorityHeroId, trendingPlanToWatchId, correctedNextEpisodes, upToDateShows, verifiedShows, dismissedPremieres]);
 
   if (!isMounted) return null;
 
@@ -491,6 +610,23 @@ export default function HomePage() {
             >
               Tudo
             </button>
+            {recentlyPremiered.length > 0 && (
+              <button
+                onClick={() => setSelectedSection('premieres')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5",
+                  selectedSection === 'premieres'
+                    ? "bg-emerald-500 text-emerald-950 shadow-sm"
+                    : "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30"
+                )}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>Estrearam</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-background/30 font-bold">
+                  {recentlyPremiered.length}
+                </span>
+              </button>
+            )}
             {continueWatching.length > 0 && (
               <button
                 onClick={() => setSelectedSection('watching')}
@@ -560,6 +696,14 @@ export default function HomePage() {
       </div>
       
       <div className="mt-2 md:mt-4 relative z-20 space-y-10 flex flex-col pb-12">
+        {recentlyPremiered.length > 0 && (selectedSection === 'all' || selectedSection === 'premieres') && (
+          <RecentlyPremieredShowcase
+            items={recentlyPremiered}
+            onDismiss={handleDismissPremiere}
+            windowDays={RECENTLY_PREMIERED_WINDOW_DAYS}
+          />
+        )}
+
         {(selectedSection === 'all' || selectedSection === 'watching') && (
           <ContinueWatchingTickets 
             title="Continuar Assistindo" 
