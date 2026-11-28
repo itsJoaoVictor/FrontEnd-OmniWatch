@@ -11,10 +11,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
-import { useMyListStore, SavedItem, ListStatus } from '@/store/useMyListStore';
+import { useMyListStore, SavedItem } from '@/store/useMyListStore';
 import { customListsService } from '@/services/customLists';
 import { CustomListItem } from '@/types/customLists';
 import { PosterImage } from '@/components/shared/PosterImage';
+import { MEDIA_STATUS_CONFIG } from '@/lib/mediaStatus';
 import {
   Bookmark,
   Search,
@@ -38,14 +39,6 @@ interface AddFromMyListModalProps {
 }
 
 type FilterCategory = 'all' | 'favorites' | 'completed' | 'watching' | 'plan_to_watch' | 'movie' | 'tv';
-
-const statusLabels: Record<ListStatus, string> = {
-  plan_to_watch: 'Quero Ver',
-  watching: 'Assistindo',
-  completed: 'Assistido',
-  dropped: 'Abandonei',
-  upcoming: 'Estreia',
-};
 
 export function AddFromMyListModal({
   open,
@@ -248,33 +241,33 @@ export function AddFromMyListModal({
               className={cn(
                 'px-2.5 py-1 rounded-full font-medium transition-colors',
                 category === 'completed'
-                  ? 'bg-emerald-500 text-black font-semibold'
+                  ? MEDIA_STATUS_CONFIG.completed.activeFilterClass
                   : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
               )}
             >
-              Assistidos
+              {MEDIA_STATUS_CONFIG.completed.pluralLabel}
             </button>
             <button
               onClick={() => setCategory('watching')}
               className={cn(
                 'px-2.5 py-1 rounded-full font-medium transition-colors',
                 category === 'watching'
-                  ? 'bg-amber-500 text-black font-semibold'
+                  ? MEDIA_STATUS_CONFIG.watching.activeFilterClass
                   : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
               )}
             >
-              Assistindo
+              {MEDIA_STATUS_CONFIG.watching.pluralLabel}
             </button>
             <button
               onClick={() => setCategory('plan_to_watch')}
               className={cn(
                 'px-2.5 py-1 rounded-full font-medium transition-colors',
                 category === 'plan_to_watch'
-                  ? 'bg-blue-500 text-black font-semibold'
+                  ? MEDIA_STATUS_CONFIG.plan_to_watch.activeFilterClass
                   : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
               )}
             >
-              Quero Ver
+              {MEDIA_STATUS_CONFIG.plan_to_watch.pluralLabel}
             </button>
             <button
               onClick={() => setCategory('movie')}
@@ -385,8 +378,13 @@ export function AddFromMyListModal({
                         {item.release_date && (
                           <span>• {item.release_date.substring(0, 4)}</span>
                         )}
-                        <span className="inline-block px-1.5 py-0.2 rounded bg-zinc-800 text-[10px] text-zinc-300">
-                          {statusLabels[item.status]}
+                        <span
+                          className={cn(
+                            'inline-block px-1.5 py-0.2 rounded border text-[10px] font-medium',
+                            (MEDIA_STATUS_CONFIG[item.status] ?? MEDIA_STATUS_CONFIG.plan_to_watch).pillClass
+                          )}
+                        >
+                          {(MEDIA_STATUS_CONFIG[item.status] ?? MEDIA_STATUS_CONFIG.plan_to_watch).shortLabel}
                         </span>
                         {item.rating && (
                           <span className="text-yellow-400 font-bold flex items-center gap-0.5 text-[11px]">

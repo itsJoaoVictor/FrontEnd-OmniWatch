@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMyListStore, ListStatus } from '@/store/useMyListStore';
 import { Button } from '@/components/ui/button';
-import { Plus, Check, Star, StarHalf, Bookmark, Play, XCircle, Clock, Trash2, RotateCcw, Minus } from 'lucide-react';
+import { Plus, Check, Star, StarHalf, Trash2, RotateCcw, Minus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { getRatingLabel } from '@/lib/ratingLabel';
+import { MEDIA_STATUS_CONFIG } from '@/lib/mediaStatus';
 import { toast } from '@/components/ui/toast';
 
 interface AddToListButtonProps {
@@ -26,50 +27,6 @@ interface AddToListButtonProps {
   showLabel?: boolean;
   addLabel?: string;
 }
-
-const statusConfig: Record<ListStatus, {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  colorClass: string;
-  borderClass: string;
-  dotColor: string;
-}> = {
-  plan_to_watch: {
-    label: 'Quero Ver',
-    icon: Bookmark,
-    colorClass: 'text-blue-400',
-    borderClass: 'border-blue-500/50 hover:border-blue-400',
-    dotColor: 'bg-blue-400',
-  },
-  watching: {
-    label: 'Assistindo',
-    icon: Play,
-    colorClass: 'text-amber-400',
-    borderClass: 'border-amber-500/50 hover:border-amber-400',
-    dotColor: 'bg-amber-400',
-  },
-  completed: {
-    label: 'Assistido',
-    icon: Check,
-    colorClass: 'text-emerald-400',
-    borderClass: 'border-emerald-500/50 hover:border-emerald-400',
-    dotColor: 'bg-emerald-400',
-  },
-  dropped: {
-    label: 'Abandonei',
-    icon: XCircle,
-    colorClass: 'text-rose-400',
-    borderClass: 'border-rose-500/50 hover:border-rose-400',
-    dotColor: 'bg-rose-400',
-  },
-  upcoming: {
-    label: 'Aguardando Estreia',
-    icon: Clock,
-    colorClass: 'text-purple-400',
-    borderClass: 'border-purple-500/50 hover:border-purple-400',
-    dotColor: 'bg-purple-400',
-  },
-};
 
 export function AddToListButton({
   tmdb_id,
@@ -111,12 +68,12 @@ export function AddToListButton({
     if (newStatus === 'plan_to_watch') {
       toast.add({
         title: 'Status alterado',
-        description: 'Movido para "Quero Ver".',
+        description: `Movido para "${MEDIA_STATUS_CONFIG.plan_to_watch.label}".`,
         type: 'info',
       });
     } else if (newStatus === 'completed' && prevStatus !== 'completed') {
       toast.add({
-        title: 'Marcado como Assistido!',
+        title: `Marcado como ${MEDIA_STATUS_CONFIG.completed.label}!`,
         description: 'Você já pode dar sua nota abaixo.',
         type: 'success',
       });
@@ -183,7 +140,7 @@ export function AddToListButton({
     );
   }
 
-  const currentConfig = statusConfig[savedItem.status] || statusConfig.plan_to_watch;
+  const currentConfig = MEDIA_STATUS_CONFIG[savedItem.status] || MEDIA_STATUS_CONFIG.plan_to_watch;
   const StatusIcon = currentConfig.icon;
 
   return (
@@ -195,7 +152,7 @@ export function AddToListButton({
               ? 'inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl font-bold text-xs md:text-sm shadow-lg bg-black/75 hover:bg-black/90 backdrop-blur-md transition-all duration-200 border'
               : 'inline-flex items-center justify-center h-10 w-10 rounded-full shadow-[0_0_12px_rgba(0,0,0,0.6)] bg-black/70 hover:bg-black/90 backdrop-blur-md transition-all duration-200 hover:scale-105 border',
             currentConfig.borderClass,
-            currentConfig.colorClass,
+            currentConfig.textClass,
             className
           )}
           title={`Status: ${currentConfig.label} (Clique para alterar)`}
@@ -230,10 +187,10 @@ export function AddToListButton({
                   <div className="px-3 py-2 flex flex-col gap-1 bg-purple-500/10 rounded-md my-1 border border-purple-500/20">
                     <span className="text-[11px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                      Aguardando Estreia
+                      {MEDIA_STATUS_CONFIG.upcoming.label}
                     </span>
                     <span className="text-[11px] text-muted-foreground leading-snug">
-                      Entrará automaticamente em &ldquo;Quero Ver&rdquo; assim que for lançado.
+                      Entrará automaticamente em &ldquo;{MEDIA_STATUS_CONFIG.plan_to_watch.label}&rdquo; assim que for lançado.
                     </span>
                   </div>
                   <DropdownMenuSeparator />
@@ -246,11 +203,11 @@ export function AddToListButton({
                     onClick={(e) => handleStatusChange('dropped', e)}
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className={cn('w-2 h-2 rounded-full', statusConfig.dropped.dotColor)} />
-                      <span>{statusConfig.dropped.label}</span>
+                      <span className={cn('w-2 h-2 rounded-full', MEDIA_STATUS_CONFIG.dropped.dotClass)} />
+                      <span>{MEDIA_STATUS_CONFIG.dropped.label}</span>
                     </div>
                     {savedItem.status === 'dropped' && (
-                      <Check className={cn('w-4 h-4', statusConfig.dropped.colorClass)} />
+                      <Check className={cn('w-4 h-4', MEDIA_STATUS_CONFIG.dropped.textClass)} />
                     )}
                   </DropdownMenuItem>
                 </>
@@ -260,7 +217,7 @@ export function AddToListButton({
             // Para títulos lançados: apenas opções normais (sem 'upcoming')
             const releasedStatuses: ListStatus[] = ['plan_to_watch', 'watching', 'completed', 'dropped'];
             return releasedStatuses.map((status) => {
-              const itemConfig = statusConfig[status];
+              const itemConfig = MEDIA_STATUS_CONFIG[status];
               const isSelected = savedItem.status === status;
               return (
                 <DropdownMenuItem
@@ -273,11 +230,11 @@ export function AddToListButton({
                   onClick={(e) => handleStatusChange(status, e)}
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className={cn('w-2 h-2 rounded-full', itemConfig.dotColor)} />
+                    <span className={cn('w-2 h-2 rounded-full', itemConfig.dotClass)} />
                     <span>{itemConfig.label}</span>
                   </div>
                   {isSelected && (
-                    <Check className={cn('w-4 h-4', itemConfig.colorClass)} />
+                    <Check className={cn('w-4 h-4', itemConfig.textClass)} />
                   )}
                 </DropdownMenuItem>
               );

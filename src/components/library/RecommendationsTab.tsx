@@ -192,14 +192,14 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
     if (rec.user_list_status === "completed" || rec.user_list_status === "watched") {
       return (
         <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-          <CheckCircle2 className="w-3 h-3" /> Já assistiu
+          <CheckCircle2 className="w-3 h-3" /> Concluído
         </span>
       );
     }
     if (rec.user_list_status === "watching") {
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">
-          <Play className="w-3 h-3 fill-sky-300" /> Assistindo
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-300 border border-orange-500/30">
+          <Play className="w-3 h-3 fill-orange-300" /> Assistindo
         </span>
       );
     }

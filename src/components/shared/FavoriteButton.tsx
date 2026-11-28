@@ -20,7 +20,7 @@ export function FavoriteButton({ tmdb_id, className, size = 'default' }: Favorit
   const isValidId = !isNaN(numericTmdbId) && numericTmdbId > 0;
   const savedItem = isValidId ? items[numericTmdbId] : undefined;
 
-  // Regra de Negócio: O status deve ser 'Assistindo' ou 'Assistido'.
+  // Regra de Negócio: O status deve ser 'Assistindo' ou 'Concluído'.
   // Se não possuir nenhum desses status, nem aparece a opção de adicionar aos favoritos.
   if (!savedItem || !['watching', 'completed'].includes(savedItem.status)) {
     return null;

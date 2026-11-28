@@ -21,6 +21,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { PosterImage } from "@/components/shared/PosterImage";
+import { getMediaStatusConfig } from "@/lib/mediaStatus";
 import { cn } from "@/lib/utils";
 
 interface FollowedCollectionCardProps {
@@ -127,32 +128,20 @@ export function FollowedCollectionCard({
   }
 
   function getStatusBadge(status?: string | null) {
-    switch (status) {
-      case "completed":
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-            <Check className="w-3 h-3 stroke-[2.5]" /> Assistido
-          </span>
-        );
-      case "watching":
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-            <PlayCircle className="w-3 h-3" /> Assistindo
-          </span>
-        );
-      case "plan_to_watch":
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
-            <Clock className="w-3 h-3" /> Quero Ver
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded-md border border-border/40">
-            Não na lista
-          </span>
-        );
+    const config = getMediaStatusConfig(status);
+    if (!config) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded-md border border-border/40">
+          Não na lista
+        </span>
+      );
     }
+    const StatusIcon = config.icon;
+    return (
+      <span className={cn("inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border", config.pillClass)}>
+        <StatusIcon className={cn("w-3 h-3", status === "completed" && "stroke-[2.5]")} /> {config.shortLabel}
+      </span>
+    );
   }
 
   return (

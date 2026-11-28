@@ -195,7 +195,7 @@ export const MediaCard = memo(function MediaCard({ item, layout = "poster", prio
         {savedItem && (
           <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start max-w-[calc(100%-48px)]">
             {savedItem.status === 'watching' && item.type === 'tv' ? (
-              <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-md backdrop-blur-md uppercase tracking-wider border border-white/15 bg-black/90 text-amber-400 flex items-center gap-1.5 whitespace-nowrap">
+              <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full shadow-md backdrop-blur-md uppercase tracking-wider border border-orange-500/30 bg-black/90 text-orange-400 flex items-center gap-1.5 whitespace-nowrap">
                 <span>Assistindo</span>
                 <span className="text-white/30 text-[10px]">•</span>
                 {(savedItem.is_up_to_date ?? item.isUpToDate) ? (
@@ -204,8 +204,8 @@ export const MediaCard = memo(function MediaCard({ item, layout = "poster", prio
                     <span>Em dia</span>
                   </span>
                 ) : (savedItem.next_episode || item.nextEpisodeToWatch) ? (
-                  <span className="text-sky-300 font-semibold flex items-center gap-1">
-                    <Play className="w-2.5 h-2.5 fill-sky-300" />
+                  <span className="text-orange-200 font-semibold flex items-center gap-1">
+                    <Play className="w-2.5 h-2.5 fill-orange-200" />
                     <span>
                       {savedItem.next_episode
                         ? `T${savedItem.next_episode.season_number}:E${savedItem.next_episode.episode_number}`

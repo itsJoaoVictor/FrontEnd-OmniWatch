@@ -21,8 +21,9 @@ import {
 import { UserFollowedUniverse, UniverseSuggestion } from '@/types/universes';
 import { FollowedUniverseCard } from '@/components/universes/FollowedUniverseCard';
 import { UniverseSuggestionCard } from '@/components/universes/UniverseSuggestionCard';
-import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, EyeOff, ArrowUpDown, LayoutGrid, Film, Tv, Bookmark, Check, Send } from 'lucide-react';
+import { Layers, Globe, Compass, Star, StarOff, CheckCircle2, Clock, Play, Heart, Sparkles, ChevronDown, ChevronUp, Search, X, XCircle, EyeOff, ArrowUpDown, LayoutGrid, Film, Tv, Bookmark, Check, Send } from 'lucide-react';
 import { useImagePreloader } from '@/hooks/useImagePreloader';
+import { MEDIA_STATUS_CONFIG } from '@/lib/mediaStatus';
 import { cn } from '@/lib/utils';
 import { RecommendationsTab } from '@/components/library/RecommendationsTab';
 import { friendsService } from '@/services/friendsService';
@@ -1500,8 +1501,8 @@ function MyListContent() {
                 role="tab"
                 aria-selected={statusFilter === 'plan_to_watch'}
               >
-                <Bookmark className="w-3.5 h-3.5" />
-                <span>Quero Ver</span>
+                <Bookmark className={cn("w-3.5 h-3.5", statusFilter !== 'plan_to_watch' && MEDIA_STATUS_CONFIG.plan_to_watch.textClass)} />
+                <span>{MEDIA_STATUS_CONFIG.plan_to_watch.pluralLabel}</span>
                 <span
                   className={cn(
                     "text-[10px] px-1.5 py-0.2 rounded-full",
@@ -1525,8 +1526,8 @@ function MyListContent() {
                 role="tab"
                 aria-selected={statusFilter === 'upcoming'}
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Aguardando</span>
+                <Sparkles className={cn("w-3.5 h-3.5", statusFilter !== 'upcoming' && MEDIA_STATUS_CONFIG.upcoming.textClass)} />
+                <span>{MEDIA_STATUS_CONFIG.upcoming.pluralLabel}</span>
                 <span
                   className={cn(
                     "text-[10px] px-1.5 py-0.2 rounded-full",
@@ -1550,8 +1551,8 @@ function MyListContent() {
                 role="tab"
                 aria-selected={statusFilter === 'watching'}
               >
-                <span className={cn("w-2 h-2 rounded-full", statusFilter === 'watching' ? "bg-white animate-pulse" : "bg-emerald-500")} />
-                <span>Assistindo</span>
+                <span className={cn("w-2 h-2 rounded-full", statusFilter === 'watching' ? "bg-white animate-pulse" : MEDIA_STATUS_CONFIG.watching.dotClass)} />
+                <span>{MEDIA_STATUS_CONFIG.watching.pluralLabel}</span>
                 <span
                   className={cn(
                     "text-[10px] px-1.5 py-0.2 rounded-full",
@@ -1575,8 +1576,8 @@ function MyListContent() {
                 role="tab"
                 aria-selected={statusFilter === 'completed'}
               >
-                <Check className="w-3.5 h-3.5" />
-                <span>Concluídos</span>
+                <Check className={cn("w-3.5 h-3.5", statusFilter !== 'completed' && MEDIA_STATUS_CONFIG.completed.textClass)} />
+                <span>{MEDIA_STATUS_CONFIG.completed.pluralLabel}</span>
                 <span
                   className={cn(
                     "text-[10px] px-1.5 py-0.2 rounded-full",
@@ -1600,7 +1601,8 @@ function MyListContent() {
                 role="tab"
                 aria-selected={statusFilter === 'dropped'}
               >
-                <span>Abandonados</span>
+                <XCircle className={cn("w-3.5 h-3.5", statusFilter !== 'dropped' && MEDIA_STATUS_CONFIG.dropped.textClass)} />
+                <span>{MEDIA_STATUS_CONFIG.dropped.pluralLabel}</span>
                 <span
                   className={cn(
                     "text-[10px] px-1.5 py-0.2 rounded-full",

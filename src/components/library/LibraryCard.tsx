@@ -2,11 +2,12 @@
 
 import { memo } from 'react';
 import Link from 'next/link';
-import { Star, Check, Play, Clock, Bookmark, Sparkles, XCircle, RotateCcw } from 'lucide-react';
+import { Star, Check, Play, Clock, RotateCcw } from 'lucide-react';
 import { SavedItem } from '@/store/useMyListStore';
 import { PosterImage } from '@/components/shared/PosterImage';
 import { FavoriteButton } from '@/components/shared/FavoriteButton';
 import { AddToListButton } from '@/components/shared/AddToListButton';
+import { MEDIA_STATUS_CONFIG } from '@/lib/mediaStatus';
 import { cn } from '@/lib/utils';
 
 interface LibraryCardProps {
@@ -114,13 +115,13 @@ export const LibraryCard = memo(function LibraryCard({ item, priority = false }:
                   <Check className="w-2.5 h-2.5 stroke-[2.5]" /> Em dia
                 </span>
               ) : item.next_episode ? (
-                <span className="text-sky-400 flex items-center gap-1 font-bold">
+                <span className="text-orange-400 flex items-center gap-1 font-bold">
                   <Play className="w-2.5 h-2.5 fill-current" />
                   <span>T{item.next_episode.season_number}:E{item.next_episode.episode_number}</span>
                 </span>
               ) : (
-                <span className="text-amber-400 flex items-center gap-1">
-                  <Clock className="w-2.5 h-2.5" /> Assistindo
+                <span className="text-orange-400 flex items-center gap-1">
+                  <Clock className="w-2.5 h-2.5" /> {MEDIA_STATUS_CONFIG.watching.label}
                 </span>
               )}
               <span className="text-zinc-500 text-[9px] font-medium">
@@ -131,7 +132,7 @@ export const LibraryCard = memo(function LibraryCard({ item, priority = false }:
               <div
                 className={cn(
                   "h-full rounded-full transition-all duration-300",
-                  item.is_up_to_date ? "bg-emerald-500 w-full" : "bg-gradient-to-r from-sky-500 to-rose-500 w-3/4"
+                  item.is_up_to_date ? "bg-emerald-500 w-full" : "bg-gradient-to-r from-orange-500 to-amber-400 w-3/4"
                 )}
               />
             </div>
@@ -139,37 +140,27 @@ export const LibraryCard = memo(function LibraryCard({ item, priority = false }:
         ) : (
           <div className="mt-1 pt-1.5 border-t border-zinc-800/60 flex items-center justify-between gap-1">
             {/* Pill Semântica de Status */}
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md truncate",
-                item.status === 'completed'
-                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                  : item.status === 'watching'
-                  ? "bg-amber-500/15 text-amber-400 border border-amber-500/25"
-                  : item.status === 'plan_to_watch'
-                  ? "bg-blue-500/15 text-blue-400 border border-blue-500/25"
-                  : item.status === 'upcoming'
-                  ? "bg-purple-500/15 text-purple-400 border border-purple-500/25"
-                  : "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
-              )}
-            >
-              {item.status === 'completed' && <Check className="w-2.5 h-2.5 stroke-[2.5]" />}
-              {item.status === 'watching' && <Play className="w-2.5 h-2.5 fill-current" />}
-              {item.status === 'plan_to_watch' && <Bookmark className="w-2.5 h-2.5" />}
-              {item.status === 'upcoming' && <Sparkles className="w-2.5 h-2.5 text-amber-400" />}
-              {item.status === 'dropped' && <XCircle className="w-2.5 h-2.5" />}
-              <span>
-                {item.status === 'completed'
-                  ? 'Concluído'
-                  : item.status === 'watching'
-                  ? 'Assistindo'
-                  : item.status === 'plan_to_watch'
-                  ? 'Quero Ver'
-                  : item.status === 'upcoming'
-                  ? 'Aguardando'
-                  : 'Abandonado'}
-              </span>
-            </span>
+            {(() => {
+              const statusCfg = MEDIA_STATUS_CONFIG[item.status] ?? MEDIA_STATUS_CONFIG.plan_to_watch;
+              const StatusIcon = statusCfg.icon;
+              return (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border truncate",
+                    statusCfg.pillClass
+                  )}
+                >
+                  <StatusIcon
+                    className={cn(
+                      "w-2.5 h-2.5 shrink-0",
+                      item.status === 'completed' && "stroke-[2.5]",
+                      item.status === 'watching' && "fill-current"
+                    )}
+                  />
+                  <span>{statusCfg.shortLabel}</span>
+                </span>
+              );
+            })()}
 
             {/* Ação rápida de menu de status com AddToListButton */}
             <div

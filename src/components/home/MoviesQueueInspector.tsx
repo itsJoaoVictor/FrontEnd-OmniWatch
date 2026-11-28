@@ -658,7 +658,7 @@ export const MoviesQueueInspector = memo(function MoviesQueueInspector({
                       {isSelectedExiting ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-extrabold">
                           <Check className="w-3.5 h-3.5" />
-                          <span>🎉 Sessão concluída! Movendo para Assistidos...</span>
+                          <span>🎉 Sessão concluída! Movendo para Concluídos...</span>
                         </span>
                       ) : wasShuffled ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/45 text-amber-300 text-xs font-extrabold animate-in fade-in zoom-in-95 duration-200">
@@ -796,8 +796,8 @@ export const MoviesQueueInspector = memo(function MoviesQueueInspector({
                         <Check className="w-4 h-4 stroke-[2.5]" />
                         <span>
                           {isSelectedExiting
-                            ? "Marcado como Assistido!"
-                            : "Marcar como Assistido"}
+                            ? "Marcado como Concluído!"
+                            : "Marcar como Concluído"}
                         </span>
                       </button>
 

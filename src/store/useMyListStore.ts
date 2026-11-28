@@ -1000,7 +1000,7 @@ export const useMyListStore = create<MyListStore>()(
     if (!['watching', 'completed'].includes(item.status)) {
       toast.add({
         title: "Ação não permitida",
-        description: "Apenas mídias com status 'Assistindo' ou 'Assistido' podem ser favoritadas.",
+        description: "Apenas mídias com status 'Assistindo' ou 'Concluído' podem ser favoritadas.",
         type: "warning"
       });
       return;
