@@ -107,6 +107,17 @@ export const friendsService = {
     return res.data;
   },
 
+  async getSentRecommendations(
+    status: 'all' | 'pending' | 'accepted' | 'dismissed' = 'all',
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<FriendRecommendationItem[]> {
+    const res = await api.get<FriendRecommendationItem[]>('/api/friends/recommendations/sent', {
+      params: { status, limit, offset },
+    });
+    return res.data;
+  },
+
   async updateRecommendationStatus(
     recommendationId: string,
     status: 'accepted' | 'dismissed'
@@ -114,6 +125,15 @@ export const friendsService = {
     const res = await api.patch<FriendRecommendationItem>(
       `/api/friends/recommendations/${recommendationId}/status`,
       { status }
+    );
+    return res.data;
+  },
+
+  async cancelSentRecommendation(
+    recommendationId: string
+  ): Promise<{ message: string; id: string }> {
+    const res = await api.delete<{ message: string; id: string }>(
+      `/api/friends/recommendations/${recommendationId}`
     );
     return res.data;
   },

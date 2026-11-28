@@ -15,9 +15,10 @@ import {
   Plus,
   Loader2,
   EyeOff,
-  Sparkles,
+  Play,
   Inbox,
   Star,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -45,16 +46,22 @@ interface RecommendationsTabProps {
 }
 
 export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabProps) {
-  const [subTab, setSubTab] = useState<"pending" | "history">("pending");
+  const [subTab, setSubTab] = useState<"pending" | "history" | "sent">("pending");
   const [recommendations, setRecommendations] = useState<FriendRecommendationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const { items: myItems, addToList } = useMyListStore();
 
-  const loadData = useCallback(async (currentSubTab: "pending" | "history") => {
+  const loadData = useCallback(async (currentSubTab: "pending" | "history" | "sent") => {
     setIsLoading(true);
     try {
+      if (currentSubTab === "sent") {
+        const data = await friendsService.getSentRecommendations("all");
+        setRecommendations(data);
+        return;
+      }
+
       const data = await friendsService.getReceivedRecommendations(currentSubTab);
 
       if (currentSubTab === "pending") {
@@ -158,6 +165,65 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
     }
   };
 
+  // Cancelar indicação enviada pendente
+  const handleCancelSent = async (rec: FriendRecommendationItem) => {
+    setProcessingId(rec.id);
+    try {
+      await friendsService.cancelSentRecommendation(rec.id);
+      toast.add({
+        title: "Indicação cancelada",
+        description: `Indicação de "${rec.media_title}" para ${rec.recipient.name} foi cancelada.`,
+        type: "info",
+      });
+      setRecommendations((prev) => prev.filter((r) => r.id !== rec.id));
+    } catch (err) {
+      console.error("Erro ao cancelar indicação:", err);
+      toast.add({
+        title: "Erro",
+        description: "Não foi possível cancelar a indicação.",
+        type: "error",
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const renderSentStatusBadge = (rec: FriendRecommendationItem) => {
+    if (rec.user_list_status === "completed" || rec.user_list_status === "watched") {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+          <CheckCircle2 className="w-3 h-3" /> Já assistiu
+        </span>
+      );
+    }
+    if (rec.user_list_status === "watching") {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">
+          <Play className="w-3 h-3 fill-sky-300" /> Assistindo
+        </span>
+      );
+    }
+    if (rec.status === "accepted" || rec.in_user_list) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <CheckCircle2 className="w-3 h-3" /> Adicionado à lista
+        </span>
+      );
+    }
+    if (rec.status === "dismissed") {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <EyeOff className="w-3 h-3" /> Dispensada
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+        <Clock className="w-3 h-3" /> Aguardando
+      </span>
+    );
+  };
+
   const formatRelativeTime = (dateStr: string) => {
     try {
       return formatDistanceToNow(parseISO(dateStr), {
@@ -171,9 +237,9 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
 
   return (
     <div className="space-y-6">
-      {/* Sub-abas: Pendentes vs Histórico */}
-      <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-        <div className="flex items-center gap-2">
+      {/* Sub-abas: Pendentes, Histórico e Enviadas */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             variant={subTab === "pending" ? "default" : "outline"}
@@ -197,12 +263,28 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
             <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
             Histórico
           </Button>
+          <Button
+            size="sm"
+            variant={subTab === "sent" ? "default" : "outline"}
+            onClick={() => setSubTab("sent")}
+            className="text-xs h-8 rounded-lg"
+          >
+            <Send className="w-3.5 h-3.5 mr-1.5" />
+            Enviadas
+            {subTab === "sent" && recommendations.length > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px] font-bold">
+                {recommendations.length}
+              </span>
+            )}
+          </Button>
         </div>
 
         <p className="text-xs text-zinc-500 hidden sm:block">
           {subTab === "pending"
             ? "Títulos que seus amigos indicaram especialmente para você."
-            : "Indicações que você já aceitou ou dispensou."}
+            : subTab === "history"
+              ? "Indicações recebidas que você já aceitou ou dispensou."
+              : "Histórico de títulos que você indicou para seus amigos."}
         </p>
       </div>
 
@@ -217,6 +299,8 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
           <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3 text-zinc-400">
             {subTab === "pending" ? (
               <Inbox className="w-6 h-6" />
+            ) : subTab === "sent" ? (
+              <Send className="w-6 h-6" />
             ) : (
               <CheckCircle2 className="w-6 h-6" />
             )}
@@ -224,12 +308,16 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
           <h3 className="text-base font-semibold text-white mb-1">
             {subTab === "pending"
               ? "Nenhuma indicação pendente"
-              : "Seu histórico está vazio"}
+              : subTab === "sent"
+                ? "Nenhuma indicação enviada"
+                : "Seu histórico está vazio"}
           </h3>
           <p className="text-xs text-zinc-400 leading-relaxed max-w-sm mx-auto mb-5">
             {subTab === "pending"
               ? "Quando seus amigos recomendarem filmes ou séries para você, eles aparecerão aqui com recados exclusivos."
-              : "As indicações que você aceitar ou dispensar serão arquivadas aqui para referência futura."}
+              : subTab === "sent"
+                ? "Quando você indicar filmes ou séries para seus amigos, poderá acompanhar aqui se eles aceitaram ou já assistiram."
+                : "As indicações que você aceitar ou dispensar serão arquivadas aqui para referência futura."}
           </p>
           {subTab === "pending" && (
             <Link href="/friends">
@@ -242,7 +330,9 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {recommendations.map((rec) => {
-            const isSaved = isRecommendationInList(rec, myItems);
+            const isSent = subTab === "sent";
+            const peer = isSent ? rec.recipient : rec.sender;
+            const isSaved = !isSent && isRecommendationInList(rec, myItems);
             const year = rec.media_release_date
               ? rec.media_release_date.substring(0, 4)
               : null;
@@ -254,19 +344,19 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
                 className="group relative flex flex-col justify-between bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 transition-all duration-200 overflow-hidden"
               >
                 <div>
-                  {/* Cabeçalho do Card: Quem indicou */}
+                  {/* Cabeçalho do Card: Quem indicou / Para quem foi indicado */}
                   <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-zinc-800/60">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary shrink-0 uppercase">
-                        {rec.sender.name.charAt(0)}
+                        {peer.name.charAt(0)}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-white truncate">
-                          {rec.sender.name}
+                          {isSent ? `Para ${peer.name}` : peer.name}
                         </p>
-                        {rec.sender.username && (
+                        {peer.username && (
                           <p className="text-[10px] text-zinc-400 truncate">
-                            @{rec.sender.username}
+                            @{peer.username}
                           </p>
                         )}
                       </div>
@@ -317,7 +407,7 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
                           )}
                       </div>
 
-                      {/* Status no Histórico */}
+                      {/* Status no Histórico / Enviadas */}
                       {subTab === "history" && (
                         <div className="mt-2">
                           {rec.status === "accepted" ? (
@@ -331,10 +421,14 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
                           )}
                         </div>
                       )}
+
+                      {subTab === "sent" && (
+                        <div className="mt-2">{renderSentStatusBadge(rec)}</div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Recado do Amigo (se houver) */}
+                  {/* Recado do Amigo / Seu recado (se houver) */}
                   {rec.message && (
                     <div className="mt-3 p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-800 text-xs text-zinc-300 flex items-start gap-2">
                       <Quote className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5 rotate-180" />
@@ -381,6 +475,26 @@ export function RecommendationsTab({ onPendingCountChange }: RecommendationsTabP
                           Adicionar à Lista
                         </>
                       )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Ação para Enviadas Pendentes: Cancelar */}
+                {subTab === "sent" && rec.status === "pending" && (
+                  <div className="mt-4 pt-3 border-t border-zinc-800/60 flex items-center justify-end">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleCancelSent(rec)}
+                      disabled={isProcessing}
+                      className="text-xs text-zinc-400 hover:text-red-400 hover:bg-red-500/10 h-8 px-2.5"
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      Cancelar indicação
                     </Button>
                   </div>
                 )}
